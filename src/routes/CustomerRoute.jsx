@@ -1,13 +1,16 @@
 import React from 'react';
 import useAuth from '../hooks/useAuth';
+import useRole from '../hooks/useRole';
 import { Navigate, useLocation } from 'react-router';
 import Loading from '../components/Loading/Loading';
-import useRole from '../hooks/useRole';
 import Forbidden from '../components/Forbidden/Forbidden';
 import RoleError from '../components/RoleError/RoleError';
 
-const AdminRoute = ({ children }) => {
-    const { user, loading } = useAuth();
+// Guards customer-only actions (create/view/pay for your own repair
+// requests) that previously relied on authentication alone via PrivateRoute,
+// which would let an authenticated admin/rider account reach them too.
+const CustomerRoute = ({ children }) => {
+    const { loading, user } = useAuth();
     const location = useLocation();
     const { role, roleLoading, isError } = useRole()
 
@@ -23,11 +26,11 @@ const AdminRoute = ({ children }) => {
         return <RoleError></RoleError>
     }
 
-    if (role !== 'admin') {
+    if (role !== 'user') {
         return <Forbidden></Forbidden>
     }
 
     return children;
 };
 
-export default AdminRoute;
+export default CustomerRoute;

@@ -19,6 +19,7 @@ import PaymentHistory from "../pages/Dashboard/PaymentHistory/PaymentHistory";
 import ApproveTechnicians from "../pages/Dashboard/ApproveTechnicians/ApproveTechnicians";
 import UsersManagement from "../pages/Dashboard/UsersManagement/UsersManagement";
 import AdminRoute from "./AdminRoute";
+import CustomerRoute from "./CustomerRoute";
 import AssignTechnicians from "../pages/Dashboard/AssignTechnicians/AssignTechnicians";
 import TechnicianRoute from "./TechnicianRoute";
 import AssignedJobs from "../pages/Dashboard/AssignedJobs/AssignedJobs";
@@ -85,16 +86,16 @@ export const router = createBrowserRouter([
       },
       {
         path: 'create-request',
-        Component: CreateRequest,
+        element: <CustomerRoute><CreateRequest></CreateRequest></CustomerRoute>,
         loader: () => fetch('/serviceAreas.json').then(res => res.json())
       },
       {
         path: 'my-requests',
-        Component: MyRequests
+        element: <CustomerRoute><MyRequests></MyRequests></CustomerRoute>
       },
       {
         path: 'my-requests/:id',
-        Component: RequestDetails
+        element: <CustomerRoute><RequestDetails></RequestDetails></CustomerRoute>
       },
       {
         path: 'profile',
@@ -102,19 +103,19 @@ export const router = createBrowserRouter([
       },
       {
         path: 'payment/:requestId',
-        Component: Payment
+        element: <CustomerRoute><Payment></Payment></CustomerRoute>
       },
       {
         path: 'payment-history',
-        Component: PaymentHistory
+        element: <CustomerRoute><PaymentHistory></PaymentHistory></CustomerRoute>
       },
       {
         path: 'payment-success',
-        Component: PaymentSuccess
+        element: <CustomerRoute><PaymentSuccess></PaymentSuccess></CustomerRoute>
       },
       {
         path: 'payment-cancelled',
-        Component: PaymentCancelled
+        element: <CustomerRoute><PaymentCancelled></PaymentCancelled></CustomerRoute>
       },
       // technician only routes
       {

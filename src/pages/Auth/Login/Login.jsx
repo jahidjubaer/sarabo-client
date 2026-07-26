@@ -1,26 +1,59 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import useAuth from '../../../hooks/useAuth';
 import { Link, useLocation, useNavigate } from 'react-router';
 import SocialLogin from '../SocialLogin/SocialLogin';
+import Swal from 'sweetalert2';
+import { getAuthErrorMessage } from '../../../utils/authErrorMessage';
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const Login = () => {
-    const { register, handleSubmit, formState: { errors } } = useForm();
-    const { signInUser } = useAuth();
+    const { register, handleSubmit, getValues, formState: { errors } } = useForm();
+    const { signInUser, resetPassword } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
+    const [submitting, setSubmitting] = useState(false);
+    const [resetting, setResetting] = useState(false);
 
+    const handleLogin = async (data) => {
+        if (submitting) return;
+        setSubmitting(true);
+        try {
+            await signInUser(data.email, data.password);
+            navigate(location?.state || '/');
+        } catch (error) {
+            if (import.meta.env.DEV) console.error('Login failed:', error);
+            Swal.fire({ icon: 'error', title: 'Login failed', text: getAuthErrorMessage(error) });
+            setSubmitting(false);
+        }
+    }
 
-    const handleLogin = (data) => {
-        console.log('form data', data);
-        signInUser(data.email, data.password)
-            .then(result => {
-                console.log(result.user)
-                navigate(location?.state || '/')
-            })
-            .catch(error => {
-                console.log(error)
-            })
+    const handleForgotPassword = async () => {
+        if (resetting) return;
+        const email = getValues('email');
+        if (!email || !EMAIL_PATTERN.test(email)) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Enter your email first',
+                text: 'Type a valid email address above, then click "Forgot password?" again.'
+            });
+            return;
+        }
+        setResetting(true);
+        try {
+            await resetPassword(email);
+            Swal.fire({
+                icon: 'success',
+                title: 'Check your inbox',
+                text: 'If an account exists for this email, a password reset link has been sent.'
+            });
+        } catch (error) {
+            if (import.meta.env.DEV) console.error('Password reset failed:', error);
+            Swal.fire({ icon: 'error', title: 'Could not send reset email', text: getAuthErrorMessage(error) });
+        } finally {
+            setResetting(false);
+        }
     }
 
     return (
@@ -43,11 +76,17 @@ const Login = () => {
                         errors.password?.type === 'minLength' && <p className='text-red-500'>Password must be 6 characters or longer.</p>
                     }
 
+                    <button
+                        type="button"
+                        onClick={handleForgotPassword}
+                        disabled={resetting}
+                        className="text-sm opacity-60 text-left underline w-fit">
+                        {resetting ? 'Sending reset email...' : 'Forgot password?'}
+                    </button>
 
-                    <div className="tooltip" data-tip="Password reset is not available yet">
-                        <span className="text-sm opacity-60">Forgot password?</span>
-                    </div>
-                    <button className="btn btn-primary text-black mt-4">Login</button>
+                    <button disabled={submitting} className="btn btn-primary text-black mt-4">
+                        {submitting ? 'Logging in...' : 'Login'}
+                    </button>
                 </fieldset>
                 <p>New to Sarabo <Link
                     state={location.state}

@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import useAuth from '../../../hooks/useAuth';
 import { Link, useLocation, useNavigate } from 'react-router';
 import SocialLogin from '../SocialLogin/SocialLogin';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
+import { getAuthErrorMessage, getSyncErrorMessage } from '../../../utils/authErrorMessage';
 
 const Register = () => {
     const { register, handleSubmit, formState: { errors } } = useForm();
@@ -12,66 +14,106 @@ const Register = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const axiosSecure = useAxiosSecure();
+    const [submitting, setSubmitting] = useState(false);
+    const [pendingUserInfo, setPendingUserInfo] = useState(null);
+    const [syncFailed, setSyncFailed] = useState(false);
 
+    const syncUserToBackend = async (userInfo) => {
+        await axiosSecure.post('/users', userInfo);
+        navigate(location.state || '/');
+    }
 
-    const handleRegistration = (data) => {
+    // react-hook-form's own required/pattern rules (below) already block this
+    // handler from running until the form passes validation.
+    const handleRegistration = async (data) => {
+        if (submitting) return;
+        setSubmitting(true);
+        setSyncFailed(false);
 
         const profileImg = data.photo[0];
+        let photoURL;
 
-        registerUser(data.email, data.password)
-            .then(() => {
+        // 1. Upload the photo before creating the Firebase account, so a failed
+        // upload never leaves behind an account that's already been created.
+        try {
+            const formData = new FormData();
+            formData.append('image', profileImg);
+            const image_API_URL = `https://api.imgbb.com/1/upload?key=${import.meta.env.VITE_image_host_key}`;
+            const uploadRes = await axios.post(image_API_URL, formData);
+            photoURL = uploadRes.data.data.url;
+        } catch (error) {
+            if (import.meta.env.DEV) console.error('Image upload failed:', error);
+            Swal.fire({ icon: 'error', title: 'Photo upload failed', text: 'Please try again.' });
+            setSubmitting(false);
+            return;
+        }
 
-                // 1. store the image in form data
-                const formData = new FormData();
-                formData.append('image', profileImg);
+        // 2. Create the Firebase account.
+        try {
+            await registerUser(data.email, data.password);
+        } catch (error) {
+            if (import.meta.env.DEV) console.error('Registration failed:', error);
+            Swal.fire({ icon: 'error', title: 'Registration failed', text: getAuthErrorMessage(error) });
+            setSubmitting(false);
+            return;
+        }
 
-                // 2. send the photo to store and get the ul
-                const image_API_URL = `https://api.imgbb.com/1/upload?key=${import.meta.env.VITE_image_host_key}`
+        // 3. Update the Firebase profile. Non-fatal on failure: the account
+        // already exists and the backend sync below sends displayName/photoURL
+        // from the form data directly, so it doesn't depend on this succeeding.
+        try {
+            await updateUserProfile({ displayName: data.name, photoURL });
+        } catch (error) {
+            if (import.meta.env.DEV) console.error('Firebase profile update failed:', error);
+        }
 
-                axios.post(image_API_URL, formData)
-                    .then(res => {
-                        const photoURL = res.data.data.url;
+        // 4. Sync the user into the backend database. Only navigate once this
+        // succeeds - never redirect as if registration finished when it hasn't.
+        const userInfo = {
+            email: data.email,
+            displayName: data.name,
+            photoURL: photoURL
+        };
 
-                        // create user in the database
-                        const userInfo = {
-                            email: data.email,
-                            displayName: data.name,
-                            photoURL: photoURL
-                        }
-                        axiosSecure.post('/users', userInfo)
-                            .then(res => {
-                                if (res.data.insertedId) {
-                                    console.log('user created in the database');
-                                }
-                            })
+        try {
+            await syncUserToBackend(userInfo);
+        } catch (error) {
+            if (import.meta.env.DEV) console.error('Backend sync failed:', error);
+            setPendingUserInfo(userInfo);
+            setSyncFailed(true);
+            Swal.fire({ icon: 'error', title: 'Almost there', text: getSyncErrorMessage() });
+        } finally {
+            setSubmitting(false);
+        }
+    }
 
-
-                        // update user profile to firebase
-                        const userProfile = {
-                            displayName: data.name,
-                            photoURL: photoURL
-                        }
-
-                        updateUserProfile(userProfile)
-                            .then(() => {
-                                // console.log('user profile updated done.')
-                                navigate(location.state || '/');
-                            })
-                            .catch(error => console.log(error))
-                    })
-
-
-
-            })
-            .catch(error => {
-                console.log(error)
-            })
+    const handleRetrySync = async () => {
+        if (!pendingUserInfo || submitting) return;
+        setSubmitting(true);
+        try {
+            await syncUserToBackend(pendingUserInfo);
+        } catch (error) {
+            if (import.meta.env.DEV) console.error('Retry sync failed:', error);
+            Swal.fire({ icon: 'error', title: 'Still unable to finish setup', text: getSyncErrorMessage() });
+        } finally {
+            setSubmitting(false);
+        }
     }
 
     return (
         <div className="card bg-base-100 w-full mx-auto max-w-sm shrink-0 shadow-2xl">
             <h3 className="text-3xl font-bold text-center">Welcome to Sarabo</h3>
             <p className='text-center'>Please Register</p>
+            {syncFailed && (
+                <div className="alert alert-warning mx-6 mb-2 text-sm">
+                    <span>
+                        Your account was created, but we couldn't finish setting up your profile.{' '}
+                        <button type="button" onClick={handleRetrySync} disabled={submitting} className="underline font-semibold">
+                            {submitting ? 'Retrying...' : 'Retry'}
+                        </button>
+                    </span>
+                </div>
+            )}
             <form className="card-body" onSubmit={handleSubmit(handleRegistration)}>
                 <fieldset className="fieldset">
                     {/* name field */}
@@ -116,7 +158,9 @@ const Register = () => {
                     <div className="tooltip" data-tip="Password reset is not available yet">
                         <span className="text-sm opacity-60">Forgot password?</span>
                     </div>
-                    <button className="btn btn-primary text-black mt-4">Register</button>
+                    <button disabled={submitting} className="btn btn-primary text-black mt-4">
+                        {submitting ? 'Creating account...' : 'Register'}
+                    </button>
                 </fieldset>
                 <p>Already have an account <Link
                     state={location.state}
