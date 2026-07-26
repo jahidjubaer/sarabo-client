@@ -1,0 +1,82 @@
+import React from 'react';
+import useAuth from '../../../hooks/useAuth';
+import useAxiosSecure from '../../../hooks/useAxiosSecure';
+import { useQuery } from '@tanstack/react-query';
+import { FaMoneyBillWave } from 'react-icons/fa';
+import Loading from '../../../components/Loading/Loading';
+
+const CompletedJobs = () => {
+    const { user } = useAuth();
+    const axiosSecure = useAxiosSecure();
+
+    const { data: requests = [], isLoading } = useQuery({
+        queryKey: ['requests', user.email, 'driver_assigned'],
+        queryFn: async () => {
+            const res = await axiosSecure.get(`/parcels/rider?riderEmail=${user.email}&deliveryStatus=parcel_delivered`)
+
+            return res.data;
+        }
+    })
+
+    if (isLoading) {
+        return <Loading></Loading>
+    }
+
+    const calculatePayout = request => {
+        if (request.senderDistrict === request.receiverDistrict) {
+            return request.cost * 0.8
+        }
+        else{
+            return request.cost * 0.6;
+        }
+    }
+
+    return (
+        <div>
+            <h2 className='text-4xl font-bold'>Completed Jobs: {requests.length}</h2>
+            <div className="overflow-x-auto">
+                <table className="table table-zebra">
+                    {/* head */}
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Name</th>
+                            <th>Created At</th>
+                            <th>Visit District</th>
+                            <th>Cost</th>
+                            <th>Payout</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {requests.map((request, index) => <tr key={request._id}>
+                            <th>{index + 1}</th>
+                            <td>{request.parcelName}</td>
+                            <td>{request.createdAt}</td>
+                            <td>{request.senderDistrict}</td>
+                            <td>{request.cost}</td>
+                            <td>{calculatePayout(request)}</td>
+                            <td>
+                                <div className="tooltip" data-tip="Payout processing is not available yet">
+                                    <button
+                                        type="button"
+                                        disabled
+                                        aria-disabled="true"
+                                        className='btn btn-primary text-black btn-sm'>
+                                        <FaMoneyBillWave aria-hidden="true" /> Cash out
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>)}
+
+                    </tbody>
+                </table>
+                {
+                    requests.length === 0 && <p className='text-center py-8 opacity-60'>No completed repair jobs yet.</p>
+                }
+            </div>
+        </div>
+    );
+};
+
+export default CompletedJobs;

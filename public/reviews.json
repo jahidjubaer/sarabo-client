@@ -1,0 +1,66 @@
+[
+  {
+    "id": "5f47ac10b4f1c03e8c123456",
+    "userName": "John Doe",
+    "ratings": 4.5,
+    "review": "Smooth repair experience and polite staff.",
+    "user_photoURL": "https://randomuser.me/api/portraits/men/10.jpg",
+    "date": "2024-05-08T14:30:00.000Z"
+  },
+  {
+    "id": "5f47ac10b4f1c03e8c234567",
+    "userName": "Jane Smith",
+    "ratings": 3.8,
+    "review": "Took a bit longer than expected, but okay overall.",
+    "user_photoURL": "https://randomuser.me/api/portraits/women/25.jpg",
+    "date": "2024-06-10T10:15:00.000Z"
+  },
+  {
+    "id": "5f47ac10b4f1c03e8c345678",
+    "userName": "Alex Brown",
+    "ratings": 5.0,
+    "review": "Excellent service! Fast and reliable.",
+    "user_photoURL": "https://randomuser.me/api/portraits/men/34.jpg",
+    "date": "2024-07-01T08:50:00.000Z"
+  },
+  {
+    "id": "5f47ac10b4f1c03e8c456789",
+    "userName": "Lisa White",
+    "ratings": 4.2,
+    "review": "Very responsive and professional technician.",
+    "user_photoURL": "https://randomuser.me/api/portraits/women/12.jpg",
+    "date": "2024-07-15T09:10:00.000Z"
+  },
+  {
+    "id": "5f47ac10b4f1c03e8c567890",
+    "userName": "David Lee",
+    "ratings": 2.9,
+    "review": "Late technician arrival and no updates. Disappointed.",
+    "user_photoURL": "https://randomuser.me/api/portraits/men/19.jpg",
+    "date": "2024-08-02T16:45:00.000Z"
+  },
+  {
+    "id": "5f47ac10b4f1c03e8c678901",
+    "userName": "Nina Khan",
+    "ratings": 4.9,
+    "review": "Superb experience! Highly recommended.",
+    "user_photoURL": "https://randomuser.me/api/portraits/women/8.jpg",
+    "date": "2024-08-10T12:00:00.000Z"
+  },
+  {
+    "id": "5f47ac10b4f1c03e8c789012",
+    "userName": "Michael Jordan",
+    "ratings": 3.3,
+    "review": "Decent service but the cleanup afterwards could be better.",
+    "user_photoURL": "https://randomuser.me/api/portraits/men/22.jpg",
+    "date": "2024-08-14T18:20:00.000Z"
+  },
+  {
+    "id": "5f47ac10b4f1c03e8c890123",
+    "userName": "Emma Watson",
+    "ratings": 4.7,
+    "review": "Fast, safe, and friendly repair service.",
+    "user_photoURL": "https://randomuser.me/api/portraits/women/5.jpg",
+    "date": "2024-08-20T07:30:00.000Z"
+  }
+]
