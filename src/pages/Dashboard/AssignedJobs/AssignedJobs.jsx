@@ -12,7 +12,7 @@ const AssignedJobs = () => {
     const axiosSecure = useAxiosSecure();
 
     const { data: requests = [], refetch, isLoading } = useQuery({
-        queryKey: ['requests', user.email, 'driver_assigned'],
+        queryKey: ['assignedJobs', user?.email],
         queryFn: async () => {
             const res = await axiosSecure.get(`/parcels/rider?riderEmail=${user.email}&deliveryStatus=driver_assigned`)
 
