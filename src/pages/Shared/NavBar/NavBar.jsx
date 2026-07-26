@@ -2,10 +2,12 @@ import React from 'react';
 import Logo from '../../../components/Logo/Logo';
 import { Link, NavLink } from 'react-router';
 import useAuth from '../../../hooks/useAuth';
+import useRole from '../../../hooks/useRole';
 
 const NavBar = () => {
 
     const { user, logOut } = useAuth();
+    const { role } = useRole();
 
     const handleLogOut = () => {
         logOut()
@@ -17,11 +19,20 @@ const NavBar = () => {
 
     const links = <>
         <li><NavLink to="/services">Services</NavLink></li>
-        <li><NavLink to="/dashboard/create-request">Create Repair Request</NavLink></li>
+        {/* Public before login (preserves existing anonymous behavior); once
+        signed in, customer-only - `role` is undefined for anonymous visitors,
+        while useRole is loading, and on a role-fetch error, so this never
+        flashes for admin/technician or briefly shows before it should. */}
+        {
+            (!user || role === 'user') &&
+            <li><NavLink to="/dashboard/create-request">Create Repair Request</NavLink></li>
+        }
         <li><NavLink to="/service-areas">Service Areas</NavLink></li>
         {
             user && <>
-                <li><NavLink to="/dashboard/my-requests">My Requests</NavLink></li>
+                {
+                    role === 'user' && <li><NavLink to="/dashboard/my-requests">My Requests</NavLink></li>
+                }
                 <li><NavLink to="/dashboard">Dashboard</NavLink></li>
             </>
         }
