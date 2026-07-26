@@ -1,14 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams } from 'react-router';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import Loading from '../../../components/Loading/Loading';
 import { MdPayment } from 'react-icons/md';
 import { FaLock } from 'react-icons/fa';
+import Swal from 'sweetalert2';
+import { getPaymentErrorMessage } from '../../../utils/paymentErrorMessage';
 
 const Payment = () => {
     const { requestId } = useParams();
     const axiosSecure = useAxiosSecure();
+    const [submitting, setSubmitting] = useState(false);
 
     const { isLoading, data: request } = useQuery({
         queryKey: ['parcels', requestId],
@@ -18,19 +21,19 @@ const Payment = () => {
         }
     })
 
-    const handlePayment = async() => {
-        const paymentInfo = {
-            cost: request.cost,
-            parcelId: request._id,
-            senderEmail: request.senderEmail,
-            parcelName: request.parcelName
+    // Only the request's own id is sent - the amount and customer identity
+    // are always resolved server-side from trusted, stored data.
+    const handlePayment = async () => {
+        if (submitting) return;
+        setSubmitting(true);
+        try {
+            const res = await axiosSecure.post('/payment-checkout-session', { parcelId: request._id });
+            window.location.href = res.data.url;
+        } catch (error) {
+            if (import.meta.env.DEV) console.error('Checkout session creation failed:', error);
+            Swal.fire({ icon: 'error', title: 'Could not start payment', text: getPaymentErrorMessage(error) });
+            setSubmitting(false);
         }
-
-        const res = await axiosSecure.post('/payment-checkout-session', paymentInfo);
-
-        console.log(res.data);
-
-        window.location.href = res.data.url;
     }
 
     if (isLoading) {
@@ -76,7 +79,9 @@ const Payment = () => {
                             <p className="text-4xl font-bold text-primary">${request.cost}</p>
                         </div>
 
-                        <button onClick={handlePayment} className="btn btn-primary text-black w-full mt-6">Pay Now</button>
+                        <button onClick={handlePayment} disabled={submitting} className="btn btn-primary text-black w-full mt-6">
+                            {submitting ? 'Starting payment...' : 'Pay Now'}
+                        </button>
 
                         <p className="flex items-center justify-center gap-2 text-xs opacity-60 mt-4">
                             <FaLock />

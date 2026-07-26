@@ -10,12 +10,14 @@ import { Link } from 'react-router';
 import Loading from '../../../components/Loading/Loading';
 import StatusBadge from '../../../components/StatusBadge/StatusBadge';
 import { humanizeStatus } from '../../../utils/statusBadge';
+import { getPaymentErrorMessage } from '../../../utils/paymentErrorMessage';
 
 const MyRequests = () => {
     const { user } = useAuth();
     const axiosSecure = useAxiosSecure();
     const [searchText, setSearchText] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [payingId, setPayingId] = useState(null);
 
     const { data: requests = [], refetch, isLoading } = useQuery({
         queryKey: ['my-requests', user?.email],
@@ -77,18 +79,19 @@ const MyRequests = () => {
 
     }
 
+    // Only the request's own id is sent - the amount and customer identity
+    // are always resolved server-side from trusted, stored data.
     const handlePayment = async (request) => {
-        const paymentInfo = {
-            cost: request.cost,
-            parcelId: request._id,
-            senderEmail: request.senderEmail,
-            parcelName: request.parcelName,
-            trackingId: request.trackingId
+        if (payingId) return;
+        setPayingId(request._id);
+        try {
+            const res = await axiosSecure.post('/payment-checkout-session', { parcelId: request._id });
+            window.location.assign(res.data.url);
+        } catch (error) {
+            if (import.meta.env.DEV) console.error('Checkout session creation failed:', error);
+            Swal.fire({ icon: 'error', title: 'Could not start payment', text: getPaymentErrorMessage(error) });
+            setPayingId(null);
         }
-        const res = await axiosSecure.post('/payment-checkout-session', paymentInfo);
-
-        // console.log(res.data.url);
-        window.location.assign(res.data.url);
     }
 
     const handleEditRequest = () => {
@@ -148,8 +151,11 @@ const MyRequests = () => {
                                         request.paymentStatus === 'paid' ?
                                             <StatusBadge status="paid" />
                                             :
-                                            <button onClick={() => handlePayment(request)} className="btn btn-sm btn-primary text-black">
-                                                <FaCreditCard aria-hidden="true" /> Pay
+                                            <button
+                                                onClick={() => handlePayment(request)}
+                                                disabled={payingId === request._id}
+                                                className="btn btn-sm btn-primary text-black">
+                                                <FaCreditCard aria-hidden="true" /> {payingId === request._id ? 'Starting...' : 'Pay'}
                                             </button>
 
                                     }
