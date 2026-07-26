@@ -43,19 +43,25 @@ const DashboardLayout = () => {
                             </Link>
                         </li>
 
-                        {/* our dashboard links */}
-                        <li>
-                            <NavLink className="is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="My Requests" to="/dashboard/my-requests">
-                                <FaTools />
-                                <span className="is-drawer-close:hidden">My Requests</span>
-                            </NavLink>
-                        </li>
-                        <li>
-                            <NavLink className="is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="Payment History" to="/dashboard/payment-history">
-                                <FaRegCreditCard />
-                                <span className="is-drawer-close:hidden">Payment History</span>
-                            </NavLink>
-                        </li>
+                        {/* customer-only dashboard links - `role` is undefined
+                        while useRole is loading or has errored, so these
+                        correctly stay hidden until it resolves to 'user' */}
+                        {
+                            role === 'user' && <>
+                                <li>
+                                    <NavLink className="is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="My Requests" to="/dashboard/my-requests">
+                                        <FaTools />
+                                        <span className="is-drawer-close:hidden">My Requests</span>
+                                    </NavLink>
+                                </li>
+                                <li>
+                                    <NavLink className="is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="Payment History" to="/dashboard/payment-history">
+                                        <FaRegCreditCard />
+                                        <span className="is-drawer-close:hidden">Payment History</span>
+                                    </NavLink>
+                                </li>
+                            </>
+                        }
                         {
                             role === 'rider' && <>
                                 <li>
