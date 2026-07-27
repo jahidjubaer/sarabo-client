@@ -18,13 +18,16 @@ const PaymentSuccess = () => {
     const [paymentInfo, setPaymentInfo] = useState({});
     const [alreadyProcessed, setAlreadyProcessed] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
+    const [canRetry, setCanRetry] = useState(false);
+    const [retryCount, setRetryCount] = useState(0);
     const hasVerified = useRef(false);
 
     useEffect(() => {
         if (!sessionId) return;
         // Guards against React Strict Mode's double-invoke and any re-render
-        // re-firing this effect - the request is sent at most once per mount.
-        // The server-side idempotent check remains the real protection.
+        // re-firing this effect - the request is sent at most once per mount
+        // (or once per explicit retry, see handleRetry below). The
+        // server-side idempotent check remains the real protection.
         if (hasVerified.current) return;
         hasVerified.current = true;
 
@@ -41,10 +44,22 @@ const PaymentSuccess = () => {
             })
             .catch(error => {
                 if (import.meta.env.DEV) console.error('Payment verification failed:', error);
+                // A missing response (network blip) or 5xx is likely transient
+                // (e.g. the webhook hasn't finished landing yet) - offer a
+                // retry. 4xx outcomes (403/404/409/400) are permanent and
+                // retrying would just repeat the same rejection.
+                const httpStatus = error?.response?.status;
+                setCanRetry(!httpStatus || httpStatus >= 500);
                 setErrorMessage(getPaymentErrorMessage(error));
                 setStatus('failed');
             });
-    }, [sessionId, axiosSecure, queryClient, user?.email]);
+    }, [sessionId, axiosSecure, queryClient, user?.email, retryCount]);
+
+    const handleRetry = () => {
+        hasVerified.current = false;
+        setStatus('verifying');
+        setRetryCount(count => count + 1);
+    };
 
     if (status === 'failed') {
         return (
@@ -58,8 +73,13 @@ const PaymentSuccess = () => {
                             <h2 className="text-3xl font-bold mt-2">Payment Verification Failed</h2>
                             <p className="opacity-70">{errorMessage || 'No payment session was found. If you completed a payment, check My Requests for its status.'}</p>
 
-                            <div className="flex flex-col sm:flex-row gap-3 w-full mt-6">
-                                <Link to="/dashboard/my-requests" className="btn btn-primary text-black flex-1">View My Requests</Link>
+                            {
+                                canRetry &&
+                                <button onClick={handleRetry} className="btn btn-primary text-black w-full mt-4">Retry Verification</button>
+                            }
+
+                            <div className="flex flex-col sm:flex-row gap-3 w-full mt-3">
+                                <Link to="/dashboard/my-requests" className="btn btn-outline flex-1">View My Requests</Link>
                                 <Link to="/dashboard" className="btn btn-outline flex-1">Go to Dashboard</Link>
                             </div>
                         </div>
