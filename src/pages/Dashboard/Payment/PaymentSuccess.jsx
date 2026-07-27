@@ -1,10 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import useAuth from '../../../hooks/useAuth';
 import { FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 import { getPaymentErrorMessage } from '../../../utils/paymentErrorMessage';
+
+// Gives the customer a moment to read the confirmation before moving on -
+// long enough to not feel rushed, short enough to not feel stuck.
+const AUTO_REDIRECT_SECONDS = 5;
 
 const PaymentSuccess = () => {
     const [searchParams] = useSearchParams();
@@ -12,6 +16,7 @@ const PaymentSuccess = () => {
     const axiosSecure = useAxiosSecure();
     const { user } = useAuth();
     const queryClient = useQueryClient();
+    const navigate = useNavigate();
 
     // 'verifying' | 'verified' | 'failed'
     const [status, setStatus] = useState(sessionId ? 'verifying' : 'failed');
@@ -20,6 +25,7 @@ const PaymentSuccess = () => {
     const [errorMessage, setErrorMessage] = useState('');
     const [canRetry, setCanRetry] = useState(false);
     const [retryCount, setRetryCount] = useState(0);
+    const [secondsLeft, setSecondsLeft] = useState(AUTO_REDIRECT_SECONDS);
     const hasVerified = useRef(false);
 
     useEffect(() => {
@@ -41,6 +47,9 @@ const PaymentSuccess = () => {
                 setStatus('verified');
                 queryClient.invalidateQueries({ queryKey: ['my-requests', user?.email] });
                 queryClient.invalidateQueries({ queryKey: ['payments', user?.email] });
+                // Partial-match invalidation: covers any currently-cached
+                // Request Details page (`['parcels', id]`) for this request.
+                queryClient.invalidateQueries({ queryKey: ['parcels'] });
             })
             .catch(error => {
                 if (import.meta.env.DEV) console.error('Payment verification failed:', error);
@@ -54,6 +63,19 @@ const PaymentSuccess = () => {
                 setStatus('failed');
             });
     }, [sessionId, axiosSecure, queryClient, user?.email, retryCount]);
+
+    // Auto-redirect countdown, active only once verification succeeds - the
+    // customer can still navigate manually at any time, and the countdown is
+    // clearly visible rather than instant/surprising.
+    useEffect(() => {
+        if (status !== 'verified') return;
+        if (secondsLeft <= 0) {
+            navigate('/dashboard/my-requests');
+            return;
+        }
+        const timer = setTimeout(() => setSecondsLeft(seconds => seconds - 1), 1000);
+        return () => clearTimeout(timer);
+    }, [status, secondsLeft, navigate]);
 
     const handleRetry = () => {
         hasVerified.current = false;
@@ -70,8 +92,12 @@ const PaymentSuccess = () => {
                             <div className="bg-error/10 rounded-full p-4">
                                 <FaTimesCircle className="text-4xl text-error" />
                             </div>
-                            <h2 className="text-3xl font-bold mt-2">Payment Verification Failed</h2>
-                            <p className="opacity-70">{errorMessage || 'No payment session was found. If you completed a payment, check My Requests for its status.'}</p>
+                            <h2 className="text-3xl font-bold mt-2">We could not verify your payment yet</h2>
+                            <p className="opacity-70">{errorMessage || 'No payment session was found. If you completed a payment, check My Repair Requests for its status.'}</p>
+                            {
+                                canRetry &&
+                                <p className="opacity-60 text-sm mt-1">Stripe may still be processing your payment - this can take a moment.</p>
+                            }
 
                             {
                                 canRetry &&
@@ -79,7 +105,7 @@ const PaymentSuccess = () => {
                             }
 
                             <div className="flex flex-col sm:flex-row gap-3 w-full mt-3">
-                                <Link to="/dashboard/my-requests" className="btn btn-outline flex-1">View My Requests</Link>
+                                <Link to="/dashboard/my-requests" className="btn btn-outline flex-1">View My Repair Requests</Link>
                                 <Link to="/dashboard" className="btn btn-outline flex-1">Go to Dashboard</Link>
                             </div>
                         </div>
@@ -106,11 +132,13 @@ const PaymentSuccess = () => {
                                     <div className="bg-success/10 rounded-full p-4">
                                         <FaCheckCircle className="text-4xl text-success" />
                                     </div>
-                                    <h2 className="text-3xl font-bold mt-2">Payment Successful</h2>
+                                    <h2 className="text-3xl font-bold mt-2">
+                                        {alreadyProcessed ? 'Payment already confirmed' : 'Payment successful'}
+                                    </h2>
                                     <p className="opacity-70">
                                         {alreadyProcessed
-                                            ? 'This payment was already verified for your request.'
-                                            : 'Thank you! Your payment has been confirmed.'}
+                                            ? 'This payment was already confirmed for your repair request.'
+                                            : 'Your repair request payment has been confirmed.'}
                                     </p>
 
                                     {
@@ -133,10 +161,15 @@ const PaymentSuccess = () => {
                                         </div>
                                     }
 
-                                    <div className="flex flex-col sm:flex-row gap-3 w-full mt-6">
-                                        <Link to="/dashboard/my-requests" className="btn btn-primary text-black flex-1">View My Requests</Link>
-                                        <Link to="/dashboard" className="btn btn-outline flex-1">Go to Dashboard</Link>
+                                    <p className="opacity-60 text-sm mt-4">
+                                        Taking you to My Repair Requests in {secondsLeft}s...
+                                    </p>
+
+                                    <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
+                                        <Link to="/dashboard/my-requests" className="btn btn-primary text-black flex-1">View My Repair Requests</Link>
+                                        <Link to="/dashboard/payment-history" className="btn btn-outline flex-1">View Payment History</Link>
                                     </div>
+                                    <Link to="/dashboard" className="btn btn-ghost btn-sm w-full mt-2">Return to Dashboard</Link>
                                 </>
                         }
                     </div>

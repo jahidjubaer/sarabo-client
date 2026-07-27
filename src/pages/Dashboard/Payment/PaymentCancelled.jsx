@@ -13,12 +13,12 @@ const PaymentCancelled = () => {
                         </div>
                         <h2 className="text-3xl font-bold mt-2">Payment Cancelled</h2>
                         <p className="opacity-70">
-                            Your payment was cancelled before it was completed. No charge has been made.
-                            You can try again anytime from your requests.
+                            Payment cancelled - no charge was recorded.
+                            You can try again anytime from My Repair Requests.
                         </p>
 
                         <div className="flex flex-col sm:flex-row gap-3 w-full mt-6">
-                            <Link to="/dashboard/my-requests" className="btn btn-primary text-black flex-1">Return to My Requests</Link>
+                            <Link to="/dashboard/my-requests" className="btn btn-primary text-black flex-1">Return to My Repair Requests</Link>
                             <Link to="/dashboard" className="btn btn-outline flex-1">Go to Dashboard</Link>
                         </div>
                     </div>
