@@ -8,6 +8,7 @@ import Swal from 'sweetalert2';
 import Loading from '../../../components/Loading/Loading';
 import StatusBadge from '../../../components/StatusBadge/StatusBadge';
 import { humanizeStatus } from '../../../utils/statusBadge';
+import { getTechnicianApprovalErrorMessage } from '../../../utils/technicianApprovalErrorMessage';
 
 // Technician work-status wording is display-only here - the stored
 // workStatus values ('available'/'in_delivery') are unchanged and still
@@ -22,6 +23,9 @@ const ApproveTechnicians = () => {
     const [searchText, setSearchText] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [selectedTechnician, setSelectedTechnician] = useState(null);
+    // Tracks which technician + which action is in flight, so only that
+    // technician's buttons disable/relabel - not the whole table.
+    const [pendingAction, setPendingAction] = useState(null);
 
     const { refetch, data: technicians = [], isLoading } = useQuery({
         queryKey: ['technicians', 'pending'],
@@ -45,21 +49,33 @@ const ApproveTechnicians = () => {
         return matchesSearch && matchesStatus;
     });
 
+    // Only { status } is sent - the server always derives the linked user's
+    // email from the technician application record itself, never from this
+    // body (see riderController.updateRiderStatus).
     const updateTechnicianStatus = (technician, status) => {
-        const updateInfo = { status: status, email: technician.email }
-        axiosSecure.patch(`/riders/${technician._id}`, updateInfo)
-            .then(res => {
-                if (res.data.modifiedCount) {
-                    refetch();
-                    Swal.fire({
-                        position: "top-end",
-                        icon: "success",
-                        title: `Technician status is set to ${status}.`,
-                        showConfirmButton: false,
-                        timer: 2000
-                    });
-                }
+        if (pendingAction) return;
+        setPendingAction({ id: technician._id, status });
+
+        axiosSecure.patch(`/riders/${technician._id}`, { status })
+            .then(() => {
+                refetch();
+                Swal.fire({
+                    position: "top-end",
+                    icon: "success",
+                    title: `Technician status is set to ${status}.`,
+                    showConfirmButton: false,
+                    timer: 2000
+                });
             })
+            .catch(error => {
+                if (import.meta.env.DEV) console.error('Technician status update failed:', error);
+                Swal.fire({ icon: 'error', title: 'Could not update technician', text: getTechnicianApprovalErrorMessage(error) });
+                // A conflict (e.g. already updated concurrently) means the
+                // list shown may be stale - refresh so the admin sees the
+                // current state.
+                refetch();
+            })
+            .finally(() => setPendingAction(null));
     }
 
     const handleApproval = technician => {
@@ -134,9 +150,12 @@ const ApproveTechnicians = () => {
                                             <div className="tooltip" data-tip="Approve technician">
                                                 <button
                                                     onClick={() => handleApproval(technician)}
+                                                    disabled={pendingAction?.id === technician._id}
                                                     aria-label="Approve technician"
                                                     className='btn btn-success text-black btn-sm'>
-                                                    <FaUserCheck aria-hidden="true" />
+                                                    {pendingAction?.id === technician._id && pendingAction.status === 'approved'
+                                                        ? 'Approving...'
+                                                        : <FaUserCheck aria-hidden="true" />}
                                                 </button>
                                             </div>
                                         }
@@ -145,9 +164,12 @@ const ApproveTechnicians = () => {
                                             <div className="tooltip" data-tip="Reject technician">
                                                 <button
                                                     onClick={() => handleRejection(technician)}
+                                                    disabled={pendingAction?.id === technician._id}
                                                     aria-label="Reject technician"
                                                     className='btn btn-error text-black btn-sm'>
-                                                    <IoPersonRemoveSharp aria-hidden="true" />
+                                                    {pendingAction?.id === technician._id && pendingAction.status === 'rejected'
+                                                        ? 'Rejecting...'
+                                                        : <IoPersonRemoveSharp aria-hidden="true" />}
                                                 </button>
                                             </div>
                                         }
