@@ -57,6 +57,10 @@ export const router = createBrowserRouter([
         Component: About
       },
       {
+        path: 'track-request',
+        Component: TrackRequest
+      },
+      {
         path: 'track-request/:requestId',
         Component: TrackRequest
       }

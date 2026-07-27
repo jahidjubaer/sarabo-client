@@ -28,6 +28,7 @@ const NavBar = () => {
             <li><NavLink to="/dashboard/create-request">Create Repair Request</NavLink></li>
         }
         <li><NavLink to="/service-areas">Service Areas</NavLink></li>
+        <li><NavLink to="/track-request">Track Repair</NavLink></li>
         {
             user && <>
                 {
