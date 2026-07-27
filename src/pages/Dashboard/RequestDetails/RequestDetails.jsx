@@ -1,19 +1,26 @@
-import { useQuery } from '@tanstack/react-query';
-import React from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import React, { useState } from 'react';
 import { Link, useParams } from 'react-router';
-import { FaHistory, FaCreditCard, FaArrowLeft } from 'react-icons/fa';
+import { FaHistory, FaCreditCard, FaArrowLeft, FaBan } from 'react-icons/fa';
+import Swal from 'sweetalert2';
+import useAuth from '../../../hooks/useAuth';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import Loading from '../../../components/Loading/Loading';
 import StatusBadge from '../../../components/StatusBadge/StatusBadge';
 import { humanizeStatus } from '../../../utils/statusBadge';
 import { formatCurrency } from '../../../utils/formatCurrency';
 import { getRepairStatusLabel } from '../../../utils/repairStatus';
+import { getCancellationErrorMessage } from '../../../utils/cancellationErrorMessage';
+import { canCancelRequest } from '../../../utils/cancellationEligibility';
 
 const RequestDetails = () => {
     const { id } = useParams();
+    const { user } = useAuth();
     const axiosSecure = useAxiosSecure();
+    const queryClient = useQueryClient();
+    const [cancelling, setCancelling] = useState(false);
 
-    const { data: request, isLoading, isError } = useQuery({
+    const { data: request, isLoading, isError, refetch } = useQuery({
         queryKey: ['parcels', id],
         queryFn: async () => {
             const res = await axiosSecure.get(`/parcels/${id}`);
@@ -37,6 +44,42 @@ const RequestDetails = () => {
             </div>
         );
     }
+
+    const isCancelled = request.deliveryStatus === 'cancelled';
+
+    const handleCancelRequest = () => {
+        if (cancelling) return;
+
+        Swal.fire({
+            title: 'Cancel this repair request?',
+            text: "This is final - once cancelled, this request cannot be reopened. Assigned or in-progress repairs can no longer be cancelled here, and paid requests require support for cancellation or a refund.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, cancel request'
+        }).then(result => {
+            if (!result.isConfirmed) return;
+
+            setCancelling(true);
+            axiosSecure.patch(`/parcels/${id}/cancel`)
+                .then(() => {
+                    queryClient.invalidateQueries({ queryKey: ['parcels', id] });
+                    queryClient.invalidateQueries({ queryKey: ['my-requests', user?.email] });
+                    refetch();
+                    Swal.fire({
+                        title: 'Request Cancelled',
+                        text: 'Your repair request has been cancelled.',
+                        icon: 'success'
+                    });
+                })
+                .catch(error => {
+                    if (import.meta.env.DEV) console.error('Cancellation failed:', error);
+                    Swal.fire({ icon: 'error', title: 'Could not cancel request', text: getCancellationErrorMessage(error) });
+                })
+                .finally(() => setCancelling(false));
+        });
+    };
 
     return (
         <div>
@@ -76,10 +119,18 @@ const RequestDetails = () => {
                 <Link to={`/track-request/${request.trackingId}`} className="btn btn-primary text-black">
                     <FaHistory aria-hidden="true" /> View Timeline
                 </Link>
-                {request.paymentStatus !== 'paid' && (
+                {request.paymentStatus !== 'paid' && !isCancelled && (
                     <Link to={`/dashboard/payment/${request._id}`} className="btn btn-primary text-black">
                         <FaCreditCard aria-hidden="true" /> Pay Now
                     </Link>
+                )}
+                {canCancelRequest(request) && (
+                    <button
+                        onClick={handleCancelRequest}
+                        disabled={cancelling}
+                        className="btn btn-outline btn-error">
+                        <FaBan aria-hidden="true" /> {cancelling ? 'Cancelling...' : 'Cancel Request'}
+                    </button>
                 )}
                 <Link to="/dashboard/my-requests" className="btn btn-outline">
                     <FaArrowLeft aria-hidden="true" /> Back to My Repair Requests

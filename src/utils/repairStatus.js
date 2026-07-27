@@ -8,6 +8,7 @@ const REPAIR_STATUS_LABELS = {
     'rider_arriving': 'Technician On The Way',
     'parcel_picked_up': 'Repair In Progress',
     'parcel_delivered': 'Repair Completed',
+    'cancelled': 'Request Cancelled',
 };
 
 export function getRepairStatusLabel(status) {

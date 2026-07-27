@@ -1,24 +1,28 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useState } from 'react';
 import useAuth from '../../../hooks/useAuth';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import { FiEdit } from 'react-icons/fi';
-import { FaTrashCan } from 'react-icons/fa6';
+import { FaBan } from 'react-icons/fa6';
 import { FaEye, FaCreditCard } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import { Link } from 'react-router';
 import Loading from '../../../components/Loading/Loading';
 import StatusBadge from '../../../components/StatusBadge/StatusBadge';
 import { getPaymentErrorMessage } from '../../../utils/paymentErrorMessage';
+import { getCancellationErrorMessage } from '../../../utils/cancellationErrorMessage';
 import { formatCurrency } from '../../../utils/formatCurrency';
 import { getRepairStatusLabel } from '../../../utils/repairStatus';
+import { canCancelRequest } from '../../../utils/cancellationEligibility';
 
 const MyRequests = () => {
     const { user } = useAuth();
     const axiosSecure = useAxiosSecure();
+    const queryClient = useQueryClient();
     const [searchText, setSearchText] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [payingId, setPayingId] = useState(null);
+    const [cancellingId, setCancellingId] = useState(null);
 
     const { data: requests = [], refetch, isLoading } = useQuery({
         queryKey: ['my-requests', user?.email],
@@ -43,41 +47,38 @@ const MyRequests = () => {
         return matchesSearch && matchesStatus;
     });
 
-    const handleRequestDelete = id => {
-        console.log(id);
+    const handleCancelRequest = request => {
+        if (cancellingId) return;
 
         Swal.fire({
-            title: "Are you sure?",
-            text: "You won't be able to revert this!",
-            icon: "warning",
+            title: 'Cancel this repair request?',
+            text: "This is final - once cancelled, this request cannot be reopened. Assigned or in-progress repairs can no longer be cancelled here, and paid requests require support for cancellation or a refund.",
+            icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: "#3085d6",
-            cancelButtonColor: "#d33",
-            confirmButtonText: "Yes, delete it!"
-        }).then((result) => {
-            if (result.isConfirmed) {
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, cancel request'
+        }).then(result => {
+            if (!result.isConfirmed) return;
 
-                axiosSecure.delete(`/parcels/${id}`)
-                    .then(res => {
-                        console.log(res.data);
-
-                        if (res.data.deletedCount) {
-                            // refresh the data in the ui
-                            refetch();
-
-                            Swal.fire({
-                                title: "Deleted!",
-                                text: "Your repair request has been deleted.",
-                                icon: "success"
-                            });
-                        }
-
-                    })
-
-
-            }
+            setCancellingId(request._id);
+            axiosSecure.patch(`/parcels/${request._id}/cancel`)
+                .then(() => {
+                    queryClient.invalidateQueries({ queryKey: ['my-requests', user?.email] });
+                    queryClient.invalidateQueries({ queryKey: ['parcels', request._id] });
+                    refetch();
+                    Swal.fire({
+                        title: 'Request Cancelled',
+                        text: 'Your repair request has been cancelled.',
+                        icon: 'success'
+                    });
+                })
+                .catch(error => {
+                    if (import.meta.env.DEV) console.error('Cancellation failed:', error);
+                    Swal.fire({ icon: 'error', title: 'Could not cancel request', text: getCancellationErrorMessage(error) });
+                })
+                .finally(() => setCancellingId(null));
         });
-
     }
 
     // Only the request's own id is sent - the amount and customer identity
@@ -143,7 +144,9 @@ const MyRequests = () => {
                     </thead>
                     <tbody>
                         {
-                            filteredRequests.map((request, index) => <tr key={request._id}>
+                            filteredRequests.map((request, index) => {
+                                const isCancelled = request.deliveryStatus === 'cancelled';
+                                return <tr key={request._id}>
                                 <th>{index + 1}</th>
                                 <td>{request.parcelName}</td>
                                 <td>{formatCurrency(request.cost)}</td>
@@ -151,7 +154,7 @@ const MyRequests = () => {
                                     {
                                         request.paymentStatus === 'paid' ?
                                             <StatusBadge status="paid" />
-                                            :
+                                            : !isCancelled &&
                                             <button
                                                 onClick={() => handlePayment(request)}
                                                 disabled={payingId === request._id}
@@ -183,17 +186,21 @@ const MyRequests = () => {
                                                 <FiEdit aria-hidden="true" />
                                             </button>
                                         </div>
-                                        <div className="tooltip" data-tip="Delete request">
-                                            <button
-                                                onClick={() => handleRequestDelete(request._id)}
-                                                aria-label="Delete request"
-                                                className='btn btn-square btn-sm btn-outline btn-error'>
-                                                <FaTrashCan aria-hidden="true" />
-                                            </button>
-                                        </div>
+                                        {
+                                            canCancelRequest(request) &&
+                                            <div className="tooltip" data-tip="Cancel Request">
+                                                <button
+                                                    onClick={() => handleCancelRequest(request)}
+                                                    disabled={cancellingId === request._id}
+                                                    aria-label="Cancel Request"
+                                                    className='btn btn-square btn-sm btn-outline btn-error'>
+                                                    <FaBan aria-hidden="true" />
+                                                </button>
+                                            </div>
+                                        }
                                     </div>
                                 </td>
-                            </tr>)
+                            </tr>})
                         }
 
                     </tbody>
