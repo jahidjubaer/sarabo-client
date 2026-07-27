@@ -4,8 +4,8 @@ import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import { Legend, Pie, PieChart, Tooltip } from 'recharts';
 import Loading from '../../../components/Loading/Loading';
 import StatusBadge from '../../../components/StatusBadge/StatusBadge';
-import { humanizeStatus } from '../../../utils/statusBadge';
 import { formatCurrency } from '../../../utils/formatCurrency';
+import { getRepairStatusLabel } from '../../../utils/repairStatus';
 
 const AdminDashboardHome = () => {
     const axiosSecure = useAxiosSecure();
@@ -52,7 +52,7 @@ const AdminDashboardHome = () => {
 
     const getPieChartData = data =>{
         return data.map(item => {
-            return {name: humanizeStatus(item.status), value: item.count}
+            return {name: getRepairStatusLabel(item.status), value: item.count}
         })
     }
 
@@ -62,7 +62,7 @@ const AdminDashboardHome = () => {
 
             <div className="stats shadow flex-wrap mt-6">
                 <div className="stat">
-                    <div className="stat-title">Total Requests</div>
+                    <div className="stat-title">Total Repair Requests</div>
                     <div className="stat-value">{allRequests.length}</div>
                 </div>
                 <div className="stat">
@@ -84,7 +84,7 @@ const AdminDashboardHome = () => {
                 </div>
             </div>
 
-            <h3 className="text-2xl font-semibold mt-8 mb-2">Requests by Status</h3>
+            <h3 className="text-2xl font-semibold mt-8 mb-2">Repair Requests by Status</h3>
             <div className="stats shadow flex-wrap">
                 {
                     statusStats.map(stat => <div key={stat._id} className="stat">
@@ -103,7 +103,7 @@ const AdminDashboardHome = () => {
                                 ></path>
                             </svg>
                         </div>
-                        <div className="stat-title text-2xl"><StatusBadge status={stat._id} /></div>
+                        <div className="stat-title text-2xl"><StatusBadge status={stat._id} label={getRepairStatusLabel(stat._id)} /></div>
                         <div className="stat-value">{stat.count}</div>
                     </div>)
                 }

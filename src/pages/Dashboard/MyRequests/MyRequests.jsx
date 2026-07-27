@@ -9,9 +9,9 @@ import Swal from 'sweetalert2';
 import { Link } from 'react-router';
 import Loading from '../../../components/Loading/Loading';
 import StatusBadge from '../../../components/StatusBadge/StatusBadge';
-import { humanizeStatus } from '../../../utils/statusBadge';
 import { getPaymentErrorMessage } from '../../../utils/paymentErrorMessage';
 import { formatCurrency } from '../../../utils/formatCurrency';
+import { getRepairStatusLabel } from '../../../utils/repairStatus';
 
 const MyRequests = () => {
     const { user } = useAuth();
@@ -105,7 +105,7 @@ const MyRequests = () => {
 
     return (
         <div>
-            <h2 className="text-4xl font-bold">All of my repair requests: {requests.length}</h2>
+            <h2 className="text-4xl font-bold">My Repair Requests: {requests.length}</h2>
 
             <div className="flex flex-col md:flex-row gap-4 my-6">
                 <label className="input">
@@ -123,7 +123,7 @@ const MyRequests = () => {
                 </label>
                 <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="select">
                     <option value="all">All Statuses</option>
-                    {statusOptions.map((s, i) => <option key={i} value={s}>{humanizeStatus(s)}</option>)}
+                    {statusOptions.map((s, i) => <option key={i} value={s}>{getRepairStatusLabel(s)}</option>)}
                 </select>
             </div>
 
@@ -134,7 +134,7 @@ const MyRequests = () => {
                         <tr>
                             <th></th>
                             <th>Name</th>
-                            <th>Cost</th>
+                            <th>Repair Cost</th>
                             <th>Payment</th>
                             <th>Request ID</th>
                             <th>Status</th>
@@ -164,7 +164,7 @@ const MyRequests = () => {
                                 <td>
                                     <Link to={`/track-request/${request.trackingId}`}> {request.trackingId}</Link>
                                 </td>
-                                <td><StatusBadge status={request.deliveryStatus || 'pending-pickup'} /></td>
+                                <td><StatusBadge status={request.deliveryStatus || 'pending-pickup'} label={getRepairStatusLabel(request.deliveryStatus)} /></td>
                                 <td>
                                     <div className="flex flex-wrap gap-2">
                                         <div className="tooltip" data-tip="View details">

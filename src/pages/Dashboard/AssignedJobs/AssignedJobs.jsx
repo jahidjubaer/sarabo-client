@@ -6,6 +6,7 @@ import Swal from 'sweetalert2';
 import { FaCheck, FaBan, FaRoute, FaClipboardCheck } from 'react-icons/fa';
 import Loading from '../../../components/Loading/Loading';
 import StatusBadge from '../../../components/StatusBadge/StatusBadge';
+import { getRepairStatusLabel } from '../../../utils/repairStatus';
 
 const AssignedJobs = () => {
     const { user } = useAuth();
@@ -31,7 +32,7 @@ const AssignedJobs = () => {
             trackingId: request.trackingId
         }
 
-        let message = `Job status is updated with ${status.split('_').join(' ')}`
+        let message = `Repair status updated: ${getRepairStatusLabel(status)}`
 
         axiosSecure.patch(`/parcels/${request._id}/status`, statusInfo)
             .then(res => {
@@ -50,7 +51,7 @@ const AssignedJobs = () => {
 
     return (
         <div>
-            <h2 className="text-4xl font-bold">Jobs Pending Visit: {requests.length}</h2>
+            <h2 className="text-4xl font-bold">Assigned Repairs: {requests.length}</h2>
 
             <div className="overflow-x-auto">
                 <table className="table table-zebra">
@@ -74,7 +75,7 @@ const AssignedJobs = () => {
                                             <button
                                                 onClick={() => handleJobStatusUpdate(request, 'rider_arriving')}
                                                 className='btn btn-primary text-black btn-sm'>
-                                                <FaCheck aria-hidden="true" /> Accept
+                                                <FaCheck aria-hidden="true" /> Start Journey
                                             </button>
                                             <div className="tooltip" data-tip="Rejecting jobs is not available yet">
                                                 <button
@@ -86,7 +87,7 @@ const AssignedJobs = () => {
                                                 </button>
                                             </div>
                                         </div>
-                                        : <StatusBadge status={request.deliveryStatus} />
+                                        : <StatusBadge status={request.deliveryStatus} label={getRepairStatusLabel(request.deliveryStatus)} />
                                 }
 
                             </td>
@@ -95,12 +96,12 @@ const AssignedJobs = () => {
                                     <button
                                         onClick={() => handleJobStatusUpdate(request, 'parcel_picked_up')}
                                         className='btn btn-primary text-black btn-sm'>
-                                        <FaRoute aria-hidden="true" /> Start Visit
+                                        <FaRoute aria-hidden="true" /> Start Repair
                                     </button>
                                     <button
                                         onClick={() => handleJobStatusUpdate(request, 'parcel_delivered')}
                                         className='btn btn-primary text-black btn-sm'>
-                                        <FaClipboardCheck aria-hidden="true" /> Mark as Completed
+                                        <FaClipboardCheck aria-hidden="true" /> Complete Repair
                                     </button>
                                 </div>
                             </td>
@@ -110,7 +111,7 @@ const AssignedJobs = () => {
                     </tbody>
                 </table>
                 {
-                    requests.length === 0 && <p className='text-center py-8 opacity-60'>You have no assigned repair jobs at the moment.</p>
+                    requests.length === 0 && <p className='text-center py-8 opacity-60'>You have no assigned repairs at the moment.</p>
                 }
             </div>
 

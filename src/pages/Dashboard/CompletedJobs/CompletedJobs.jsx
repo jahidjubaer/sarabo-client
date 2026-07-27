@@ -34,7 +34,7 @@ const CompletedJobs = () => {
 
     return (
         <div>
-            <h2 className='text-4xl font-bold'>Completed Jobs: {requests.length}</h2>
+            <h2 className='text-4xl font-bold'>Completed Repairs: {requests.length}</h2>
             <div className="overflow-x-auto">
                 <table className="table table-zebra">
                     {/* head */}
@@ -44,7 +44,7 @@ const CompletedJobs = () => {
                             <th>Name</th>
                             <th>Created At</th>
                             <th>Visit District</th>
-                            <th>Cost</th>
+                            <th>Repair Cost</th>
                             <th>Payout</th>
                             <th>Action</th>
                         </tr>
@@ -73,7 +73,7 @@ const CompletedJobs = () => {
                     </tbody>
                 </table>
                 {
-                    requests.length === 0 && <p className='text-center py-8 opacity-60'>No completed repair jobs yet.</p>
+                    requests.length === 0 && <p className='text-center py-8 opacity-60'>No completed repairs yet.</p>
                 }
             </div>
         </div>

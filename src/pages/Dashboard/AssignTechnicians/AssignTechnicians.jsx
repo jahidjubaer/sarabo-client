@@ -93,7 +93,7 @@ const AssignTechnicians = () => {
                         <tr>
                             <th></th>
                             <th>Name</th>
-                            <th>Cost</th>
+                            <th>Repair Cost</th>
                             <th>Created At</th>
                             <th>Visit District</th>
                             <th>Action</th>

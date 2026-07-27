@@ -5,12 +5,14 @@ import { humanizeStatus } from './statusBadge';
 // old delivery-domain phrasing. This is a display-only translation for known
 // values; it never touches the stored log or the backend that writes it.
 const TRACKING_LABELS = {
+    'parcel created': 'Request Submitted',
     'driver assigned': 'Technician Assigned',
-    'rider arriving': 'Technician Arriving',
-    'parcel picked up': 'Service Visit Started',
+    'rider arriving': 'Technician On The Way',
+    'parcel picked up': 'Repair In Progress',
     'parcel delivered': 'Repair Completed',
-    'pending pickup': 'Awaiting Technician',
-    'in delivery': 'Repair in Progress',
+    'parcel paid': 'Payment Received',
+    'pending pickup': 'Request Submitted',
+    'in delivery': 'Repair In Progress',
 };
 
 export const formatTrackingLabel = details => {

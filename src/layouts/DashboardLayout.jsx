@@ -49,9 +49,9 @@ const DashboardLayout = () => {
                         {
                             role === 'user' && <>
                                 <li>
-                                    <NavLink className="is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="My Requests" to="/dashboard/my-requests">
+                                    <NavLink className="is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="My Repair Requests" to="/dashboard/my-requests">
                                         <FaTools />
-                                        <span className="is-drawer-close:hidden">My Requests</span>
+                                        <span className="is-drawer-close:hidden">My Repair Requests</span>
                                     </NavLink>
                                 </li>
                                 <li>
@@ -65,15 +65,15 @@ const DashboardLayout = () => {
                         {
                             role === 'rider' && <>
                                 <li>
-                                    <NavLink className="is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="Assigned Jobs" to="/dashboard/assigned-jobs">
+                                    <NavLink className="is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="Assigned Repairs" to="/dashboard/assigned-jobs">
                                         <FaTasks />
-                                        <span className="is-drawer-close:hidden">Assigned Jobs</span>
+                                        <span className="is-drawer-close:hidden">Assigned Repairs</span>
                                     </NavLink>
                                 </li>
                                 <li>
-                                    <NavLink className="is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="Completed Jobs" to="/dashboard/completed-jobs">
+                                    <NavLink className="is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="Completed Repairs" to="/dashboard/completed-jobs">
                                         <SiGoogletasks />
-                                        <span className="is-drawer-close:hidden">Completed Jobs</span>
+                                        <span className="is-drawer-close:hidden">Completed Repairs</span>
                                     </NavLink>
                                 </li>
                             </>

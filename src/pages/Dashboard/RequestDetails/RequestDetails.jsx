@@ -7,6 +7,7 @@ import Loading from '../../../components/Loading/Loading';
 import StatusBadge from '../../../components/StatusBadge/StatusBadge';
 import { humanizeStatus } from '../../../utils/statusBadge';
 import { formatCurrency } from '../../../utils/formatCurrency';
+import { getRepairStatusLabel } from '../../../utils/repairStatus';
 
 const RequestDetails = () => {
     const { id } = useParams();
@@ -31,7 +32,7 @@ const RequestDetails = () => {
                 <h2 className="text-4xl font-bold">Repair request not found</h2>
                 <p className="mt-4 opacity-70">This request may have been removed, or you may not have access to it.</p>
                 <Link to="/dashboard/my-requests" className="btn btn-outline mt-6">
-                    <FaArrowLeft aria-hidden="true" /> Back to My Requests
+                    <FaArrowLeft aria-hidden="true" /> Back to My Repair Requests
                 </Link>
             </div>
         );
@@ -64,8 +65,8 @@ const RequestDetails = () => {
 
                 <div className="card bg-base-200 p-6">
                     <h3 className="text-2xl font-semibold mb-4">Status & Payment</h3>
-                    <p><span className="font-semibold">Status:</span> <StatusBadge status={request.deliveryStatus || 'pending-pickup'} /></p>
-                    <p><span className="font-semibold">Cost:</span> {formatCurrency(request.cost)}</p>
+                    <p><span className="font-semibold">Repair Status:</span> <StatusBadge status={request.deliveryStatus || 'pending-pickup'} label={getRepairStatusLabel(request.deliveryStatus)} /></p>
+                    <p><span className="font-semibold">Repair Cost:</span> {formatCurrency(request.cost)}</p>
                     <p><span className="font-semibold">Payment:</span> <StatusBadge status={request.paymentStatus || 'unpaid'} /></p>
                     {request.riderName && <p><span className="font-semibold">Assigned Technician:</span> {request.riderName}</p>}
                 </div>
@@ -81,7 +82,7 @@ const RequestDetails = () => {
                     </Link>
                 )}
                 <Link to="/dashboard/my-requests" className="btn btn-outline">
-                    <FaArrowLeft aria-hidden="true" /> Back to My Requests
+                    <FaArrowLeft aria-hidden="true" /> Back to My Repair Requests
                 </Link>
             </div>
         </div>

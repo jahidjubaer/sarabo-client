@@ -9,6 +9,14 @@ import Loading from '../../../components/Loading/Loading';
 import StatusBadge from '../../../components/StatusBadge/StatusBadge';
 import { humanizeStatus } from '../../../utils/statusBadge';
 
+// Technician work-status wording is display-only here - the stored
+// workStatus values ('available'/'in_delivery') are unchanged and still
+// used for querying (see AssignTechnicians.jsx's workStatus=available
+// filter); 'in_delivery' predates the repair-service rename and must never
+// be shown to an admin as-is.
+const WORK_STATUS_LABELS = { available: 'Available', in_delivery: 'On a Repair' };
+const getWorkStatusLabel = status => WORK_STATUS_LABELS[status] || humanizeStatus(status);
+
 const ApproveTechnicians = () => {
     const axiosSecure = useAxiosSecure();
     const [searchText, setSearchText] = useState('');
@@ -110,7 +118,7 @@ const ApproveTechnicians = () => {
                                 <td>
                                     <StatusBadge status={technician.status} />
                                 </td>
-                                <td><StatusBadge status={technician.workStatus} /></td>
+                                <td><StatusBadge status={technician.workStatus} label={getWorkStatusLabel(technician.workStatus)} /></td>
                                 <td>
                                     <div className="flex flex-wrap gap-2">
                                         <div className="tooltip" data-tip="View details">
@@ -183,7 +191,7 @@ const ApproveTechnicians = () => {
                                 <p><span className="font-semibold">National ID:</span> {selectedTechnician.nid}</p>
                                 <p><span className="font-semibold">Experience:</span> {selectedTechnician.bike}</p>
                                 <p><span className="font-semibold">Application Status:</span> <StatusBadge status={selectedTechnician.status} /></p>
-                                <p><span className="font-semibold">Work Status:</span> <StatusBadge status={selectedTechnician.workStatus} /></p>
+                                <p><span className="font-semibold">Work Status:</span> <StatusBadge status={selectedTechnician.workStatus} label={getWorkStatusLabel(selectedTechnician.workStatus)} /></p>
                             </div>
                             <div className="modal-action">
                                 <button onClick={() => setSelectedTechnician(null)} className="btn">Close</button>

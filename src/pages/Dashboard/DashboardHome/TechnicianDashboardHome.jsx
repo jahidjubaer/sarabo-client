@@ -6,6 +6,7 @@ import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import Loading from '../../../components/Loading/Loading';
 import StatusBadge from '../../../components/StatusBadge/StatusBadge';
 import { formatCurrency } from '../../../utils/formatCurrency';
+import { getRepairStatusLabel } from '../../../utils/repairStatus';
 
 // Estimated only: no backend earnings field exists yet: not persisted, for display purposes
 const estimatePayout = job => job.senderDistrict === job.receiverDistrict ? job.cost * 0.8 : job.cost * 0.6;
@@ -58,15 +59,15 @@ const TechnicianDashboardHome = () => {
 
             <div className="stats shadow flex-wrap">
                 <div className="stat">
-                    <div className="stat-title">Assigned Jobs</div>
+                    <div className="stat-title">Assigned Repairs</div>
                     <div className="stat-value">{assignedCount}</div>
                 </div>
                 <div className="stat">
-                    <div className="stat-title">Ongoing Jobs</div>
+                    <div className="stat-title">Ongoing Repairs</div>
                     <div className="stat-value">{ongoingCount}</div>
                 </div>
                 <div className="stat">
-                    <div className="stat-title">Completed Jobs</div>
+                    <div className="stat-title">Completed Repairs</div>
                     <div className="stat-value">{completedJobs.length}</div>
                 </div>
                 <div className="stat">
@@ -76,10 +77,10 @@ const TechnicianDashboardHome = () => {
                 </div>
             </div>
 
-            <h3 className="text-2xl font-semibold mt-8 mb-4">Current Tasks</h3>
+            <h3 className="text-2xl font-semibold mt-8 mb-4">Recent Repairs</h3>
             {
                 recentJobs.length === 0 ? (
-                    <p className="opacity-60">No jobs assigned yet.</p>
+                    <p className="opacity-60">No repairs assigned yet.</p>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="table table-zebra">
@@ -94,7 +95,7 @@ const TechnicianDashboardHome = () => {
                                 {recentJobs.map(j => (
                                     <tr key={j._id}>
                                         <td>{j.parcelName}</td>
-                                        <td><StatusBadge status={j.deliveryStatus || 'pending-pickup'} /></td>
+                                        <td><StatusBadge status={j.deliveryStatus || 'pending-pickup'} label={getRepairStatusLabel(j.deliveryStatus)} /></td>
                                         <td>{j.senderDistrict}</td>
                                     </tr>
                                 ))}
@@ -104,8 +105,8 @@ const TechnicianDashboardHome = () => {
                 )
             }
             <div className="mt-6 flex gap-3">
-                <Link to="/dashboard/assigned-jobs" className="btn btn-primary text-black">View Assigned Jobs</Link>
-                <Link to="/dashboard/completed-jobs" className="btn">View Completed Jobs</Link>
+                <Link to="/dashboard/assigned-jobs" className="btn btn-primary text-black">View Assigned Repairs</Link>
+                <Link to="/dashboard/completed-jobs" className="btn">View Completed Repairs</Link>
             </div>
         </div>
     );

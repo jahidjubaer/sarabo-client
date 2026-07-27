@@ -7,6 +7,7 @@ import Loading from '../../../components/Loading/Loading';
 import StatusBadge from '../../../components/StatusBadge/StatusBadge';
 import Avatar from '../../../components/Avatar/Avatar';
 import { formatCurrency } from '../../../utils/formatCurrency';
+import { getRepairStatusLabel } from '../../../utils/repairStatus';
 
 const CustomerDashboardHome = () => {
     const { user } = useAuth();
@@ -53,7 +54,7 @@ const CustomerDashboardHome = () => {
 
             <div className="stats shadow flex-wrap">
                 <div className="stat">
-                    <div className="stat-title">Total Requests</div>
+                    <div className="stat-title">Total Repair Requests</div>
                     <div className="stat-value">{requests.length}</div>
                 </div>
                 <div className="stat">
@@ -77,7 +78,7 @@ const CustomerDashboardHome = () => {
             <h3 className="text-2xl font-semibold mt-8 mb-4">Recent Activity</h3>
             {
                 recentRequests.length === 0 ? (
-                    <p className="opacity-60">No repair requests yet. <Link to="/dashboard/create-request" className="link">Create your first request</Link>.</p>
+                    <p className="opacity-60">No repair requests yet. <Link to="/dashboard/create-request" className="link">Create your first repair request</Link>.</p>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="table table-zebra">
@@ -85,7 +86,7 @@ const CustomerDashboardHome = () => {
                                 <tr>
                                     <th>Device</th>
                                     <th>Status</th>
-                                    <th>Cost</th>
+                                    <th>Repair Cost</th>
                                     <th></th>
                                 </tr>
                             </thead>
@@ -93,7 +94,7 @@ const CustomerDashboardHome = () => {
                                 {recentRequests.map(r => (
                                     <tr key={r._id}>
                                         <td>{r.parcelName}</td>
-                                        <td><StatusBadge status={r.deliveryStatus || 'pending-pickup'} /></td>
+                                        <td><StatusBadge status={r.deliveryStatus || 'pending-pickup'} label={getRepairStatusLabel(r.deliveryStatus)} /></td>
                                         <td>{formatCurrency(r.cost)}</td>
                                         <td><Link to={`/dashboard/my-requests/${r._id}`} className="link">View</Link></td>
                                     </tr>

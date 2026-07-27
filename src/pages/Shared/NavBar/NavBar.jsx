@@ -31,7 +31,7 @@ const NavBar = () => {
         {
             user && <>
                 {
-                    role === 'user' && <li><NavLink to="/dashboard/my-requests">My Requests</NavLink></li>
+                    role === 'user' && <li><NavLink to="/dashboard/my-requests">My Repair Requests</NavLink></li>
                 }
                 <li><NavLink to="/dashboard">Dashboard</NavLink></li>
             </>
