@@ -4,10 +4,12 @@ import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import Swal from 'sweetalert2';
 import Loading from '../../../components/Loading/Loading';
 import { formatCurrency } from '../../../utils/formatCurrency';
+import { getAssignmentErrorMessage } from '../../../utils/assignmentErrorMessage';
 
 const AssignTechnicians = () => {
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [searchText, setSearchText] = useState('');
+    const [assigningId, setAssigningId] = useState(null);
     const axiosSecure = useAxiosSecure();
     const technicianModalRef = useRef();
 
@@ -43,7 +45,14 @@ const AssignTechnicians = () => {
         technicianModalRef.current.showModal()
     }
 
+    // Only riderId is required server-side (the technician's name/email are
+    // looked up and trusted from the database, not from this body) - the
+    // extra fields are harmless and kept for backward compatibility with
+    // any other consumer of this same request shape.
     const handleAssignTechnician = technician => {
+        if (assigningId) return;
+        setAssigningId(technician._id);
+
         const technicianAssignInfo = {
             riderId: technician._id,
             riderEmail: technician.email,
@@ -66,6 +75,15 @@ const AssignTechnicians = () => {
                     });
                 }
             })
+            .catch(error => {
+                if (import.meta.env.DEV) console.error('Technician assignment failed:', error);
+                Swal.fire({ icon: 'error', title: 'Could not assign technician', text: getAssignmentErrorMessage(error) });
+                // A conflict (already assigned/cancelled) means the lists
+                // shown are stale - refresh so the admin sees current state.
+                requestsRefetch();
+                techniciansRefetch();
+            })
+            .finally(() => setAssigningId(null));
     }
 
     return (
@@ -145,7 +163,8 @@ const AssignTechnicians = () => {
                                     <td>
                                         <button
                                             onClick={() => handleAssignTechnician(technician)}
-                                            className='btn btn-primary text-black'>Assign</button>
+                                            disabled={!!assigningId}
+                                            className='btn btn-primary text-black'>{assigningId === technician._id ? 'Assigning...' : 'Assign'}</button>
                                     </td>
                                 </tr>)}
 
