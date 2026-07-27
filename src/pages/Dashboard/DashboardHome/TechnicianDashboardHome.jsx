@@ -5,6 +5,7 @@ import useAuth from '../../../hooks/useAuth';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import Loading from '../../../components/Loading/Loading';
 import StatusBadge from '../../../components/StatusBadge/StatusBadge';
+import { formatCurrency } from '../../../utils/formatCurrency';
 
 // Estimated only: no backend earnings field exists yet: not persisted, for display purposes
 const estimatePayout = job => job.senderDistrict === job.receiverDistrict ? job.cost * 0.8 : job.cost * 0.6;
@@ -70,7 +71,7 @@ const TechnicianDashboardHome = () => {
                 </div>
                 <div className="stat">
                     <div className="stat-title">Estimated Earnings</div>
-                    <div className="stat-value">${estimatedEarnings.toFixed(2)}</div>
+                    <div className="stat-value">{formatCurrency(estimatedEarnings)}</div>
                     <div className="stat-desc">Estimate only — not a persisted ledger value</div>
                 </div>
             </div>

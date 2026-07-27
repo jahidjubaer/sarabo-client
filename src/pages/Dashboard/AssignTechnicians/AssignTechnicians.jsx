@@ -3,6 +3,7 @@ import React, { useRef, useState } from 'react';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import Swal from 'sweetalert2';
 import Loading from '../../../components/Loading/Loading';
+import { formatCurrency } from '../../../utils/formatCurrency';
 
 const AssignTechnicians = () => {
     const [selectedRequest, setSelectedRequest] = useState(null);
@@ -102,7 +103,7 @@ const AssignTechnicians = () => {
                         {filteredRequests.map((request, index) => <tr key={request._id}>
                             <th>{index + 1}</th>
                             <td>{request.parcelName}</td>
-                            <td>{request.cost}</td>
+                            <td>{formatCurrency(request.cost)}</td>
                             <td>{request.createdAt}</td>
                             <td>{request.senderDistrict}</td>
                             <td>

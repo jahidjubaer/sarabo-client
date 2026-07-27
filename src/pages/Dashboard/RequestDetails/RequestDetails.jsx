@@ -6,6 +6,7 @@ import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import Loading from '../../../components/Loading/Loading';
 import StatusBadge from '../../../components/StatusBadge/StatusBadge';
 import { humanizeStatus } from '../../../utils/statusBadge';
+import { formatCurrency } from '../../../utils/formatCurrency';
 
 const RequestDetails = () => {
     const { id } = useParams();
@@ -64,7 +65,7 @@ const RequestDetails = () => {
                 <div className="card bg-base-200 p-6">
                     <h3 className="text-2xl font-semibold mb-4">Status & Payment</h3>
                     <p><span className="font-semibold">Status:</span> <StatusBadge status={request.deliveryStatus || 'pending-pickup'} /></p>
-                    <p><span className="font-semibold">Cost:</span> ${request.cost}</p>
+                    <p><span className="font-semibold">Cost:</span> {formatCurrency(request.cost)}</p>
                     <p><span className="font-semibold">Payment:</span> <StatusBadge status={request.paymentStatus || 'unpaid'} /></p>
                     {request.riderName && <p><span className="font-semibold">Assigned Technician:</span> {request.riderName}</p>}
                 </div>

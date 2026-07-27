@@ -5,6 +5,7 @@ import { Legend, Pie, PieChart, Tooltip } from 'recharts';
 import Loading from '../../../components/Loading/Loading';
 import StatusBadge from '../../../components/StatusBadge/StatusBadge';
 import { humanizeStatus } from '../../../utils/statusBadge';
+import { formatCurrency } from '../../../utils/formatCurrency';
 
 const AdminDashboardHome = () => {
     const axiosSecure = useAxiosSecure();
@@ -79,7 +80,7 @@ const AdminDashboardHome = () => {
                 </div>
                 <div className="stat">
                     <div className="stat-title">Revenue</div>
-                    <div className="stat-value">${revenue}</div>
+                    <div className="stat-value">{formatCurrency(revenue)}</div>
                 </div>
             </div>
 

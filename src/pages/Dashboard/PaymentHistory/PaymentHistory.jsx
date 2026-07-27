@@ -3,6 +3,7 @@ import React from 'react';
 import useAuth from '../../../hooks/useAuth';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import Loading from '../../../components/Loading/Loading';
+import { formatCurrency } from '../../../utils/formatCurrency';
 
 const PaymentHistory = () => {
     const { user } = useAuth();
@@ -40,7 +41,7 @@ const PaymentHistory = () => {
                             payments.map((payment, index) => <tr key={payment._id}>
                                 <th>{index + 1}</th>
                                 <td>{payment.customerEmail}</td>
-                                <td>${payment.amount}</td>
+                                <td>{formatCurrency(payment.amount)}</td>
                                 <td>{payment.paidAt}</td>
                                 <td>{payment.transactionId}</td>
                             </tr>)

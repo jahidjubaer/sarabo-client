@@ -6,6 +6,7 @@ import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import Loading from '../../../components/Loading/Loading';
 import StatusBadge from '../../../components/StatusBadge/StatusBadge';
 import Avatar from '../../../components/Avatar/Avatar';
+import { formatCurrency } from '../../../utils/formatCurrency';
 
 const CustomerDashboardHome = () => {
     const { user } = useAuth();
@@ -69,7 +70,7 @@ const CustomerDashboardHome = () => {
                 </div>
                 <div className="stat">
                     <div className="stat-title">Total Spending</div>
-                    <div className="stat-value">${totalSpending}</div>
+                    <div className="stat-value">{formatCurrency(totalSpending)}</div>
                 </div>
             </div>
 
@@ -93,7 +94,7 @@ const CustomerDashboardHome = () => {
                                     <tr key={r._id}>
                                         <td>{r.parcelName}</td>
                                         <td><StatusBadge status={r.deliveryStatus || 'pending-pickup'} /></td>
-                                        <td>${r.cost}</td>
+                                        <td>{formatCurrency(r.cost)}</td>
                                         <td><Link to={`/dashboard/my-requests/${r._id}`} className="link">View</Link></td>
                                     </tr>
                                 ))}

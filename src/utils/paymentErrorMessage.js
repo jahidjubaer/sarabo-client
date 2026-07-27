@@ -14,6 +14,9 @@ export function getPaymentErrorMessage(error) {
             if (code === 'CHECKOUT_CREATION_IN_PROGRESS') {
                 return 'A payment session is already being started for this request. Please wait a moment and try again.';
             }
+            if (code === 'PAYMENT_NOT_AVAILABLE') {
+                return 'Payment is not available for this request right now.';
+            }
             return 'This request has already been paid for.';
         case 400:
             return 'This request cannot be paid for right now. Please contact support.';

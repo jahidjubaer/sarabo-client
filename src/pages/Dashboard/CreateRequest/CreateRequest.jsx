@@ -4,6 +4,7 @@ import { useLoaderData, useNavigate } from 'react-router';
 import Swal from 'sweetalert2';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import useAuth from '../../../hooks/useAuth';
+import { formatCurrency } from '../../../utils/formatCurrency';
 
 const notBlank = message => value => (value && value.trim().length > 0) || message;
 
@@ -67,7 +68,7 @@ const CreateRequest = () => {
 
         Swal.fire({
             title: "Agree with the Cost?",
-            text: `You will be charged ${cost} taka!`,
+            text: `You will be charged ${formatCurrency(cost)}!`,
             icon: "warning",
             showCancelButton: true,
             confirmButtonColor: "#3085d6",

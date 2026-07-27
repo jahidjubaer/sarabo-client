@@ -4,6 +4,7 @@ import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import { useQuery } from '@tanstack/react-query';
 import { FaMoneyBillWave } from 'react-icons/fa';
 import Loading from '../../../components/Loading/Loading';
+import { formatCurrency } from '../../../utils/formatCurrency';
 
 const CompletedJobs = () => {
     const { user } = useAuth();
@@ -54,8 +55,8 @@ const CompletedJobs = () => {
                             <td>{request.parcelName}</td>
                             <td>{request.createdAt}</td>
                             <td>{request.senderDistrict}</td>
-                            <td>{request.cost}</td>
-                            <td>{calculatePayout(request)}</td>
+                            <td>{formatCurrency(request.cost)}</td>
+                            <td>{formatCurrency(calculatePayout(request))}</td>
                             <td>
                                 <div className="tooltip" data-tip="Payout processing is not available yet">
                                     <button

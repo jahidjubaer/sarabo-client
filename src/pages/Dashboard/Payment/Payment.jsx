@@ -7,6 +7,7 @@ import { MdPayment } from 'react-icons/md';
 import { FaLock } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import { getPaymentErrorMessage } from '../../../utils/paymentErrorMessage';
+import { formatCurrency } from '../../../utils/formatCurrency';
 
 const Payment = () => {
     const { requestId } = useParams();
@@ -76,7 +77,7 @@ const Payment = () => {
 
                         <div className="w-full mt-6">
                             <p className="opacity-70">Amount Payable</p>
-                            <p className="text-4xl font-bold text-primary">${request.cost}</p>
+                            <p className="text-4xl font-bold text-primary">{formatCurrency(request.cost)}</p>
                         </div>
 
                         <button onClick={handlePayment} disabled={submitting} className="btn btn-primary text-black w-full mt-6">

@@ -11,6 +11,7 @@ import Loading from '../../../components/Loading/Loading';
 import StatusBadge from '../../../components/StatusBadge/StatusBadge';
 import { humanizeStatus } from '../../../utils/statusBadge';
 import { getPaymentErrorMessage } from '../../../utils/paymentErrorMessage';
+import { formatCurrency } from '../../../utils/formatCurrency';
 
 const MyRequests = () => {
     const { user } = useAuth();
@@ -145,7 +146,7 @@ const MyRequests = () => {
                             filteredRequests.map((request, index) => <tr key={request._id}>
                                 <th>{index + 1}</th>
                                 <td>{request.parcelName}</td>
-                                <td>{request.cost}</td>
+                                <td>{formatCurrency(request.cost)}</td>
                                 <td>
                                     {
                                         request.paymentStatus === 'paid' ?
