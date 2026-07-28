@@ -5,6 +5,7 @@ import { FaUserShield } from 'react-icons/fa';
 import { FiShieldOff } from 'react-icons/fi';
 import Swal from 'sweetalert2';
 import Loading from '../../../components/Loading/Loading';
+import { getUserRoleUpdateErrorMessage } from '../../../utils/userRoleUpdateErrorMessage';
 
 const roleLabels = { user: 'Customer', rider: 'Technician', admin: 'Admin' };
 
@@ -12,6 +13,9 @@ const UsersManagement = () => {
     const axiosSecure = useAxiosSecure();
     const [searchText, setSearchText] = useState('')
     const [roleFilter, setRoleFilter] = useState('all')
+    // Tracks which user row has a role update in flight, so only that row's
+    // button disables/relabels - not the whole table.
+    const [pendingUserId, setPendingUserId] = useState(null);
 
     const { refetch, data: users = [], isLoading } = useQuery({
         queryKey: ['users', searchText],
@@ -27,41 +31,50 @@ const UsersManagement = () => {
 
     const filteredUsers = users.filter(u => roleFilter === 'all' || u.role === roleFilter);
 
-    const handleMakeAdmin = user => {
-        const roleInfo = { role: 'admin' }
-        //TODO: must ask for confirmation before proceed
-        axiosSecure.patch(`/users/${user._id}/role`, roleInfo)
+    const updateUserRole = (user, role, successMessage) => {
+        if (pendingUserId) return;
+        setPendingUserId(user._id);
+
+        axiosSecure.patch(`/users/${user._id}/role`, { role })
             .then(res => {
-                console.log(res.data);
                 if (res.data.modifiedCount) {
                     refetch();
                     Swal.fire({
                         position: "top-end",
                         icon: "success",
-                        title: `${user.displayName} marked as an Admin`,
+                        title: successMessage,
                         showConfirmButton: false,
                         timer: 2000
                     });
+                } else {
+                    // No document was modified but no error was thrown either -
+                    // the list shown may be stale (e.g. the role already
+                    // changed, or this user no longer exists). Refresh rather
+                    // than silently doing nothing.
+                    refetch();
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'No change was made',
+                        text: "This user's role may have already been updated. The list has been refreshed."
+                    });
                 }
             })
+            .catch(error => {
+                if (import.meta.env.DEV) console.error('User role update failed:', error);
+                Swal.fire({ icon: 'error', title: 'Could not update user role', text: getUserRoleUpdateErrorMessage(error) });
+                refetch();
+            })
+            .finally(() => setPendingUserId(null));
     }
 
+    //TODO: must ask for confirmation before proceed
+    const handleMakeAdmin = user => {
+        updateUserRole(user, 'admin', `${user.displayName} marked as an Admin`);
+    }
+
+    //TODO: must ask for confirmation before proceed
     const handleRemoveAdmin = user => {
-        const roleInfo = { role: 'user' }
-        //TODO: must ask for confirmation before proceed
-        axiosSecure.patch(`/users/${user._id}/role`, roleInfo)
-            .then(res => {
-                if (res.data.modifiedCount) {
-                    refetch();
-                    Swal.fire({
-                        position: "top-end",
-                        icon: "success",
-                        title: `${user.displayName} removed from Admin`,
-                        showConfirmButton: false,
-                        timer: 2000
-                    });
-                }
-            })
+        updateUserRole(user, 'user', `${user.displayName} removed from Admin`);
     }
 
     return (
@@ -139,13 +152,15 @@ const UsersManagement = () => {
                                 {user.role === 'admin' ?
                                     <button
                                         onClick={() => handleRemoveAdmin(user)}
+                                        disabled={pendingUserId === user._id}
                                         className='btn btn-error text-black'>
-                                        <FiShieldOff />
+                                        {pendingUserId === user._id ? 'Updating...' : <FiShieldOff />}
                                     </button> :
                                     <button
                                         onClick={() => handleMakeAdmin(user)}
+                                        disabled={pendingUserId === user._id}
                                         className='btn btn-success text-black'>
-                                        <FaUserShield></FaUserShield>
+                                        {pendingUserId === user._id ? 'Updating...' : <FaUserShield></FaUserShield>}
                                     </button>
                                 }
                             </td>

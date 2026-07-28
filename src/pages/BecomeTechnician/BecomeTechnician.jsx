@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import useAuth from '../../hooks/useAuth';
 import useAxiosSecure from '../../hooks/useAxiosSecure';
 import { useLoaderData } from 'react-router';
 import Swal from 'sweetalert2';
+import { getTechnicianApplicationErrorMessage } from '../../utils/technicianApplicationErrorMessage';
 
 const notBlank = message => value => (value && value.trim().length > 0) || message;
 
@@ -16,6 +17,7 @@ const BecomeTechnician = () => {
     } = useForm();
     const { user } = useAuth();
     const axiosSecure = useAxiosSecure();
+    const [submitting, setSubmitting] = useState(false);
 
     const serviceAreas = useLoaderData();
     const regionsDuplicate = serviceAreas.map(c => c.region);
@@ -31,7 +33,9 @@ const BecomeTechnician = () => {
     const technicianRegion = useWatch({ control, name: 'region' });
 
     const handleTechnicianApplication = data => {
-        console.log(data);
+        if (submitting) return;
+        setSubmitting(true);
+
         axiosSecure.post('/riders', data)
             .then(res => {
                 if (res.data.insertedId) {
@@ -44,6 +48,11 @@ const BecomeTechnician = () => {
                     });
                 }
             })
+            .catch(error => {
+                if (import.meta.env.DEV) console.error('Technician application submission failed:', error);
+                Swal.fire({ icon: 'error', title: 'Could not submit application', text: getTechnicianApplicationErrorMessage(error) });
+            })
+            .finally(() => setSubmitting(false));
     }
     return (
         <div>
@@ -181,7 +190,7 @@ const BecomeTechnician = () => {
 
                     </fieldset>
                 </div>
-                <input type="submit" className='btn btn-primary mt-8 text-black' value="Apply as a Technician" />
+                <input type="submit" disabled={submitting} className='btn btn-primary mt-8 text-black' value={submitting ? 'Submitting Application...' : 'Apply as a Technician'} />
             </form>
         </div>
     );

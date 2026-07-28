@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useLoaderData, useNavigate } from 'react-router';
 import Swal from 'sweetalert2';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import useAuth from '../../../hooks/useAuth';
 import { formatCurrency } from '../../../utils/formatCurrency';
+import { getCreateRequestErrorMessage } from '../../../utils/createRequestErrorMessage';
 
 const notBlank = message => value => (value && value.trim().length > 0) || message;
 
@@ -18,6 +19,7 @@ const CreateRequest = () => {
     const { user } = useAuth();
     const axiosSecure = useAxiosSecure();
     const navigate = useNavigate();
+    const [submitting, setSubmitting] = useState(false);
 
     const serviceAreas = useLoaderData();
     const regionsDuplicate = serviceAreas.map(c => c.region);
@@ -37,7 +39,7 @@ const CreateRequest = () => {
 
 
     const handleCreateRequest = data => {
-        console.log(data);
+        if (submitting) return;
 
         // a repair request has a single service address (the technician visits this location)
         data.receiverDistrict = data.senderDistrict;
@@ -63,7 +65,6 @@ const CreateRequest = () => {
             }
         }
 
-        console.log('cost', cost);
         data.cost = cost;
 
         Swal.fire({
@@ -75,26 +76,29 @@ const CreateRequest = () => {
             cancelButtonColor: "#d33",
             confirmButtonText: "Confirm and Continue Payment!"
         }).then((result) => {
-            if (result.isConfirmed) {
+            if (!result.isConfirmed) return;
 
-                // save the repair request to the database
-                axiosSecure.post('/parcels', data)
-                    .then(res => {
-                        console.log('after saving request', res.data);
-                        if (res.data.insertedId) {
-                            navigate('/dashboard/my-requests')
-                            Swal.fire({
-                                position: "top-end",
-                                icon: "success",
-                                title: "Request has been created. Please Pay",
-                                showConfirmButton: false,
-                                timer: 2500
-                            });
-                        }
-                    })
+            setSubmitting(true);
 
-
-            }
+            // save the repair request to the database
+            axiosSecure.post('/parcels', data)
+                .then(res => {
+                    if (res.data.insertedId) {
+                        navigate('/dashboard/my-requests')
+                        Swal.fire({
+                            position: "top-end",
+                            icon: "success",
+                            title: "Request has been created. Please Pay",
+                            showConfirmButton: false,
+                            timer: 2500
+                        });
+                    }
+                })
+                .catch(error => {
+                    if (import.meta.env.DEV) console.error('Repair request creation failed:', error);
+                    Swal.fire({ icon: 'error', title: 'Could not create request', text: getCreateRequestErrorMessage(error) });
+                })
+                .finally(() => setSubmitting(false));
         });
 
     }
@@ -315,7 +319,7 @@ const CreateRequest = () => {
 
                     </fieldset>
                 </div>
-                <input type="submit" className='btn btn-primary mt-8 text-black' value="Create Repair Request" />
+                <input type="submit" disabled={submitting} className='btn btn-primary mt-8 text-black' value={submitting ? 'Creating Request...' : 'Create Repair Request'} />
             </form>
         </div>
     );
