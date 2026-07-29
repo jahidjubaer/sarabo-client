@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useLocation, useParams } from 'react-router';
 import { FaHistory, FaCreditCard, FaArrowLeft, FaBan } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import useAuth from '../../../hooks/useAuth';
@@ -16,9 +16,17 @@ import { canCancelRequest } from '../../../utils/cancellationEligibility';
 const RequestDetails = () => {
     const { id } = useParams();
     const { user } = useAuth();
+    const location = useLocation();
     const axiosSecure = useAxiosSecure();
     const queryClient = useQueryClient();
     const [cancelling, setCancelling] = useState(false);
+    // This same page is reused from two entry points (see routes/router.jsx):
+    // the customer's own my-requests/:id, and the admin's read-only
+    // manage-repair-requests/:id - the back link and not-found fallback
+    // should return to whichever list the viewer actually came from.
+    const isAdminContext = location.pathname.startsWith('/dashboard/manage-repair-requests');
+    const backTo = isAdminContext ? '/dashboard/manage-repair-requests' : '/dashboard/my-requests';
+    const backLabel = isAdminContext ? 'Back to Manage Repair Requests' : 'Back to My Repair Requests';
 
     const { data: request, isLoading, isError, refetch } = useQuery({
         queryKey: ['parcels', id],
@@ -38,14 +46,21 @@ const RequestDetails = () => {
             <div>
                 <h2 className="text-4xl font-bold">Repair request not found</h2>
                 <p className="mt-4 opacity-70">This request may have been removed, or you may not have access to it.</p>
-                <Link to="/dashboard/my-requests" className="btn btn-outline mt-6">
-                    <FaArrowLeft aria-hidden="true" /> Back to My Repair Requests
+                <Link to={backTo} className="btn btn-outline mt-6">
+                    <FaArrowLeft aria-hidden="true" /> {backLabel}
                 </Link>
             </div>
         );
     }
 
     const isCancelled = request.deliveryStatus === 'cancelled';
+    // Paying and cancelling are actions only the request's own customer can
+    // take - the server already enforces ownership on both endpoints, but an
+    // admin or technician viewing this same page (see routes/router.jsx's
+    // manage-repair-requests/:id route) should never see buttons that would
+    // just fail with a 403. Admin request-management is read-only here by
+    // design (no admin cancellation override, no pay-on-behalf-of).
+    const isOwner = request.senderEmail === user?.email;
 
     const handleCancelRequest = () => {
         if (cancelling) return;
@@ -119,12 +134,12 @@ const RequestDetails = () => {
                 <Link to={`/track-request/${request.trackingId}`} className="btn btn-primary text-black">
                     <FaHistory aria-hidden="true" /> View Timeline
                 </Link>
-                {request.paymentStatus !== 'paid' && !isCancelled && (
+                {isOwner && request.paymentStatus !== 'paid' && !isCancelled && (
                     <Link to={`/dashboard/payment/${request._id}`} className="btn btn-primary text-black">
                         <FaCreditCard aria-hidden="true" /> Pay Now
                     </Link>
                 )}
-                {canCancelRequest(request) && (
+                {isOwner && canCancelRequest(request) && (
                     <button
                         onClick={handleCancelRequest}
                         disabled={cancelling}
@@ -132,8 +147,8 @@ const RequestDetails = () => {
                         <FaBan aria-hidden="true" /> {cancelling ? 'Cancelling...' : 'Cancel Request'}
                     </button>
                 )}
-                <Link to="/dashboard/my-requests" className="btn btn-outline">
-                    <FaArrowLeft aria-hidden="true" /> Back to My Repair Requests
+                <Link to={backTo} className="btn btn-outline">
+                    <FaArrowLeft aria-hidden="true" /> {backLabel}
                 </Link>
             </div>
         </div>

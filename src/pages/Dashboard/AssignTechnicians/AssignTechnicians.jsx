@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import Swal from 'sweetalert2';
 import Loading from '../../../components/Loading/Loading';
@@ -12,6 +13,13 @@ const AssignTechnicians = () => {
     const [assigningId, setAssigningId] = useState(null);
     const axiosSecure = useAxiosSecure();
     const technicianModalRef = useRef();
+    const [searchParams, setSearchParams] = useSearchParams();
+    // Supports being deep-linked from the Manage Repair Requests page with a
+    // specific request preselected (?request=<id>) - only ever auto-opens
+    // once per arrival at this page, and only for a request that is actually
+    // still in this pending-assignment list (never trusts the id alone).
+    const preselectRequestId = searchParams.get('request');
+    const [autoOpenedFor, setAutoOpenedFor] = useState(null);
 
     const { data: requests = [], refetch: requestsRefetch, isLoading } = useQuery({
         queryKey: ['requests', 'pending-assignment'],
@@ -31,6 +39,32 @@ const AssignTechnicians = () => {
         }
     })
 
+    const openAssignTechnicianModal = request => {
+        setSelectedRequest(request);
+
+        technicianModalRef.current.showModal()
+    }
+
+    useEffect(() => {
+        if (isLoading || !preselectRequestId || autoOpenedFor === preselectRequestId) return;
+
+        const match = requests.find(r => r._id === preselectRequestId);
+        if (match) {
+            openAssignTechnicianModal(match);
+        }
+        // Whether found or not, this preselect id has now been handled once -
+        // never keep retrying it (e.g. after the modal is closed) or fall
+        // back to a silent no-op forever if it wasn't eligible/found.
+        setAutoOpenedFor(preselectRequestId);
+        // Drop the query param so a later manual refetch/reopen doesn't
+        // re-trigger the same preselection.
+        setSearchParams(params => {
+            params.delete('request');
+            return params;
+        }, { replace: true });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isLoading, requests, preselectRequestId, autoOpenedFor]);
+
     if (isLoading) {
         return <Loading></Loading>
     }
@@ -38,12 +72,6 @@ const AssignTechnicians = () => {
     const filteredRequests = requests.filter(r => !searchText ||
         (r.parcelName || '').toLowerCase().includes(searchText.toLowerCase()) ||
         (r.senderDistrict || '').toLowerCase().includes(searchText.toLowerCase()));
-
-    const openAssignTechnicianModal = request => {
-        setSelectedRequest(request);
-
-        technicianModalRef.current.showModal()
-    }
 
     // Only riderId is required server-side (the technician's name/email are
     // looked up and trusted from the database, not from this body) - the

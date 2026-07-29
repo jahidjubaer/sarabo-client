@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaTools, FaRegCreditCard, FaTasks, FaUsers, FaUserCheck, FaUserCog, FaUser } from 'react-icons/fa';
+import { FaTools, FaRegCreditCard, FaTasks, FaUsers, FaUserCheck, FaUserCog, FaUser, FaClipboardList } from 'react-icons/fa';
 import { Link, NavLink, Outlet } from 'react-router';
 import useRole from '../hooks/useRole';
 import { SiGoogletasks } from 'react-icons/si';
@@ -83,6 +83,12 @@ const DashboardLayout = () => {
                         {/* admin only links */}
                         {
                             role === 'admin' && <>
+                                <li>
+                                    <NavLink className="is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="Manage Repair Requests" to="/dashboard/manage-repair-requests">
+                                        <FaClipboardList />
+                                        <span className="is-drawer-close:hidden">Manage Repair Requests</span>
+                                    </NavLink>
+                                </li>
                                 <li>
                                     <NavLink className="is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="Approve Technicians" to="/dashboard/approve-technicians">
                                         <FaUserCheck />

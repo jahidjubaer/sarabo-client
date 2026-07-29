@@ -28,6 +28,7 @@ import TrackRequest from "../pages/TrackRequest/TrackRequest";
 import DashboardHome from "../pages/Dashboard/DashboardHome/DashboardHome";
 import RequestDetails from "../pages/Dashboard/RequestDetails/RequestDetails";
 import Profile from "../pages/Dashboard/Profile/Profile";
+import ManageRepairRequests from "../pages/Dashboard/ManageRepairRequests/ManageRepairRequests";
 
 export const router = createBrowserRouter([
   {
@@ -143,6 +144,14 @@ export const router = createBrowserRouter([
       {
         path: 'users-management',
         element: <AdminRoute><UsersManagement></UsersManagement></AdminRoute>
+      },
+      {
+        path: 'manage-repair-requests',
+        element: <AdminRoute><ManageRepairRequests></ManageRepairRequests></AdminRoute>
+      },
+      {
+        path: 'manage-repair-requests/:id',
+        element: <AdminRoute><RequestDetails></RequestDetails></AdminRoute>
       }
     ]
   }
