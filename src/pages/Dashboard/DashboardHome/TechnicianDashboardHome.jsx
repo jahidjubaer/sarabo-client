@@ -105,7 +105,7 @@ const TechnicianDashboardHome = () => {
                 )
             }
             <div className="mt-6 flex gap-3">
-                <Link to="/dashboard/assigned-jobs" className="btn btn-primary text-black">View Assigned Repairs</Link>
+                <Link to="/dashboard/assigned-jobs" className="btn btn-primary">View Assigned Repairs</Link>
                 <Link to="/dashboard/completed-jobs" className="btn">View Completed Repairs</Link>
             </div>
         </div>

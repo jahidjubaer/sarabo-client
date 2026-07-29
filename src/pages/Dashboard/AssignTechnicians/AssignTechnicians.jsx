@@ -155,7 +155,7 @@ const AssignTechnicians = () => {
                             <td>
                                 <button
                                     onClick={() => openAssignTechnicianModal(request)}
-                                    className='btn btn-primary text-black'>Find Technicians</button>
+                                    className='btn btn-primary'>Find Technicians</button>
                             </td>
                         </tr>)}
 
@@ -192,7 +192,7 @@ const AssignTechnicians = () => {
                                         <button
                                             onClick={() => handleAssignTechnician(technician)}
                                             disabled={!!assigningId}
-                                            className='btn btn-primary text-black'>{assigningId === technician._id ? 'Assigning...' : 'Assign'}</button>
+                                            className='btn btn-primary'>{assigningId === technician._id ? 'Assigning...' : 'Assign'}</button>
                                     </td>
                                 </tr>)}
 

@@ -131,11 +131,11 @@ const RequestDetails = () => {
             </div>
 
             <div className="mt-8 flex flex-wrap gap-3">
-                <Link to={`/track-request/${request.trackingId}`} className="btn btn-primary text-black">
+                <Link to={`/track-request/${request.trackingId}`} className="btn btn-primary">
                     <FaHistory aria-hidden="true" /> View Timeline
                 </Link>
                 {isOwner && request.paymentStatus !== 'paid' && !isCancelled && (
-                    <Link to={`/dashboard/payment/${request._id}`} className="btn btn-primary text-black">
+                    <Link to={`/dashboard/payment/${request._id}`} className="btn btn-primary">
                         <FaCreditCard aria-hidden="true" /> Pay Now
                     </Link>
                 )}

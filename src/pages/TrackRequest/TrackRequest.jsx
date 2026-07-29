@@ -57,7 +57,7 @@ const TrackRequest = () => {
                         aria-invalid={formError ? 'true' : 'false'}
                     />
                     {formError && <p role="alert" className="text-red-500 text-sm">{formError}</p>}
-                    <button type="submit" className="btn btn-primary text-black">Track Repair</button>
+                    <button type="submit" className="btn btn-primary">Track Repair</button>
                 </form>
             </div>
         );

@@ -158,7 +158,7 @@ const Register = () => {
                     <div className="tooltip" data-tip="Password reset is not available yet">
                         <span className="text-sm opacity-60">Forgot password?</span>
                     </div>
-                    <button disabled={submitting} className="btn btn-primary text-black mt-4">
+                    <button disabled={submitting} className="btn btn-primary mt-4">
                         {submitting ? 'Creating account...' : 'Register'}
                     </button>
                 </fieldset>

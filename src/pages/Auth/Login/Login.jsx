@@ -84,7 +84,7 @@ const Login = () => {
                         {resetting ? 'Sending reset email...' : 'Forgot password?'}
                     </button>
 
-                    <button disabled={submitting} className="btn btn-primary text-black mt-4">
+                    <button disabled={submitting} className="btn btn-primary mt-4">
                         {submitting ? 'Logging in...' : 'Login'}
                     </button>
                 </fieldset>

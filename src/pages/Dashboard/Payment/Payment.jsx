@@ -80,7 +80,7 @@ const Payment = () => {
                             <p className="text-4xl font-bold text-primary">{formatCurrency(request.cost)}</p>
                         </div>
 
-                        <button onClick={handlePayment} disabled={submitting} className="btn btn-primary text-black w-full mt-6">
+                        <button onClick={handlePayment} disabled={submitting} className="btn btn-primary w-full mt-6">
                             {submitting ? 'Starting payment...' : 'Pay Now'}
                         </button>
 

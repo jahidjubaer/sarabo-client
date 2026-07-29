@@ -95,7 +95,7 @@ const AssignedJobs = () => {
                                             <button
                                                 onClick={() => handleJobStatusUpdate(request, 'rider_arriving')}
                                                 disabled={pendingAction?.id === request._id}
-                                                className='btn btn-primary text-black btn-sm'>
+                                                className='btn btn-primary btn-sm'>
                                                 <FaCheck aria-hidden="true" />
                                                 {pendingAction?.id === request._id && pendingAction.status === 'rider_arriving'
                                                     ? PENDING_LABELS.rider_arriving
@@ -120,7 +120,7 @@ const AssignedJobs = () => {
                                     <button
                                         onClick={() => handleJobStatusUpdate(request, 'parcel_picked_up')}
                                         disabled={pendingAction?.id === request._id}
-                                        className='btn btn-primary text-black btn-sm'>
+                                        className='btn btn-primary btn-sm'>
                                         <FaRoute aria-hidden="true" />
                                         {pendingAction?.id === request._id && pendingAction.status === 'parcel_picked_up'
                                             ? PENDING_LABELS.parcel_picked_up
@@ -129,7 +129,7 @@ const AssignedJobs = () => {
                                     <button
                                         onClick={() => handleJobStatusUpdate(request, 'parcel_delivered')}
                                         disabled={pendingAction?.id === request._id}
-                                        className='btn btn-primary text-black btn-sm'>
+                                        className='btn btn-primary btn-sm'>
                                         <FaClipboardCheck aria-hidden="true" />
                                         {pendingAction?.id === request._id && pendingAction.status === 'parcel_delivered'
                                             ? PENDING_LABELS.parcel_delivered

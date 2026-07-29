@@ -158,7 +158,7 @@ const MyRequests = () => {
                                             <button
                                                 onClick={() => handlePayment(request)}
                                                 disabled={payingId === request._id}
-                                                className="btn btn-sm btn-primary text-black">
+                                                className="btn btn-sm btn-primary">
                                                 <FaCreditCard aria-hidden="true" /> {payingId === request._id ? 'Starting...' : 'Pay'}
                                             </button>
 

@@ -319,7 +319,7 @@ const CreateRequest = () => {
 
                     </fieldset>
                 </div>
-                <input type="submit" disabled={submitting} className='btn btn-primary mt-8 text-black' value={submitting ? 'Creating Request...' : 'Create Repair Request'} />
+                <input type="submit" disabled={submitting} className='btn btn-primary mt-8' value={submitting ? 'Creating Request...' : 'Create Repair Request'} />
             </form>
         </div>
     );

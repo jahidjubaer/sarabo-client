@@ -50,7 +50,7 @@ const About = () => {
                 <p className="mt-2 opacity-70">
                     Create a repair request and our team will take care of the rest.
                 </p>
-                <Link to="/dashboard/create-request" className="btn btn-primary mt-6 text-black">
+                <Link to="/dashboard/create-request" className="btn btn-primary mt-6">
                     Create a Repair Request
                 </Link>
             </div>

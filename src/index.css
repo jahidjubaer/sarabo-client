@@ -4,16 +4,71 @@
    themes: light --default;
 };
 
+/*
+ * Sarabo brand primary: a restrained blue-teal (#2478A6), replacing the
+ * inherited Zap Shift lime-green (#CAEB66). --color-primary-content is set
+ * explicitly to white so btn-primary/badge-primary/etc. get readable text by
+ * default - the old lime primary had no explicit content colour, which is
+ * why every call site across the app compensated with a hardcoded
+ * `text-black` override. Unit 2.1 removed `text-black` only where it sat on
+ * a `btn-primary` element (relying on --color-primary-content above);
+ * `text-black` on unrelated surfaces (btn-error/btn-success/bg-white/plain
+ * form text) was left untouched - see Unit 2.1 report, Phase B/C.
+ */
 @plugin "daisyui/theme" {
   name: "light";
   default: true;
-  --color-primary: #CAEB66;
+  --color-primary: #2478A6;
+  --color-primary-content: #FFFFFF;
   --color-secondary: #03373D;
 }
 
+/*
+ * Extra brand tokens for concepts DaisyUI's theme system has no slot for:
+ * a dark technical-section surface, its own on-dark text colour, a
+ * restrained accent for use inside dark sections, and a reserved colour for
+ * a future single priority CTA per section. Ordinary surfaces/text
+ * (base-100/200/300, base-content, primary, secondary) already have DaisyUI
+ * utilities and are reused as-is rather than duplicated here.
+ */
+@theme {
+  --color-brand-accent: #38BDF8;
+  --color-brand-priority: #C2703D;
+  --color-surface-dark: #0B1A24;
+  --color-surface-dark-alt: #111827;
+  --color-on-dark: #E5EDF2;
+}
 
 body {
   font-family: "Urbanist", sans-serif;
   font-optical-sizing: auto;
   font-style: normal;
+}
+
+/* Shared keyboard-focus ring for public/shared components - reuses
+   brand-accent so it stays visible on both light and dark surfaces instead
+   of needing two separate focus colours. */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--color-brand-accent);
+  outline-offset: 2px;
+}
+
+/* CSS-only technical grid for dark sections - no image asset required. */
+.tech-grid-pattern {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Foundation only - no motion library runs yet. This does not affect
+   Swiper's autoplay (a JS timer, not a CSS transition/animation) or any
+   dashboard behavior. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

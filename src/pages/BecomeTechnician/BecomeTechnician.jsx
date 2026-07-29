@@ -190,7 +190,7 @@ const BecomeTechnician = () => {
 
                     </fieldset>
                 </div>
-                <input type="submit" disabled={submitting} className='btn btn-primary mt-8 text-black' value={submitting ? 'Submitting Application...' : 'Apply as a Technician'} />
+                <input type="submit" disabled={submitting} className='btn btn-primary mt-8' value={submitting ? 'Submitting Application...' : 'Apply as a Technician'} />
             </form>
         </div>
     );

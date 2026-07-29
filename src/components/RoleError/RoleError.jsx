@@ -11,7 +11,7 @@ const RoleError = () => {
             <p className="text-gray-600 mt-2">
                 Please refresh the page or try again shortly.
             </p>
-            <Link to="/" className="btn btn-primary text-black mt-4">
+            <Link to="/" className="btn btn-primary mt-4">
                 Go to Home
             </Link>
         </div>

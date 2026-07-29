@@ -63,7 +63,7 @@ const CompletedJobs = () => {
                                         type="button"
                                         disabled
                                         aria-disabled="true"
-                                        className='btn btn-primary text-black btn-sm'>
+                                        className='btn btn-primary btn-sm'>
                                         <FaMoneyBillWave aria-hidden="true" /> Cash out
                                     </button>
                                 </div>

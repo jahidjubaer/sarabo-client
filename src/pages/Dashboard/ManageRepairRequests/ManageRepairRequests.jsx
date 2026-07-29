@@ -97,7 +97,7 @@ const ManageRepairRequests = () => {
                 <div className="alert alert-error mt-8">
                     <span>{getManageRepairRequestsErrorMessage(error)}</span>
                 </div>
-                <button onClick={() => refetch()} className="btn btn-primary text-black mt-4">Retry</button>
+                <button onClick={() => refetch()} className="btn btn-primary mt-4">Retry</button>
             </div>
         );
     }

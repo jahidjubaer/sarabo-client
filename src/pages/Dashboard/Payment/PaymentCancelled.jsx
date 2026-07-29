@@ -18,7 +18,7 @@ const PaymentCancelled = () => {
                         </p>
 
                         <div className="flex flex-col sm:flex-row gap-3 w-full mt-6">
-                            <Link to="/dashboard/my-requests" className="btn btn-primary text-black flex-1">Return to My Repair Requests</Link>
+                            <Link to="/dashboard/my-requests" className="btn btn-primary flex-1">Return to My Repair Requests</Link>
                             <Link to="/dashboard" className="btn btn-outline flex-1">Go to Dashboard</Link>
                         </div>
                     </div>

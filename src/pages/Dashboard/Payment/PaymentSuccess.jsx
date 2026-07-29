@@ -101,7 +101,7 @@ const PaymentSuccess = () => {
 
                             {
                                 canRetry &&
-                                <button onClick={handleRetry} className="btn btn-primary text-black w-full mt-4">Retry Verification</button>
+                                <button onClick={handleRetry} className="btn btn-primary w-full mt-4">Retry Verification</button>
                             }
 
                             <div className="flex flex-col sm:flex-row gap-3 w-full mt-3">
@@ -166,7 +166,7 @@ const PaymentSuccess = () => {
                                     </p>
 
                                     <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
-                                        <Link to="/dashboard/my-requests" className="btn btn-primary text-black flex-1">View My Repair Requests</Link>
+                                        <Link to="/dashboard/my-requests" className="btn btn-primary flex-1">View My Repair Requests</Link>
                                         <Link to="/dashboard/payment-history" className="btn btn-outline flex-1">View Payment History</Link>
                                     </div>
                                     <Link to="/dashboard" className="btn btn-ghost btn-sm w-full mt-2">Return to Dashboard</Link>

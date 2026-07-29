@@ -68,7 +68,7 @@ const Profile = () => {
                 </div>
 
                 {!isEditing ? (
-                    <button onClick={() => setIsEditing(true)} className="btn btn-primary text-black">Edit Profile</button>
+                    <button onClick={() => setIsEditing(true)} className="btn btn-primary">Edit Profile</button>
                 ) : (
                     <form onSubmit={handleSave}>
                         <label className="label">Name</label>
@@ -87,7 +87,7 @@ const Profile = () => {
                             accept="image/*" />
 
                         <div className="mt-6 flex gap-2">
-                            <button type="submit" disabled={saving} className="btn btn-primary text-black">
+                            <button type="submit" disabled={saving} className="btn btn-primary">
                                 {saving ? 'Saving...' : 'Save'}
                             </button>
                             <button type="button" onClick={() => setIsEditing(false)} className="btn">Cancel</button>

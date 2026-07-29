@@ -69,7 +69,7 @@ const NavBar = () => {
                         : <Link className='btn' to="/login">Log in</Link>
                 }
                 <Link
-                    className='btn btn-primary text-black hidden lg:inline-flex'
+                    className='btn btn-primary hidden lg:inline-flex'
                     to="/become-technician">Become a Technician</Link>
             </div>
         </div>

@@ -72,7 +72,7 @@ const Services = () => {
                                     <h3 className="card-title mt-2">{service.label}</h3>
                                     <p className="text-sm opacity-70">{service.description}</p>
                                     <div className="card-actions mt-4">
-                                        <Link to="/dashboard/create-request" className="btn btn-primary btn-sm text-black">
+                                        <Link to="/dashboard/create-request" className="btn btn-primary btn-sm">
                                             Request this service
                                         </Link>
                                     </div>
@@ -89,7 +89,7 @@ const Services = () => {
                     No problem — choose "Other" when creating a request and describe the issue,
                     and we'll match you with the right technician.
                 </p>
-                <Link to="/dashboard/create-request" className="btn btn-primary mt-6 text-black">
+                <Link to="/dashboard/create-request" className="btn btn-primary mt-6">
                     Create a Repair Request
                 </Link>
             </div>

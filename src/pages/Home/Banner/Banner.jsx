@@ -11,7 +11,7 @@ const Banner = () => {
                     <h1 className="text-4xl md:text-5xl font-bold">Reliable Repair Service, At Your Doorstep</h1>
                     <p className="mt-4 text-lg opacity-70">Book a verified technician for your appliances and devices, track every step, and pay securely online.</p>
                     <div className="mt-8 flex flex-wrap justify-center gap-4">
-                        <Link to="/dashboard/create-request" className="btn btn-primary text-black">Create Repair Request</Link>
+                        <Link to="/dashboard/create-request" className="btn btn-primary">Create Repair Request</Link>
                         <Link to="/become-technician" className="btn btn-outline">Become a Technician</Link>
                     </div>
                 </div>
