@@ -1,16 +1,17 @@
-import React from 'react';
-import Banner from '../Banner/Banner';
+import HeroSwiper from '../HeroSwiper/HeroSwiper';
 import ServiceCategories from '../ServiceCategories/ServiceCategories';
-import Reviews from '../Reviews/Reviews';
-
-const reviewsPromise = fetch('/reviews.json').then(res => res.json());
+import HowItWorks from '../HowItWorks/HowItWorks';
+import WhyChooseSarabo from '../WhyChooseSarabo/WhyChooseSarabo';
+import RepairLifecycle from '../RepairLifecycle/RepairLifecycle';
 
 const Home = () => {
     return (
         <div>
-            <Banner></Banner>
+            <HeroSwiper></HeroSwiper>
             <ServiceCategories></ServiceCategories>
-            <Reviews reviewsPromise={reviewsPromise}></Reviews>
+            <HowItWorks></HowItWorks>
+            <WhyChooseSarabo></WhyChooseSarabo>
+            <RepairLifecycle></RepairLifecycle>
         </div>
     );
 };

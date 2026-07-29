@@ -1,4 +1,4 @@
-import React from 'react';
+import { useMemo } from 'react';
 import 'swiper/css';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay } from 'swiper/modules';
@@ -6,24 +6,35 @@ import { Link } from 'react-router';
 import { FaSnowflake, FaTv, FaMobileAlt, FaLaptop, FaTools } from 'react-icons/fa';
 import { GiWashingMachine } from 'react-icons/gi';
 import { MdKitchen, MdMicrowave } from 'react-icons/md';
+import SectionHeader from '../../../components/public/SectionHeader';
 
 const categories = [
-    { label: 'AC', icon: FaSnowflake },
-    { label: 'Refrigerator', icon: MdKitchen },
-    { label: 'Washing Machine', icon: GiWashingMachine },
-    { label: 'TV / Electronics', icon: FaTv },
-    { label: 'Mobile Phone', icon: FaMobileAlt },
-    { label: 'Laptop / Computer', icon: FaLaptop },
-    { label: 'Microwave', icon: MdMicrowave },
-    { label: 'Other', icon: FaTools },
+    { label: 'AC Repair', icon: FaSnowflake },
+    { label: 'Refrigerator Repair', icon: MdKitchen },
+    { label: 'Washing Machine Repair', icon: GiWashingMachine },
+    { label: 'TV / Electronics Repair', icon: FaTv },
+    { label: 'Mobile Phone Repair', icon: FaMobileAlt },
+    { label: 'Laptop / Computer Repair', icon: FaLaptop },
+    { label: 'Microwave Repair', icon: MdMicrowave },
+    { label: 'Other Repairs', icon: FaTools },
 ];
 
 const ServiceCategories = () => {
+    const prefersReducedMotion = useMemo(
+        () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+        []
+    );
+
     return (
-        <div className="my-16">
-            <h3 className="text-2xl font-semibold text-center mb-8">Popular Service Categories</h3>
+        <section className="px-4 py-16 sm:px-6 lg:px-8">
+            <SectionHeader
+                eyebrow="What We Repair"
+                title="Popular Service Categories"
+                description="Browse the most requested repair categories on Sarabo."
+            />
             <Swiper
-                loop={true}
+                className="mt-12"
+                rewind
                 slidesPerView={2}
                 spaceBetween={20}
                 breakpoints={{
@@ -32,8 +43,9 @@ const ServiceCategories = () => {
                 }}
                 grabCursor={true}
                 modules={[Autoplay]}
-                autoplay={{
-                    delay: 1500,
+                autoplay={prefersReducedMotion ? false : {
+                    delay: 4000,
+                    pauseOnMouseEnter: true,
                     disableOnInteraction: false,
                 }}
             >
@@ -42,16 +54,19 @@ const ServiceCategories = () => {
                         const Icon = category.icon;
                         return (
                             <SwiperSlide key={index}>
-                                <Link to="/dashboard/create-request" className="flex flex-col items-center gap-2 p-6 rounded-xl bg-base-200 hover:bg-base-300 transition">
-                                    <Icon className="text-4xl text-primary" />
-                                    <span className="text-sm font-medium text-center">{category.label}</span>
+                                <Link
+                                    to="/dashboard/create-request"
+                                    className="focus-ring flex flex-col items-center gap-2 rounded-xl bg-base-200 p-6 transition-colors hover:bg-base-300"
+                                >
+                                    <Icon className="text-4xl text-primary" aria-hidden="true" />
+                                    <span className="text-center text-sm font-medium">{category.label}</span>
                                 </Link>
                             </SwiperSlide>
                         );
                     })
                 }
             </Swiper>
-        </div>
+        </section>
     );
 };
 
