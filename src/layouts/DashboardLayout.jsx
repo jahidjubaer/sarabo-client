@@ -1,11 +1,14 @@
 import React from 'react';
 import { FaTools, FaRegCreditCard, FaTasks, FaUsers, FaUserCheck, FaUserCog, FaUser, FaClipboardList } from 'react-icons/fa';
 import { Link, NavLink, Outlet } from 'react-router';
+import useAuth from '../hooks/useAuth';
 import useRole from '../hooks/useRole';
 import { SiGoogletasks } from 'react-icons/si';
 import logoImg from '../assets/logo.png';
+import NotificationBell from '../components/notifications/NotificationBell';
 
 const DashboardLayout = () => {
+    const { user } = useAuth();
     const { role } = useRole();
     return (
         <div className="drawer lg:drawer-open max-w-7xl mx-auto ">
@@ -18,6 +21,15 @@ const DashboardLayout = () => {
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" strokeLinejoin="round" strokeLinecap="round" strokeWidth="2" fill="none" stroke="currentColor" className="my-1.5 inline-block size-4"><path d="M4 4m0 2a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2z"></path><path d="M9 4v16"></path><path d="M14 10l2 2l-2 2"></path></svg>
                     </label>
                     <div className="px-4">Sarabo Dashboard</div>
+                    {/* Pushed to the far end of the bar - this bare .navbar
+                    (unlike the shared NavBar) has no navbar-start/end wrapper
+                    divs to lean on for spacing. Same NotificationBell used by
+                    the shared NavBar, unchanged - it's already self-contained
+                    (its own relative/absolute positioning), so it needs no
+                    dashboard-specific variant. */}
+                    <div className="ml-auto flex items-center">
+                        {user && <NotificationBell />}
+                    </div>
                 </nav>
                 {/* Page content here */}
                 <div className="p-4 md:p-8">

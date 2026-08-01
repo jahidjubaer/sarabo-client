@@ -7,6 +7,7 @@ import useAuth from '../../../hooks/useAuth';
 import useRole from '../../../hooks/useRole';
 import useClickOutside from '../../../hooks/useClickOutside';
 import ProfileDropdown from './ProfileDropdown';
+import NotificationBell from '../../../components/notifications/NotificationBell';
 import { ROLE_SHORTCUTS } from './roleShortcuts';
 
 // Active state is shown via colour + weight + a bottom indicator together
@@ -114,8 +115,10 @@ const NavBar = () => {
             </div>
 
             <div className="navbar-end gap-2">
-                {/* Reserved layout position - a future NotificationBell mounts
-                here beside the avatar. No bell/badge/count renders yet. */}
+                {/* Visible at every breakpoint (unlike navbar-actions below,
+                which is desktop-only) so the bell stays reachable on mobile,
+                where the avatar/logout menu instead lives in the drawer. */}
+                {user && <NotificationBell />}
                 <div className="navbar-actions hidden lg:flex lg:items-center lg:gap-2">
                     {
                         user
