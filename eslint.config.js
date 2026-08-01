@@ -26,4 +26,13 @@ export default defineConfig([
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
     },
   },
+  {
+    // Runs under Node during `vite build`/`vite dev`, not in the browser -
+    // needs process/import.meta.dirname-style Node globals, unlike every
+    // other file in this project.
+    files: ['vite.config.js'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
 ])
