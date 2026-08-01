@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useLocation } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import { FaBell } from 'react-icons/fa';
 import useAuth from '../../hooks/useAuth';
 import useClickOutside from '../../hooks/useClickOutside';
@@ -187,6 +187,18 @@ const NotificationBell = () => {
                             </ul>
                         )}
                     </div>
+
+                    {/* Fixed target, never server/user data, so no
+                    isSafeInternalPath check is needed here - unlike
+                    NotificationItem's actionUrl. Closes the dropdown but
+                    never touches mark-one/mark-all. */}
+                    <Link
+                        to="/dashboard/notifications"
+                        onClick={close}
+                        className="focus-ring block border-t border-base-300 px-4 py-2.5 text-center text-sm font-medium text-primary hover:bg-base-200"
+                    >
+                        View all notifications
+                    </Link>
                 </div>
             )}
         </div>

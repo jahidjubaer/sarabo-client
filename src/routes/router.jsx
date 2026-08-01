@@ -29,6 +29,7 @@ import DashboardHome from "../pages/Dashboard/DashboardHome/DashboardHome";
 import RequestDetails from "../pages/Dashboard/RequestDetails/RequestDetails";
 import Profile from "../pages/Dashboard/Profile/Profile";
 import ManageRepairRequests from "../pages/Dashboard/ManageRepairRequests/ManageRepairRequests";
+import NotificationsPage from "../pages/Dashboard/Notifications/NotificationsPage";
 
 export const router = createBrowserRouter([
   {
@@ -105,6 +106,14 @@ export const router = createBrowserRouter([
       {
         path: 'profile',
         Component: Profile
+      },
+      {
+        // Role-independent, like 'profile' above - PrivateRoute already
+        // wraps this whole dashboard tree, and every authenticated role
+        // (user/rider/admin) can receive notifications, so no additional
+        // CustomerRoute/TechnicianRoute/AdminRoute wrapper is needed here.
+        path: 'notifications',
+        Component: NotificationsPage
       },
       {
         path: 'payment/:requestId',

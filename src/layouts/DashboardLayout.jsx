@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaTools, FaRegCreditCard, FaTasks, FaUsers, FaUserCheck, FaUserCog, FaUser, FaClipboardList } from 'react-icons/fa';
+import { FaTools, FaRegCreditCard, FaTasks, FaUsers, FaUserCheck, FaUserCog, FaUser, FaClipboardList, FaBell } from 'react-icons/fa';
 import { Link, NavLink, Outlet } from 'react-router';
 import useAuth from '../hooks/useAuth';
 import useRole from '../hooks/useRole';
@@ -122,7 +122,15 @@ const DashboardLayout = () => {
                             </>
                         }
 
-                        {/* List item */}
+                        {/* Account-level utilities, available to every
+                        authenticated role - not gated by `role` like the
+                        business-workflow groups above. */}
+                        <li>
+                            <NavLink className="is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="Notifications" to="/dashboard/notifications">
+                                <FaBell />
+                                <span className="is-drawer-close:hidden">Notifications</span>
+                            </NavLink>
+                        </li>
                         <li>
                             <NavLink className="is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="Profile" to="/dashboard/profile">
                                 <FaUser />

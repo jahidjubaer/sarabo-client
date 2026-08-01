@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import useAuth from './useAuth';
 import useAxiosSecure from './useAxiosSecure';
 import { notificationKeys, normalizeListParams } from './notificationKeys';
@@ -19,7 +19,12 @@ function shouldRetry(failureCount, error) {
     return failureCount < 2;
 }
 
-export function useNotifications(params = {}, { enabled = true } = {}) {
+// `keepPreviousPage` is off by default (the bell preview never needs it,
+// since it only ever fetches page 1) - the paginated Notification Center
+// page opts in so changing pages doesn't flash a loading skeleton over
+// already-visible content (mirrors ManageRepairRequests.jsx's identical use
+// of TanStack Query's keepPreviousData for the same reason).
+export function useNotifications(params = {}, { enabled = true, keepPreviousPage = false } = {}) {
     const { user, loading: authLoading } = useAuth();
     const axiosSecure = useAxiosSecure();
     const normalizedParams = normalizeListParams(params);
@@ -33,6 +38,7 @@ export function useNotifications(params = {}, { enabled = true } = {}) {
         staleTime: 30 * 1000,
         refetchOnWindowFocus: true,
         retry: shouldRetry,
+        placeholderData: keepPreviousPage ? keepPreviousData : undefined,
     });
 }
 
