@@ -16,7 +16,10 @@ const CustomerDashboardHome = () => {
     const { data: requests = [], isLoading: requestsLoading } = useQuery({
         queryKey: ['my-requests', user?.email],
         queryFn: async () => {
-            const res = await axiosSecure.get(`/parcels?email=${user.email}`);
+            // No email in the request URL - the server already scopes a
+            // non-admin caller to their own token-derived identity
+            // regardless of any ?email= query value.
+            const res = await axiosSecure.get('/parcels');
             return res.data;
         }
     })
@@ -24,7 +27,7 @@ const CustomerDashboardHome = () => {
     const { data: payments = [], isLoading: paymentsLoading } = useQuery({
         queryKey: ['payments', user?.email],
         queryFn: async () => {
-            const res = await axiosSecure.get(`/payments?email=${user.email}`);
+            const res = await axiosSecure.get('/payments');
             return res.data;
         }
     })

@@ -12,7 +12,9 @@ const PaymentHistory = () => {
     const { data: payments = [], isLoading } = useQuery({
         queryKey: ['payments', user.email],
         queryFn: async () => {
-            const res = await axiosSecure.get(`/payments?email=${user.email}`)
+            // No email in the request URL - the server already scopes a
+            // non-admin caller to their own token-derived identity.
+            const res = await axiosSecure.get('/payments')
             return res.data;
         }
     })

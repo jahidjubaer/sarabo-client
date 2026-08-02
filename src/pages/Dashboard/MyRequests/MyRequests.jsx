@@ -27,7 +27,9 @@ const MyRequests = () => {
     const { data: requests = [], refetch, isLoading } = useQuery({
         queryKey: ['my-requests', user?.email],
         queryFn: async () => {
-            const res = await axiosSecure.get(`/parcels?email=${user.email}`);
+            // No email in the request URL - the server already scopes a
+            // non-admin caller to their own token-derived identity.
+            const res = await axiosSecure.get('/parcels');
             return res.data;
         }
     })

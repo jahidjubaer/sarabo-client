@@ -4,6 +4,7 @@ import { createUserWithEmailAndPassword, GoogleAuthProvider, onAuthStateChanged,
 import { auth } from '../../firebase/firebase.init';
 import { useQueryClient } from '@tanstack/react-query';
 import { notificationKeys } from '../../hooks/notificationKeys';
+import { roleKeys } from '../../hooks/roleKeys';
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -49,12 +50,24 @@ const AuthProvider = ({ children }) => {
         const unSubscribe = onAuthStateChanged(auth, (currentUser) => {
             const previousUid = previousUidRef.current;
             const nextUid = currentUser?.uid ?? null;
-            // Narrow, notification-only cache removal on logout or a
+            // Narrow, notification/role-only cache removal on logout or a
             // different authenticated user replacing the previous one -
             // never a blanket queryClient.clear(), which would also wipe
-            // unrelated app cache this unit has no mandate to touch.
+            // unrelated app cache this unit has no mandate to touch. The
+            // role query key never carries an email/uid itself (see
+            // roleKeys.js), so this explicit removal is what actually
+            // prevents a stale previous-account role from ever being read
+            // after an account switch. cancelQueries first (not just
+            // removeQueries) so a still-in-flight fetch for the previous
+            // account can never resolve afterward and repopulate the same
+            // key with stale data - removeQueries alone only clears
+            // already-settled cache, it doesn't stop a pending request from
+            // writing its result in later.
             if (previousUid !== undefined && previousUid !== nextUid) {
+                queryClient.cancelQueries({ queryKey: notificationKeys.all });
                 queryClient.removeQueries({ queryKey: notificationKeys.all });
+                queryClient.cancelQueries({ queryKey: roleKeys.current() });
+                queryClient.removeQueries({ queryKey: roleKeys.current() });
             }
             previousUidRef.current = nextUid;
 
