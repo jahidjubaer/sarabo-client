@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import useAuth from './useAuth';
 import { useNavigate } from 'react-router';
 import { API_BASE_URL } from '../config/api';
+import { auth } from '../firebase/firebase.init';
 
 const axiosSecure = axios.create({
     baseURL: API_BASE_URL
@@ -13,17 +14,24 @@ const axiosSecure = axios.create({
 let isHandlingSessionExpiry = false;
 
 const useAxiosSecure = () => {
-    const { user, logOut } = useAuth();
+    const { logOut } = useAuth();
     const navigate = useNavigate();
 
     useEffect(() => {
         // intercept request: always attach a fresh Firebase ID token, never the
         // stale/undocumented user.accessToken field. getIdToken() returns the
         // cached token unless it's expired/near-expiry, in which case the SDK
-        // refreshes it automatically.
+        // refreshes it automatically. Read auth.currentUser (the SDK's live
+        // pointer, updated synchronously the moment signIn*()/signInWithPopup()
+        // resolves) rather than the React-context user, which only updates once
+        // onAuthStateChanged fires on its own schedule and a re-render commits -
+        // that lag let a request fired immediately after sign-in go out with no
+        // Authorization header at all, since the interceptor's closure still had
+        // the previous (often null) user.
         const reqInterceptor = axiosSecure.interceptors.request.use(async config => {
-            if (user) {
-                const token = await user.getIdToken();
+            const currentUser = auth.currentUser;
+            if (currentUser) {
+                const token = await currentUser.getIdToken();
                 config.headers.Authorization = `Bearer ${token}`;
             }
             return config;
@@ -37,10 +45,10 @@ const useAxiosSecure = () => {
             const originalRequest = error.config;
 
             // 401: attempt exactly one forced token refresh + retry before giving up.
-            if (statusCode === 401 && user && originalRequest && !originalRequest._retry) {
+            if (statusCode === 401 && auth.currentUser && originalRequest && !originalRequest._retry) {
                 originalRequest._retry = true;
                 try {
-                    const freshToken = await user.getIdToken(true);
+                    const freshToken = await auth.currentUser.getIdToken(true);
                     originalRequest.headers.Authorization = `Bearer ${freshToken}`;
                     return await axiosSecure(originalRequest);
                 } catch {
@@ -71,7 +79,7 @@ const useAxiosSecure = () => {
             axiosSecure.interceptors.response.eject(resInterceptor);
         }
 
-    }, [user, logOut, navigate])
+    }, [logOut, navigate])
 
     return axiosSecure;
 };
