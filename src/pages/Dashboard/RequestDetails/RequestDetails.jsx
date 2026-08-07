@@ -12,6 +12,25 @@ import { formatCurrency } from '../../../utils/formatCurrency';
 import { getRepairStatusLabel } from '../../../utils/repairStatus';
 import { getCancellationErrorMessage } from '../../../utils/cancellationErrorMessage';
 import { canCancelRequest } from '../../../utils/cancellationEligibility';
+import { canEditDamageImages } from '../../../utils/damageImageValidation';
+import { humanizeSlug } from '../../../utils/serviceDefinitionCatalog';
+import { formatMoneyRange } from '../../../utils/currency';
+import DamageImageManager from '../../../components/damage-images/DamageImageManager';
+
+// Formats a v2 request's server-stored pricing snapshot (`request.pricing`,
+// shape { currency, estimateMin, estimateMax, ... } - built by
+// sarabo-server's controllers/parcelController.js#createRepairRequestV2).
+// The snapshot's own persisted currency drives formatting via the shared
+// currency util - never a conversion: a new BDT request renders as taka
+// ("৳500 – ৳800 (estimate)"), while a historical USD snapshot still renders
+// as dollars. The snapshot's field names (estimateMin/estimateMax) differ
+// from the public catalogue's pricingEstimate (min/max), so the endpoints are
+// passed explicitly here.
+function formatV2PricingEstimate(pricing) {
+    if (!pricing || typeof pricing.estimateMin !== 'number' || typeof pricing.estimateMax !== 'number') return 'Pending';
+    const range = formatMoneyRange(pricing.estimateMin, pricing.estimateMax, pricing.currency);
+    return range ? `${range} (estimate)` : 'Pending';
+}
 
 const RequestDetails = () => {
     const { id } = useParams();
@@ -61,6 +80,14 @@ const RequestDetails = () => {
     // just fail with a 403. Admin request-management is read-only here by
     // design (no admin cancellation override, no pay-on-behalf-of).
     const isOwner = request.senderEmail === user?.email;
+    // Damage-evidence photos (Phase 6.4) only exist for v2 requests - never
+    // inferred from field presence, the same "schemaVersion is the single
+    // source of truth" rule the server itself enforces. `canEdit` is only
+    // ever true for the request's own (non-admin-context) owner, and is
+    // still re-confirmed independently inside DamageImageManager against
+    // the server's own accessRole before any upload/delete control renders.
+    const isV2Request = request.schemaVersion === 2;
+    const damageImagesEditable = isOwner && !isAdminContext && canEditDamageImages(request);
 
     const handleCancelRequest = () => {
         if (cancelling) return;
@@ -104,37 +131,79 @@ const RequestDetails = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
                 <div className="card bg-base-200 p-6">
                     <h3 className="text-2xl font-semibold mb-4">Device</h3>
-                    <p><span className="font-semibold">Device Name:</span> {request.parcelName}</p>
-                    {request.parcelWeight && <p><span className="font-semibold">Weight:</span> {request.parcelWeight} kg</p>}
-                    {request.receiverEmail && <p><span className="font-semibold">Brand / Model:</span> {request.receiverEmail}</p>}
-                    {request.receiverRegion && <p><span className="font-semibold">Category:</span> {request.receiverRegion}</p>}
-                    {request.priority && <p><span className="font-semibold">Priority:</span> {humanizeStatus(request.priority)}</p>}
-                    {request.receiverAddress && <p className="mt-2"><span className="font-semibold">Problem:</span> {request.receiverAddress}</p>}
+                    {isV2Request ? (
+                        <>
+                            <p><span className="font-semibold">Product Category:</span> {humanizeSlug(request.product?.categorySlug || '')}</p>
+                            {request.product?.brand && <p><span className="font-semibold">Brand:</span> {request.product.brand}</p>}
+                            {request.product?.model && <p><span className="font-semibold">Model:</span> {request.product.model}</p>}
+                            {request.product?.serialNumber && <p><span className="font-semibold">Serial Number:</span> {request.product.serialNumber}</p>}
+                            {request.damage?.description && <p className="mt-2"><span className="font-semibold">Problem:</span> {request.damage.description}</p>}
+                        </>
+                    ) : (
+                        <>
+                            <p><span className="font-semibold">Device Name:</span> {request.parcelName}</p>
+                            {request.parcelWeight && <p><span className="font-semibold">Weight:</span> {request.parcelWeight} kg</p>}
+                            {request.receiverEmail && <p><span className="font-semibold">Brand / Model:</span> {request.receiverEmail}</p>}
+                            {request.receiverRegion && <p><span className="font-semibold">Category:</span> {request.receiverRegion}</p>}
+                            {request.priority && <p><span className="font-semibold">Priority:</span> {humanizeStatus(request.priority)}</p>}
+                            {request.receiverAddress && <p className="mt-2"><span className="font-semibold">Problem:</span> {request.receiverAddress}</p>}
+                        </>
+                    )}
                 </div>
 
                 <div className="card bg-base-200 p-6">
                     <h3 className="text-2xl font-semibold mb-4">Customer & Service Address</h3>
-                    <p><span className="font-semibold">Name:</span> {request.senderName}</p>
-                    <p><span className="font-semibold">Email:</span> {request.senderEmail}</p>
-                    {request.senderPhone && <p><span className="font-semibold">Phone:</span> {request.senderPhone}</p>}
-                    <p><span className="font-semibold">Address:</span> {request.senderAddress}, {request.senderDistrict}, {request.senderRegion}</p>
-                    {request.visitInstructions && <p className="mt-2"><span className="font-semibold">Visit Instructions:</span> {request.visitInstructions}</p>}
+                    {isV2Request ? (
+                        <>
+                            <p><span className="font-semibold">Email:</span> {request.senderEmail}</p>
+                            <p><span className="font-semibold">Address:</span> {request.serviceLocation?.address}, {request.serviceLocation?.district}, {request.serviceLocation?.region}</p>
+                        </>
+                    ) : (
+                        <>
+                            <p><span className="font-semibold">Name:</span> {request.senderName}</p>
+                            <p><span className="font-semibold">Email:</span> {request.senderEmail}</p>
+                            {request.senderPhone && <p><span className="font-semibold">Phone:</span> {request.senderPhone}</p>}
+                            <p><span className="font-semibold">Address:</span> {request.senderAddress}, {request.senderDistrict}, {request.senderRegion}</p>
+                            {request.visitInstructions && <p className="mt-2"><span className="font-semibold">Visit Instructions:</span> {request.visitInstructions}</p>}
+                        </>
+                    )}
                 </div>
 
                 <div className="card bg-base-200 p-6">
                     <h3 className="text-2xl font-semibold mb-4">Status & Payment</h3>
                     <p><span className="font-semibold">Repair Status:</span> <StatusBadge status={request.deliveryStatus || 'pending-pickup'} label={getRepairStatusLabel(request.deliveryStatus)} /></p>
-                    <p><span className="font-semibold">Repair Cost:</span> {formatCurrency(request.cost)}</p>
+                    <p><span className="font-semibold">Repair Cost:</span> {isV2Request ? formatV2PricingEstimate(request.pricing) : formatCurrency(request.cost)}</p>
                     <p><span className="font-semibold">Payment:</span> <StatusBadge status={request.paymentStatus || 'unpaid'} /></p>
                     {request.riderName && <p><span className="font-semibold">Assigned Technician:</span> {request.riderName}</p>}
                 </div>
             </div>
 
+            {isV2Request && (
+                <div className="card bg-base-200 p-6 mt-8">
+                    <h3 className="text-2xl font-semibold mb-4">Damage Photos</h3>
+                    {/* Only requestId is passed down - the raw `request`
+                        object's own damage.images (url/storageKey, see
+                        BL-032 debt) is never read here or handed to this
+                        component; every image shown comes from the
+                        authorized GET /parcels/:id/damage-images endpoint. */}
+                    <DamageImageManager requestId={request._id} canEdit={damageImagesEditable} />
+                </div>
+            )}
+            {!isV2Request && isOwner && (
+                <p className="text-sm opacity-70 mt-4">Damage photo upload is available for newer repair requests only.</p>
+            )}
+
             <div className="mt-8 flex flex-wrap gap-3">
                 <Link to={`/track-request/${request.trackingId}`} className="btn btn-primary">
                     <FaHistory aria-hidden="true" /> View Timeline
                 </Link>
-                {isOwner && request.paymentStatus !== 'paid' && !isCancelled && (
+                {/* V2 payment is not implemented yet - the server itself
+                    already rejects it safely (services/paymentEligibility.js
+                    returns PAYMENT_NOT_AVAILABLE for any v2 request, before
+                    any Stripe call), but the button is hidden here too so a
+                    customer never sees a "Pay Now" action that can only
+                    ever fail. */}
+                {isOwner && !isV2Request && request.paymentStatus !== 'paid' && !isCancelled && (
                     <Link to={`/dashboard/payment/${request._id}`} className="btn btn-primary">
                         <FaCreditCard aria-hidden="true" /> Pay Now
                     </Link>

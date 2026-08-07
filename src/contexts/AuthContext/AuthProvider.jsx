@@ -5,6 +5,7 @@ import { auth } from '../../firebase/firebase.init';
 import { useQueryClient } from '@tanstack/react-query';
 import { notificationKeys } from '../../hooks/notificationKeys';
 import { roleKeys } from '../../hooks/roleKeys';
+import { damageImageKeys } from '../../hooks/damageImageKeys';
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -68,6 +69,13 @@ const AuthProvider = ({ children }) => {
                 queryClient.removeQueries({ queryKey: notificationKeys.all });
                 queryClient.cancelQueries({ queryKey: roleKeys.current() });
                 queryClient.removeQueries({ queryKey: roleKeys.current() });
+                // Damage-image queries carry short-lived signed read URLs
+                // (Phase 6.4 Unit 3) - removed on the same account-switch
+                // trigger as everything else above, so a cached response
+                // fetched under one account can never be read after a
+                // different account signs in within the same tab.
+                queryClient.cancelQueries({ queryKey: damageImageKeys.all });
+                queryClient.removeQueries({ queryKey: damageImageKeys.all });
             }
             previousUidRef.current = nextUid;
 

@@ -9,7 +9,7 @@ import Login from "../pages/Auth/Login/Login";
 import Register from "../pages/Auth/Register/Register";
 import PrivateRoute from "./PrivateRoute";
 import BecomeTechnician from "../pages/BecomeTechnician/BecomeTechnician";
-import CreateRequest from "../pages/Dashboard/CreateRequest/CreateRequest";
+import RepairRequestV2Form from "../components/repair-request/RepairRequestV2Form";
 import DashboardLayout from "../layouts/DashboardLayout";
 import MyRequests from "../pages/Dashboard/MyRequests/MyRequests";
 import Payment from "../pages/Dashboard/Payment/Payment";
@@ -91,8 +91,16 @@ export const router = createBrowserRouter([
         Component: DashboardHome
       },
       {
+        // Phase 6.4 Unit 3A: this single route is already the sole
+        // customer-facing "Request a Repair" entry point across the app
+        // (NavBar, Home, Services, Footer, CustomerDashboardHome all link
+        // here) - swapping its rendered component to the v2 form reaches
+        // every existing entry point without any navigation change. The
+        // legacy CreateRequest component (src/pages/Dashboard/CreateRequest)
+        // is left in place, unrouted, per this unit's no-broad-cleanup
+        // instruction.
         path: 'create-request',
-        element: <CustomerRoute><CreateRequest></CreateRequest></CustomerRoute>,
+        element: <CustomerRoute><RepairRequestV2Form></RepairRequestV2Form></CustomerRoute>,
         loader: () => fetch('/serviceAreas.json').then(res => res.json())
       },
       {
