@@ -39,6 +39,143 @@
   --color-on-dark: #E5EDF2;
 }
 
+/* ==========================================================================
+ * Sarabo Design System foundation (Phase 7.1)
+ *
+ * Semantic, CSS-variable-driven tokens for the redesigned UI surfaces. They
+ * are deliberately exposed to Tailwind under a `ds-` colour namespace
+ * (bg-ds-primary, text-ds-muted-foreground, border-ds-border, ring-ds-ring,
+ * rounded-ds, ...) so they can NEVER collide with DaisyUI's own utilities
+ * (bg-primary, badge-accent, base-100, ...). DaisyUI and every existing page
+ * keep working byte-for-byte; only the new design-system components consume
+ * the `ds-` scale. When a page is later migrated it opts in by switching to
+ * `ds-` utilities; nothing is mass-replaced here.
+ *
+ * Light values for the brand primary (#2478A6) and secondary (#03373D)
+ * intentionally match the existing DaisyUI brand so the two systems read as
+ * one visual language during the migration period. Raw hex lives ONLY here -
+ * React components reference the semantic token, never a literal colour.
+ * ========================================================================== */
+:root {
+  --radius: 0.625rem;
+
+  --ds-background: #ffffff;
+  --ds-foreground: #0f172a;
+
+  --ds-card: #ffffff;
+  --ds-card-foreground: #0f172a;
+
+  --ds-popover: #ffffff;
+  --ds-popover-foreground: #0f172a;
+
+  --ds-primary: #2478a6;
+  --ds-primary-foreground: #ffffff;
+
+  --ds-secondary: #f1f5f9;
+  --ds-secondary-foreground: #0f172a;
+
+  --ds-muted: #f1f5f9;
+  --ds-muted-foreground: #5b6b7a;
+
+  --ds-accent: #e7f1f6;
+  --ds-accent-foreground: #0f2a38;
+
+  --ds-border: #e2e8f0;
+  --ds-input: #cbd5e1;
+  --ds-ring: #2478a6;
+
+  --ds-destructive: #dc2626;
+  --ds-destructive-foreground: #ffffff;
+
+  --ds-success: #15803d;
+  --ds-success-foreground: #ffffff;
+
+  --ds-warning: #b45309;
+  --ds-warning-foreground: #ffffff;
+
+  --ds-info: #0369a1;
+  --ds-info-foreground: #ffffff;
+}
+
+/* Dark palette. Only new design-system surfaces opt into `.dark` (the
+ * user-facing theme toggle ships with the App Shell in Phase 7.2); existing
+ * DaisyUI pages never carry the class, so they are unaffected. */
+.dark {
+  --ds-background: #0b1a24;
+  --ds-foreground: #e5edf2;
+
+  --ds-card: #111827;
+  --ds-card-foreground: #e5edf2;
+
+  --ds-popover: #111827;
+  --ds-popover-foreground: #e5edf2;
+
+  --ds-primary: #38bdf8;
+  --ds-primary-foreground: #052a38;
+
+  --ds-secondary: #1e293b;
+  --ds-secondary-foreground: #e5edf2;
+
+  --ds-muted: #172231;
+  --ds-muted-foreground: #94a3b8;
+
+  --ds-accent: #17303d;
+  --ds-accent-foreground: #e5edf2;
+
+  --ds-border: #22303c;
+  --ds-input: #2a3a47;
+  --ds-ring: #38bdf8;
+
+  --ds-destructive: #f87171;
+  --ds-destructive-foreground: #240b0b;
+
+  --ds-success: #4ade80;
+  --ds-success-foreground: #05210f;
+
+  --ds-warning: #fbbf24;
+  --ds-warning-foreground: #241a00;
+
+  --ds-info: #38bdf8;
+  --ds-info-foreground: #04222e;
+}
+
+/* Expose the tokens to Tailwind v4 as a `ds-`-namespaced colour + radius
+ * scale. `@theme inline` emits the utilities as `var(--ds-*)` references, so
+ * the `.dark` overrides above take effect wherever a `.dark` ancestor exists,
+ * with no JS theme engine required. */
+@theme inline {
+  --color-ds-background: var(--ds-background);
+  --color-ds-foreground: var(--ds-foreground);
+  --color-ds-card: var(--ds-card);
+  --color-ds-card-foreground: var(--ds-card-foreground);
+  --color-ds-popover: var(--ds-popover);
+  --color-ds-popover-foreground: var(--ds-popover-foreground);
+  --color-ds-primary: var(--ds-primary);
+  --color-ds-primary-foreground: var(--ds-primary-foreground);
+  --color-ds-secondary: var(--ds-secondary);
+  --color-ds-secondary-foreground: var(--ds-secondary-foreground);
+  --color-ds-muted: var(--ds-muted);
+  --color-ds-muted-foreground: var(--ds-muted-foreground);
+  --color-ds-accent: var(--ds-accent);
+  --color-ds-accent-foreground: var(--ds-accent-foreground);
+  --color-ds-border: var(--ds-border);
+  --color-ds-input: var(--ds-input);
+  --color-ds-ring: var(--ds-ring);
+  --color-ds-destructive: var(--ds-destructive);
+  --color-ds-destructive-foreground: var(--ds-destructive-foreground);
+  --color-ds-success: var(--ds-success);
+  --color-ds-success-foreground: var(--ds-success-foreground);
+  --color-ds-warning: var(--ds-warning);
+  --color-ds-warning-foreground: var(--ds-warning-foreground);
+  --color-ds-info: var(--ds-info);
+  --color-ds-info-foreground: var(--ds-info-foreground);
+
+  --radius-ds-sm: calc(var(--radius) - 4px);
+  --radius-ds: var(--radius);
+  --radius-ds-lg: calc(var(--radius) + 4px);
+  --radius-ds-xl: calc(var(--radius) + 8px);
+}
+
 body {
   font-family: "Urbanist", sans-serif;
   font-optical-sizing: auto;
