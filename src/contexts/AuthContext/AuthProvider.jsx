@@ -7,6 +7,7 @@ import { notificationKeys } from '../../hooks/notificationKeys';
 import { roleKeys } from '../../hooks/roleKeys';
 import { damageImageKeys } from '../../hooks/damageImageKeys';
 import { inspectionKeys } from '../../hooks/inspectionKeys';
+import { quoteKeys } from '../../hooks/quoteKeys';
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -83,6 +84,11 @@ const AuthProvider = ({ children }) => {
                 // after a different account signs in within the same tab.
                 queryClient.cancelQueries({ queryKey: inspectionKeys.all });
                 queryClient.removeQueries({ queryKey: inspectionKeys.all });
+                // Quote queries (Phase 6.4 Unit 5) - cleared on the same
+                // account-switch trigger, so one account's quote data can never
+                // be read after a different account signs in within the tab.
+                queryClient.cancelQueries({ queryKey: quoteKeys.all });
+                queryClient.removeQueries({ queryKey: quoteKeys.all });
             }
             previousUidRef.current = nextUid;
 

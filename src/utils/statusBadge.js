@@ -15,6 +15,9 @@ const STATUS_BADGE_CLASSES = {
     'rider_arriving': 'badge-accent',
     'parcel_picked_up': 'badge-accent',
     'inspection_completed': 'badge-info',
+    'quote_submitted': 'badge-warning',
+    'quote_approved': 'badge-success',
+    'quote_rejected': 'badge-error',
     'parcel_delivered': 'badge-success',
 
     // technician application status

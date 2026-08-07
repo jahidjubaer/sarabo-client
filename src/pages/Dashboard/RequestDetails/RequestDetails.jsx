@@ -17,6 +17,7 @@ import { humanizeSlug } from '../../../utils/serviceDefinitionCatalog';
 import { formatMoneyRange } from '../../../utils/currency';
 import DamageImageManager from '../../../components/damage-images/DamageImageManager';
 import InspectionSection from '../../../components/inspection/InspectionSection';
+import QuoteSection from '../../../components/quote/QuoteSection';
 
 // Formats a v2 request's server-stored pricing snapshot (`request.pricing`,
 // shape { currency, estimateMin, estimateMax, ... } - built by
@@ -98,6 +99,9 @@ const RequestDetails = () => {
     // submission at commit time, so this is purely a UX gate.
     const isAssignedTechnicianView = isV2Request && isTechnicianContext && request.riderEmail === user?.email;
     const canInspect = isAssignedTechnicianView && request.deliveryStatus === 'parcel_picked_up';
+    // Quote submission (Phase 6.4 Unit 5) - offered to the assigned technician
+    // once the inspection is completed. The server always revalidates.
+    const canSubmitQuote = isAssignedTechnicianView && request.deliveryStatus === 'inspection_completed';
 
     const handleCancelRequest = () => {
         if (cancelling) return;
@@ -212,6 +216,18 @@ const RequestDetails = () => {
                         customer never receives internal technician notes or the
                         submitter's identity. */}
                     <InspectionSection requestId={request._id} canInspect={canInspect} isAssignedTechnicianView={isAssignedTechnicianView} />
+                </div>
+            )}
+
+            {isV2Request && (
+                <div className="card bg-base-200 p-6 mt-8">
+                    <h3 className="text-2xl font-semibold mb-4">Repair Quote</h3>
+                    {/* Quote data is fetched from the dedicated, role-projected
+                        GET /parcels/:id/quote endpoint (never read off the raw
+                        parcel, which the server strips). The server computes the
+                        total and owns the currency; the customer approves or
+                        declines but can never alter the line items. */}
+                    <QuoteSection requestId={request._id} isOwner={isOwner} canSubmitQuote={canSubmitQuote} isAssignedTechnicianView={isAssignedTechnicianView} />
                 </div>
             )}
 
