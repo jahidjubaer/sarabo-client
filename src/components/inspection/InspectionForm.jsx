@@ -1,17 +1,18 @@
+import { useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import Swal from 'sweetalert2';
 import DetectedIssuesEditor from './DetectedIssuesEditor';
 import { useSubmitInspection } from '../../hooks/useInspectionMutations';
+import { notify } from '../../lib/notify';
+import { Input } from '../ui/input';
+import { Textarea } from '../ui/textarea';
+import { Label } from '../ui/label';
+import { LoadingButton } from '../common/LoadingButton';
+import { ConfirmDialog } from '../common/ConfirmDialog';
 import {
     REPAIRABILITY_OPTIONS, DIAGNOSIS_SUMMARY_MIN, DIAGNOSIS_SUMMARY_MAX, REASON_MIN, REASON_MAX,
     INTERNAL_NOTES_MAX, MAX_ESTIMATE_BDT, buildInspectionPayload, parseEstimate,
 } from '../../utils/inspectionForm';
 
-// Maps the server's controlled inspection error codes to short, safe UI copy -
-// never renders a raw Axios/network error. On an "already submitted / no
-// longer allowed" outcome the surrounding section refetches (see
-// useSubmitInspection's onSettled) and swaps the form for the read-only
-// summary, so the technician always re-syncs to server truth.
 const SUBMIT_ERROR_COPY = {
     INSPECTION_ALREADY_SUBMITTED: 'An inspection has already been submitted for this request.',
     INSPECTION_NOT_ALLOWED: 'This request is no longer at the stage where an inspection can be submitted.',
@@ -25,12 +26,17 @@ const SUBMIT_ERROR_COPY = {
     INVALID_INSPECTION_ESTIMATE: 'Please review the estimate amounts and try again.',
     INVALID_INSPECTION: 'Please review the form and try again.',
 };
-
 function submitErrorMessage(error) {
-    const code = error?.response?.data?.code;
-    return SUBMIT_ERROR_COPY[code] || 'Could not submit the inspection. Please try again.';
+    return SUBMIT_ERROR_COPY[error?.response?.data?.code] || 'Could not submit the inspection. Please try again.';
 }
 
+const selectClass = "flex h-10 w-full rounded-ds border border-ds-input bg-ds-background px-3 text-sm text-ds-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-ring aria-[invalid=true]:border-ds-destructive";
+
+// Inspection form (Phase 6.4 Unit 4) redesigned in 7.6A: same react-hook-form
+// fields, same validation rules, same buildInspectionPayload contract and
+// useSubmitInspection mutation - only the presentation, a design-system confirm
+// dialog, and Toastify feedback changed. Internal notes stay clearly marked and
+// are never shown to the customer (customer view uses InspectionSummary).
 const InspectionForm = ({ requestId }) => {
     const { register, control, handleSubmit, formState: { errors, isSubmitting } } = useForm({
         defaultValues: {
@@ -45,138 +51,112 @@ const InspectionForm = ({ requestId }) => {
     });
     const { fields, append, remove } = useFieldArray({ control, name: 'detectedIssues' });
     const mutation = useSubmitInspection(requestId);
+    const [pendingValues, setPendingValues] = useState(null);
 
     const busy = isSubmitting || mutation.isPending;
+    const estimateRule = { validate: (v) => parseEstimate(v).ok || `Enter a whole number of taka (0-${MAX_ESTIMATE_BDT}) or leave blank.` };
 
-    const onSubmit = async (values) => {
-        if (busy) return;
-        const confirm = await Swal.fire({
-            title: 'Submit inspection?',
-            text: 'Once submitted, this inspection is final and cannot be edited.',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'Yes, submit',
+    const onValid = (values) => { if (!busy) setPendingValues(values); };
+
+    const confirmSubmit = () => {
+        const values = pendingValues;
+        if (!values) return;
+        mutation.mutate(buildInspectionPayload(values), {
+            onSuccess: () => { setPendingValues(null); notify.success('Inspection submitted - the customer will be notified.'); },
+            onError: (error) => { setPendingValues(null); notify.error(submitErrorMessage(error)); },
         });
-        if (!confirm.isConfirmed) return;
-
-        const payload = buildInspectionPayload(values);
-        mutation.mutate(payload, {
-            onSuccess: () => {
-                Swal.fire({ icon: 'success', title: 'Inspection submitted', text: 'The customer has been notified that a quote will follow.' });
-            },
-            onError: (error) => {
-                Swal.fire({ icon: 'error', title: 'Could not submit inspection', text: submitErrorMessage(error) });
-            },
-        });
-    };
-
-    // Whole-taka only, and within the shared cap - reuses the same pure parser
-    // the payload builder uses, so the UI rule and the wire format never drift.
-    const estimateRule = {
-        validate: (v) => parseEstimate(v).ok || `Enter a whole number of taka (0-${MAX_ESTIMATE_BDT}) or leave blank.`,
     };
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-            <div>
-                <label className="label" htmlFor="diagnosisSummary">Diagnosis summary</label>
-                <textarea
-                    id="diagnosisSummary"
-                    rows={4}
-                    className={`textarea w-full ${errors.diagnosisSummary ? 'textarea-error' : ''}`}
-                    placeholder="Describe what you found on inspection"
-                    aria-invalid={errors.diagnosisSummary ? 'true' : 'false'}
-                    {...register('diagnosisSummary', {
-                        required: 'A diagnosis summary is required.',
-                        minLength: { value: DIAGNOSIS_SUMMARY_MIN, message: `At least ${DIAGNOSIS_SUMMARY_MIN} characters.` },
-                        maxLength: { value: DIAGNOSIS_SUMMARY_MAX, message: `At most ${DIAGNOSIS_SUMMARY_MAX} characters.` },
-                    })}
-                />
-                {errors.diagnosisSummary && <p role="alert" className="text-red-500 text-sm">{errors.diagnosisSummary.message}</p>}
-            </div>
-
-            <DetectedIssuesEditor fields={fields} register={register} errors={errors} append={append} remove={remove} />
-
-            <div>
-                <label className="label" htmlFor="repairabilityDecision">Repairability</label>
-                <select
-                    id="repairabilityDecision"
-                    defaultValue=""
-                    className={`select w-full ${errors.repairabilityDecision ? 'select-error' : ''}`}
-                    aria-invalid={errors.repairabilityDecision ? 'true' : 'false'}
-                    {...register('repairabilityDecision', { required: 'Select a repairability decision.' })}>
-                    <option value="" disabled>Select a decision</option>
-                    {REPAIRABILITY_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                </select>
-                {errors.repairabilityDecision && <p role="alert" className="text-red-500 text-sm">{errors.repairabilityDecision.message}</p>}
-
-                <label className="label mt-2" htmlFor="repairabilityReason">Reason</label>
-                <textarea
-                    id="repairabilityReason"
-                    rows={3}
-                    className={`textarea w-full ${errors.repairabilityReason ? 'textarea-error' : ''}`}
-                    placeholder="Explain the repairability decision"
-                    aria-invalid={errors.repairabilityReason ? 'true' : 'false'}
-                    {...register('repairabilityReason', {
-                        required: 'A reason is required.',
-                        minLength: { value: REASON_MIN, message: `At least ${REASON_MIN} characters.` },
-                        maxLength: { value: REASON_MAX, message: `At most ${REASON_MAX} characters.` },
-                    })}
-                />
-                {errors.repairabilityReason && <p role="alert" className="text-red-500 text-sm">{errors.repairabilityReason.message}</p>}
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label className="label" htmlFor="laborEstimate">Preliminary labor estimate (BDT)</label>
-                    <input
-                        id="laborEstimate"
-                        type="number" min="0" step="1" inputMode="numeric"
-                        className={`input w-full ${errors.laborEstimate ? 'input-error' : ''}`}
-                        placeholder="Optional"
-                        aria-invalid={errors.laborEstimate ? 'true' : 'false'}
-                        {...register('laborEstimate', estimateRule)}
+        <>
+            <form onSubmit={handleSubmit(onValid)} className="space-y-4" noValidate>
+                <div className="space-y-1.5">
+                    <Label htmlFor="diagnosisSummary">Diagnosis summary</Label>
+                    <Textarea
+                        id="diagnosisSummary" rows={4} placeholder="Describe what you found on inspection"
+                        aria-invalid={errors.diagnosisSummary ? 'true' : 'false'}
+                        {...register('diagnosisSummary', {
+                            required: 'A diagnosis summary is required.',
+                            minLength: { value: DIAGNOSIS_SUMMARY_MIN, message: `At least ${DIAGNOSIS_SUMMARY_MIN} characters.` },
+                            maxLength: { value: DIAGNOSIS_SUMMARY_MAX, message: `At most ${DIAGNOSIS_SUMMARY_MAX} characters.` },
+                        })}
                     />
-                    {errors.laborEstimate && <p role="alert" className="text-red-500 text-sm">{errors.laborEstimate.message}</p>}
+                    {errors.diagnosisSummary && <p role="alert" className="text-xs font-medium text-ds-destructive">{errors.diagnosisSummary.message}</p>}
                 </div>
-                <div>
-                    <label className="label" htmlFor="partsEstimate">Preliminary parts estimate (BDT)</label>
-                    <input
-                        id="partsEstimate"
-                        type="number" min="0" step="1" inputMode="numeric"
-                        className={`input w-full ${errors.partsEstimate ? 'input-error' : ''}`}
-                        placeholder="Optional"
-                        aria-invalid={errors.partsEstimate ? 'true' : 'false'}
-                        {...register('partsEstimate', estimateRule)}
+
+                <DetectedIssuesEditor fields={fields} register={register} errors={errors} append={append} remove={remove} />
+
+                <div className="space-y-3 rounded-ds-lg border border-ds-border p-4">
+                    <div className="space-y-1.5">
+                        <Label htmlFor="repairabilityDecision">Repairability</Label>
+                        <select
+                            id="repairabilityDecision" defaultValue="" className={selectClass}
+                            aria-invalid={errors.repairabilityDecision ? 'true' : 'false'}
+                            {...register('repairabilityDecision', { required: 'Select a repairability decision.' })}
+                        >
+                            <option value="" disabled>Select a decision</option>
+                            {REPAIRABILITY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                        </select>
+                        {errors.repairabilityDecision && <p role="alert" className="text-xs font-medium text-ds-destructive">{errors.repairabilityDecision.message}</p>}
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label htmlFor="repairabilityReason">Reason</Label>
+                        <Textarea
+                            id="repairabilityReason" rows={3} placeholder="Explain the repairability decision"
+                            aria-invalid={errors.repairabilityReason ? 'true' : 'false'}
+                            {...register('repairabilityReason', {
+                                required: 'A reason is required.',
+                                minLength: { value: REASON_MIN, message: `At least ${REASON_MIN} characters.` },
+                                maxLength: { value: REASON_MAX, message: `At most ${REASON_MAX} characters.` },
+                            })}
+                        />
+                        {errors.repairabilityReason && <p role="alert" className="text-xs font-medium text-ds-destructive">{errors.repairabilityReason.message}</p>}
+                    </div>
+                </div>
+
+                <div className="rounded-ds-lg border border-ds-border p-4">
+                    <p className="mb-3 text-sm font-semibold text-ds-foreground">Preliminary estimate (BDT)</p>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div className="space-y-1.5">
+                            <Label htmlFor="laborEstimate">Labor</Label>
+                            <Input id="laborEstimate" type="number" min="0" step="1" inputMode="numeric" placeholder="Optional"
+                                aria-invalid={errors.laborEstimate ? 'true' : 'false'} {...register('laborEstimate', estimateRule)} />
+                            {errors.laborEstimate && <p role="alert" className="text-xs font-medium text-ds-destructive">{errors.laborEstimate.message}</p>}
+                        </div>
+                        <div className="space-y-1.5">
+                            <Label htmlFor="partsEstimate">Parts</Label>
+                            <Input id="partsEstimate" type="number" min="0" step="1" inputMode="numeric" placeholder="Optional"
+                                aria-invalid={errors.partsEstimate ? 'true' : 'false'} {...register('partsEstimate', estimateRule)} />
+                            {errors.partsEstimate && <p role="alert" className="text-xs font-medium text-ds-destructive">{errors.partsEstimate.message}</p>}
+                        </div>
+                    </div>
+                    <p className="mt-2 text-xs text-ds-muted-foreground">This is a preliminary technician estimate, not a final quote or an amount to be paid now.</p>
+                </div>
+
+                <div className="space-y-1.5 rounded-ds-lg border border-ds-warning/30 bg-ds-warning/5 p-4">
+                    <Label htmlFor="internalNotes">Internal technician notes (optional)</Label>
+                    <Textarea
+                        id="internalNotes" rows={3} placeholder="Notes for you and the admin team"
+                        aria-describedby="internalNotes-help"
+                        {...register('internalNotes', { maxLength: { value: INTERNAL_NOTES_MAX, message: `At most ${INTERNAL_NOTES_MAX} characters.` } })}
                     />
-                    {errors.partsEstimate && <p role="alert" className="text-red-500 text-sm">{errors.partsEstimate.message}</p>}
+                    <p id="internalNotes-help" className="text-xs text-ds-muted-foreground">Private to you and admins — the customer never sees them.</p>
+                    {errors.internalNotes && <p role="alert" className="text-xs font-medium text-ds-destructive">{errors.internalNotes.message}</p>}
                 </div>
-            </div>
-            <p className="text-sm opacity-70">This is a preliminary technician estimate, not a final quote or an amount to be paid now.</p>
 
-            <div>
-                <label className="label" htmlFor="internalNotes">Internal technician notes (optional)</label>
-                <textarea
-                    id="internalNotes"
-                    rows={3}
-                    className={`textarea w-full ${errors.internalNotes ? 'textarea-error' : ''}`}
-                    placeholder="Notes for you and the admin team"
-                    aria-describedby="internalNotes-help"
-                    {...register('internalNotes', {
-                        maxLength: { value: INTERNAL_NOTES_MAX, message: `At most ${INTERNAL_NOTES_MAX} characters.` },
-                    })}
-                />
-                <p id="internalNotes-help" className="text-sm opacity-70">These notes are private to you and admins — the customer never sees them.</p>
-                {errors.internalNotes && <p role="alert" className="text-red-500 text-sm">{errors.internalNotes.message}</p>}
-            </div>
+                <LoadingButton type="submit" loading={busy} loadingText="Submitting…">Submit inspection</LoadingButton>
+            </form>
 
-            <p aria-live="polite" className="sr-only">{busy ? 'Submitting inspection' : ''}</p>
-            <button type="submit" disabled={busy} className="btn btn-primary">
-                {busy ? 'Submitting...' : 'Submit inspection'}
-            </button>
-        </form>
+            <ConfirmDialog
+                open={!!pendingValues}
+                onOpenChange={(open) => { if (!open) setPendingValues(null); }}
+                title="Submit inspection?"
+                description="Once submitted, this inspection is final and cannot be edited."
+                confirmLabel="Submit inspection"
+                busy={mutation.isPending}
+                onConfirm={confirmSubmit}
+            />
+        </>
     );
 };
 

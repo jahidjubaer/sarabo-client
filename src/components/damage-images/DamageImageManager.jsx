@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import Swal from 'sweetalert2';
 import { useDamageImages } from '../../hooks/useDamageImages';
 import { useDamageImageUploadQueue, useRemoveDamageImage } from '../../hooks/useDamageImageMutations';
 import { normalizeDamageImageError } from '../../utils/damageImageErrors';
 import { MAX_DAMAGE_IMAGES } from '../../utils/damageImageValidation';
+import { notify } from '../../lib/notify';
+import { ConfirmDialog } from '../common/ConfirmDialog';
 import DamageImagePicker from './DamageImagePicker';
 import DamageImageGallery from './DamageImageGallery';
 import UploadProgressItem from './UploadProgressItem';
@@ -21,6 +22,7 @@ const COMPLETE_ITEM_DISPLAY_MS = 1500;
 // confirms this caller is the request's owner, regardless of `canEdit`.
 const DamageImageManager = ({ requestId, canEdit = false, maxImages = MAX_DAMAGE_IMAGES, onBusyChange }) => {
     const [serverLocked, setServerLocked] = useState(false);
+    const [deleteTargetId, setDeleteTargetId] = useState(null);
     const { data, isLoading, isError, refetch } = useDamageImages(requestId, { enabled: !!requestId });
     const { items, addFiles, retryItem, cancelItem, removeItem, isProcessing } = useDamageImageUploadQueue({ requestId });
     const removeMutation = useRemoveDamageImage(requestId);
@@ -63,36 +65,31 @@ const DamageImageManager = ({ requestId, canEdit = false, maxImages = MAX_DAMAGE
 
     const handleFilesSelected = (files) => addFiles(files);
 
-    const handleDelete = (imageId) => {
-        Swal.fire({
-            title: 'Remove this photo?',
-            text: 'This cannot be undone.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Yes, remove it',
-        }).then((result) => {
-            if (!result.isConfirmed) return;
-            removeMutation.mutate(imageId, {
-                onSuccess: () => {
-                    Swal.fire({ position: 'top-end', icon: 'success', title: 'Photo removed', showConfirmButton: false, timer: 1500 });
-                },
-                onError: (error) => {
-                    const normalized = normalizeDamageImageError(error);
-                    if (normalized.code === 'DAMAGE_IMAGES_LOCKED') {
-                        setServerLocked(true);
-                    } else if (normalized.code === 'DAMAGE_IMAGE_NOT_FOUND') {
-                        refetch();
-                    }
-                    // Avoid a duplicate identical toast if the same
-                    // controlled error fires twice in a row.
-                    if (removalErrorNoticeRef.current !== normalized.code) {
-                        removalErrorNoticeRef.current = normalized.code;
-                        Swal.fire({ icon: 'error', title: 'Could not remove photo', text: normalized.message });
-                    }
-                },
-            });
+    // Opens the design-system confirm dialog; the mutation only fires on
+    // confirm. Behaviour/endpoints are unchanged - only the confirm/feedback UI.
+    const handleDelete = (imageId) => setDeleteTargetId(imageId);
+
+    const confirmDelete = () => {
+        const imageId = deleteTargetId;
+        if (!imageId) return;
+        removeMutation.mutate(imageId, {
+            onSuccess: () => {
+                setDeleteTargetId(null);
+                notify.success('Photo removed');
+            },
+            onError: (error) => {
+                const normalized = normalizeDamageImageError(error);
+                setDeleteTargetId(null);
+                if (normalized.code === 'DAMAGE_IMAGES_LOCKED') {
+                    setServerLocked(true);
+                } else if (normalized.code === 'DAMAGE_IMAGE_NOT_FOUND') {
+                    refetch();
+                }
+                if (removalErrorNoticeRef.current !== normalized.code) {
+                    removalErrorNoticeRef.current = normalized.code;
+                }
+                notify.error(normalized.message);
+            },
         });
     };
 
@@ -139,6 +136,17 @@ const DamageImageManager = ({ requestId, canEdit = false, maxImages = MAX_DAMAGE
                 deletingImageId={removeMutation.isPending ? removeMutation.variables : null}
                 onDelete={handleDelete}
                 onRequestRefresh={refetch}
+            />
+
+            <ConfirmDialog
+                open={!!deleteTargetId}
+                onOpenChange={(open) => { if (!open) setDeleteTargetId(null); }}
+                title="Remove this photo?"
+                description="This cannot be undone."
+                confirmLabel="Remove photo"
+                destructive
+                busy={removeMutation.isPending}
+                onConfirm={confirmDelete}
             />
         </div>
     );

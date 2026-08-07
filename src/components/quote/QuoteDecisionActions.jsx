@@ -1,6 +1,9 @@
-import Swal from 'sweetalert2';
-import { FaCheck, FaTimes } from 'react-icons/fa';
+import { useState } from 'react';
+import { Check, X } from 'lucide-react';
 import { useDecideQuote } from '../../hooks/useQuoteMutations';
+import { notify } from '../../lib/notify';
+import { Button } from '../ui/button';
+import { ConfirmDialog } from '../common/ConfirmDialog';
 import { validateRejectionReason, DECISION_REASON_MIN, DECISION_REASON_MAX } from '../../utils/quoteForm';
 
 const DECISION_ERROR_COPY = {
@@ -14,54 +17,62 @@ function decisionErrorMessage(error) {
     return DECISION_ERROR_COPY[error?.response?.data?.code] || 'Could not record your decision. Please try again.';
 }
 
-// Approve / Decline controls, shown to the request owner only while the quote
-// is awaiting a decision (QuoteSection gates this). The server is always
-// authoritative and revalidates ownership + one-decision-only.
+// Approve / Decline controls (Phase 6.4 Unit 5), redesigned in 7.6A to use
+// design-system dialogs instead of SweetAlert. The API payload and validation
+// (validateRejectionReason, { decision, reason }) are unchanged; the server is
+// always authoritative and revalidates ownership + one-decision-only.
 const QuoteDecisionActions = ({ requestId }) => {
     const mutation = useDecideQuote(requestId);
     const busy = mutation.isPending;
+    const [approveOpen, setApproveOpen] = useState(false);
+    const [declineOpen, setDeclineOpen] = useState(false);
 
-    const approve = async () => {
-        if (busy) return;
-        const confirm = await Swal.fire({
-            title: 'Approve this quote?', text: 'This confirms you accept the quoted repair cost.',
-            icon: 'question', showCancelButton: true, confirmButtonText: 'Yes, approve',
-        });
-        if (!confirm.isConfirmed) return;
+    const confirmApprove = () => {
         mutation.mutate({ decision: 'approve' }, {
-            onSuccess: () => Swal.fire({ icon: 'success', title: 'Quote approved', text: 'Your technician has been notified.' }),
-            onError: (error) => Swal.fire({ icon: 'error', title: 'Could not approve', text: decisionErrorMessage(error) }),
+            onSuccess: () => { setApproveOpen(false); notify.success('Quote approved - your technician has been notified.'); },
+            onError: (error) => { setApproveOpen(false); notify.error(decisionErrorMessage(error)); },
         });
     };
 
-    const reject = async () => {
-        if (busy) return;
-        const result = await Swal.fire({
-            title: 'Decline this quote?',
-            input: 'textarea',
-            inputLabel: `Reason (${DECISION_REASON_MIN}-${DECISION_REASON_MAX} characters)`,
-            inputPlaceholder: 'Let the technician know why you are declining',
-            showCancelButton: true, confirmButtonText: 'Decline quote',
-            inputValidator: (value) => {
-                const check = validateRejectionReason(value);
-                return check.valid ? undefined : check.message;
-            },
-        });
-        if (!result.isConfirmed) return;
-        mutation.mutate({ decision: 'reject', reason: result.value.trim() }, {
-            onSuccess: () => Swal.fire({ icon: 'success', title: 'Quote declined', text: 'Your technician has been notified.' }),
-            onError: (error) => Swal.fire({ icon: 'error', title: 'Could not decline', text: decisionErrorMessage(error) }),
+    const confirmDecline = (reason) => {
+        mutation.mutate({ decision: 'reject', reason }, {
+            onSuccess: () => { setDeclineOpen(false); notify.success('Quote declined - your technician has been notified.'); },
+            onError: (error) => { setDeclineOpen(false); notify.error(decisionErrorMessage(error)); },
         });
     };
 
     return (
-        <div className="flex flex-wrap gap-3 mt-3">
-            <button type="button" onClick={approve} disabled={busy} className="btn btn-success">
-                <FaCheck aria-hidden="true" /> {busy ? 'Working…' : 'Approve Quote'}
-            </button>
-            <button type="button" onClick={reject} disabled={busy} className="btn btn-outline btn-error">
-                <FaTimes aria-hidden="true" /> Decline Quote
-            </button>
+        <div className="mt-3 flex flex-wrap gap-3">
+            <Button onClick={() => setApproveOpen(true)} disabled={busy}>
+                <Check aria-hidden="true" /> Approve quote
+            </Button>
+            <Button variant="outline" className="text-ds-destructive hover:text-ds-destructive" onClick={() => setDeclineOpen(true)} disabled={busy}>
+                <X aria-hidden="true" /> Decline quote
+            </Button>
+
+            <ConfirmDialog
+                open={approveOpen}
+                onOpenChange={setApproveOpen}
+                title="Approve this quote?"
+                description="This confirms you accept the quoted repair cost."
+                confirmLabel="Yes, approve"
+                busy={busy}
+                onConfirm={confirmApprove}
+            />
+            <ConfirmDialog
+                open={declineOpen}
+                onOpenChange={setDeclineOpen}
+                title="Decline this quote?"
+                description="Let the technician know why you are declining."
+                confirmLabel="Decline quote"
+                destructive
+                busy={busy}
+                reason
+                reasonLabel={`Reason (${DECISION_REASON_MIN}-${DECISION_REASON_MAX} characters)`}
+                reasonPlaceholder="Explain why you are declining this quote"
+                validateReason={validateRejectionReason}
+                onConfirm={confirmDecline}
+            />
         </div>
     );
 };

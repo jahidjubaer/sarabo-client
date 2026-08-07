@@ -1,7 +1,13 @@
+import { useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
-import Swal from 'sweetalert2';
 import { formatMoney } from '../../utils/currency';
 import { useSubmitQuote } from '../../hooks/useQuoteMutations';
+import { notify } from '../../lib/notify';
+import { Input } from '../ui/input';
+import { Textarea } from '../ui/textarea';
+import { Label } from '../ui/label';
+import { LoadingButton } from '../common/LoadingButton';
+import { ConfirmDialog } from '../common/ConfirmDialog';
 import { MAX_LINE_AMOUNT_BDT, NOTES_MAX, computeTotal, buildQuotePayload, parseAmount } from '../../utils/quoteForm';
 
 const SUBMIT_ERROR_COPY = {
@@ -14,87 +20,90 @@ const SUBMIT_ERROR_COPY = {
     INVALID_QUOTE: 'Please review the quote and try again.',
     INVALID_QUOTE_AMOUNT: 'Please review the amounts and try again.',
 };
-
 function submitErrorMessage(error) {
     return SUBMIT_ERROR_COPY[error?.response?.data?.code] || 'Could not submit the quote. Please try again.';
 }
 
-const amountRule = {
-    validate: (v) => parseAmount(v, { required: true }).ok || `Enter a whole number of taka (0-${MAX_LINE_AMOUNT_BDT}).`,
-};
-const optionalAmountRule = {
-    validate: (v) => parseAmount(v).ok || `Enter a whole number of taka (0-${MAX_LINE_AMOUNT_BDT}) or leave blank.`,
-};
+const amountRule = { validate: (v) => parseAmount(v, { required: true }).ok || `Enter a whole number of taka (0-${MAX_LINE_AMOUNT_BDT}).` };
+const optionalAmountRule = { validate: (v) => parseAmount(v).ok || `Enter a whole number of taka (0-${MAX_LINE_AMOUNT_BDT}) or leave blank.` };
 
+// Technician quote form (Phase 6.4 Unit 5) redesigned in 7.6A. Same fields,
+// same validation, same buildQuotePayload/useSubmitQuote wiring. The live total
+// is UX-only - the server always recomputes the authoritative total on submit.
 const QuoteForm = ({ requestId }) => {
     const { register, handleSubmit, control, formState: { errors, isSubmitting } } = useForm({
         defaultValues: { laborAmount: '', partsAmount: '', additionalCharges: '', notes: '' },
     });
     const mutation = useSubmitQuote(requestId);
+    const [pendingValues, setPendingValues] = useState(null);
     const busy = isSubmitting || mutation.isPending;
 
-    // Local, UX-only running total - the server always recomputes the
-    // authoritative total from the line items on submit.
     const watched = useWatch({ control });
     const previewTotal = computeTotal(watched || {});
 
-    const onSubmit = async (values) => {
-        if (busy) return;
-        const confirm = await Swal.fire({
-            title: 'Submit quote?',
-            text: 'The customer will be asked to approve or decline this quote.',
-            icon: 'question', showCancelButton: true, confirmButtonText: 'Yes, submit',
-        });
-        if (!confirm.isConfirmed) return;
+    const onValid = (values) => { if (!busy) setPendingValues(values); };
 
+    const confirmSubmit = () => {
+        const values = pendingValues;
+        if (!values) return;
         mutation.mutate(buildQuotePayload(values), {
-            onSuccess: () => Swal.fire({ icon: 'success', title: 'Quote submitted', text: 'The customer has been notified to review it.' }),
-            onError: (error) => Swal.fire({ icon: 'error', title: 'Could not submit quote', text: submitErrorMessage(error) }),
+            onSuccess: () => { setPendingValues(null); notify.success('Quote submitted - the customer will be notified to review it.'); },
+            onError: (error) => { setPendingValues(null); notify.error(submitErrorMessage(error)); },
         });
     };
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                    <label className="label" htmlFor="laborAmount">Labor (BDT)</label>
-                    <input id="laborAmount" type="number" min="0" step="1" inputMode="numeric"
-                        className={`input w-full ${errors.laborAmount ? 'input-error' : ''}`}
-                        aria-invalid={errors.laborAmount ? 'true' : 'false'} {...register('laborAmount', amountRule)} />
-                    {errors.laborAmount && <p role="alert" className="text-red-500 text-sm">{errors.laborAmount.message}</p>}
+        <>
+            <form onSubmit={handleSubmit(onValid)} className="space-y-4" noValidate>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div className="space-y-1.5">
+                        <Label htmlFor="laborAmount">Labor (BDT)</Label>
+                        <Input id="laborAmount" type="number" min="0" step="1" inputMode="numeric"
+                            aria-invalid={errors.laborAmount ? 'true' : 'false'} {...register('laborAmount', amountRule)} />
+                        {errors.laborAmount && <p role="alert" className="text-xs font-medium text-ds-destructive">{errors.laborAmount.message}</p>}
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label htmlFor="partsAmount">Parts (BDT)</Label>
+                        <Input id="partsAmount" type="number" min="0" step="1" inputMode="numeric"
+                            aria-invalid={errors.partsAmount ? 'true' : 'false'} {...register('partsAmount', amountRule)} />
+                        {errors.partsAmount && <p role="alert" className="text-xs font-medium text-ds-destructive">{errors.partsAmount.message}</p>}
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label htmlFor="additionalCharges">Additional (BDT)</Label>
+                        <Input id="additionalCharges" type="number" min="0" step="1" inputMode="numeric" placeholder="Optional"
+                            aria-invalid={errors.additionalCharges ? 'true' : 'false'} {...register('additionalCharges', optionalAmountRule)} />
+                        {errors.additionalCharges && <p role="alert" className="text-xs font-medium text-ds-destructive">{errors.additionalCharges.message}</p>}
+                    </div>
                 </div>
-                <div>
-                    <label className="label" htmlFor="partsAmount">Parts (BDT)</label>
-                    <input id="partsAmount" type="number" min="0" step="1" inputMode="numeric"
-                        className={`input w-full ${errors.partsAmount ? 'input-error' : ''}`}
-                        aria-invalid={errors.partsAmount ? 'true' : 'false'} {...register('partsAmount', amountRule)} />
-                    {errors.partsAmount && <p role="alert" className="text-red-500 text-sm">{errors.partsAmount.message}</p>}
+
+                <div className="flex items-center justify-between gap-3 rounded-ds border border-ds-border bg-ds-muted/40 p-3">
+                    <span className="text-sm text-ds-muted-foreground">Estimated total</span>
+                    <span className="text-lg font-semibold text-ds-foreground tabular-nums" aria-live="polite">
+                        {previewTotal === null ? '—' : formatMoney(previewTotal, 'BDT')}
+                    </span>
                 </div>
-                <div>
-                    <label className="label" htmlFor="additionalCharges">Additional (BDT)</label>
-                    <input id="additionalCharges" type="number" min="0" step="1" inputMode="numeric"
-                        className={`input w-full ${errors.additionalCharges ? 'input-error' : ''}`}
-                        placeholder="Optional"
-                        aria-invalid={errors.additionalCharges ? 'true' : 'false'} {...register('additionalCharges', optionalAmountRule)} />
-                    {errors.additionalCharges && <p role="alert" className="text-red-500 text-sm">{errors.additionalCharges.message}</p>}
+                <p className="-mt-2 text-xs text-ds-muted-foreground">The server confirms the final total from these line items.</p>
+
+                <div className="space-y-1.5">
+                    <Label htmlFor="quoteNotes">Notes (optional)</Label>
+                    <Textarea id="quoteNotes" rows={3} placeholder="Anything the customer should know about this quote"
+                        {...register('notes', { maxLength: { value: NOTES_MAX, message: `At most ${NOTES_MAX} characters.` } })} />
+                    {errors.notes && <p role="alert" className="text-xs font-medium text-ds-destructive">{errors.notes.message}</p>}
                 </div>
-            </div>
 
-            <p className="font-semibold" aria-live="polite">
-                Estimated total: {previewTotal === null ? '—' : formatMoney(previewTotal, 'BDT')}
-                <span className="font-normal text-sm opacity-70"> (server confirms the final total)</span>
-            </p>
+                <LoadingButton type="submit" loading={busy} loadingText="Submitting…">Submit quote</LoadingButton>
+            </form>
 
-            <div>
-                <label className="label" htmlFor="quoteNotes">Notes (optional)</label>
-                <textarea id="quoteNotes" rows={3} className={`textarea w-full ${errors.notes ? 'textarea-error' : ''}`}
-                    placeholder="Anything the customer should know about this quote"
-                    {...register('notes', { maxLength: { value: NOTES_MAX, message: `At most ${NOTES_MAX} characters.` } })} />
-                {errors.notes && <p role="alert" className="text-red-500 text-sm">{errors.notes.message}</p>}
-            </div>
-
-            <button type="submit" disabled={busy} className="btn btn-primary">{busy ? 'Submitting…' : 'Submit quote'}</button>
-        </form>
+            <ConfirmDialog
+                open={!!pendingValues}
+                onOpenChange={(open) => { if (!open) setPendingValues(null); }}
+                title="Submit quote?"
+                description="The customer will be asked to approve or decline this quote."
+                confirmLabel="Submit quote"
+                busy={mutation.isPending}
+                onConfirm={confirmSubmit}
+            />
+        </>
     );
 };
 

@@ -3,27 +3,18 @@ import QuoteForm from './QuoteForm';
 import QuoteSummary from './QuoteSummary';
 import QuoteDecisionActions from './QuoteDecisionActions';
 
-// Orchestrates the quote area inside RequestDetails (Phase 6.4 Unit 5).
-// Rendered only for v2 requests. Decides, from server truth, whether to show
-// the technician form, the read-only summary (+ owner decision actions while
-// awaiting a decision), or a neutral placeholder. The server always
-// re-authorizes and re-validates.
-//
-//  - submitted            -> summary + (owner only) approve/decline actions
-//  - approved / rejected  -> summary (final state)
-//  - not submitted + eligible technician -> submission form
-//  - not submitted + assigned technician, wrong stage -> hint
-//  - not submitted + customer/admin -> "no quote yet" note
+// Orchestrates the quote area inside the repair workspace (Phase 6.4 Unit 5).
+// Server truth decides which of form / summary (+ owner decision) / hint shows;
+// the server always re-authorizes. Redesigned to ds-* copy in 7.6A.
 const QuoteSection = ({ requestId, isOwner, canSubmitQuote, isAssignedTechnicianView }) => {
     const { data: quote, isLoading, isError } = useQuote(requestId);
 
     if (isLoading) {
-        return <p className="opacity-70 text-sm" aria-busy="true">Loading quote…</p>;
+        return <p className="text-sm text-ds-muted-foreground" aria-busy="true">Loading quote…</p>;
     }
     if (isError || !quote) {
-        return <p className="opacity-70 text-sm">Quote details are unavailable right now.</p>;
+        return <p className="text-sm text-ds-muted-foreground">Quote details are unavailable right now.</p>;
     }
-
     if (quote.status === 'submitted') {
         return (
             <div>
@@ -32,19 +23,16 @@ const QuoteSection = ({ requestId, isOwner, canSubmitQuote, isAssignedTechnician
             </div>
         );
     }
-
     if (quote.status === 'approved' || quote.status === 'rejected') {
         return <QuoteSummary quote={quote} />;
     }
-
-    // No quote yet.
     if (canSubmitQuote) {
         return <QuoteForm requestId={requestId} />;
     }
     if (isAssignedTechnicianView) {
-        return <p className="opacity-70 text-sm">You can submit a quote once the inspection is completed.</p>;
+        return <p className="text-sm text-ds-muted-foreground">You can submit a quote once the inspection is completed.</p>;
     }
-    return <p className="opacity-70 text-sm">No repair quote has been prepared yet.</p>;
+    return <p className="text-sm text-ds-muted-foreground">No repair quote has been prepared yet.</p>;
 };
 
 export default QuoteSection;

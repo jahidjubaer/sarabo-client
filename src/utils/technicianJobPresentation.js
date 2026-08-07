@@ -55,12 +55,13 @@ export function isV2Job(job) {
     return job?.schemaVersion === 2;
 }
 
-// Per-status CTA descriptor. Two of these ADVANCE the generic delivery status
-// via the existing PATCH /parcels/:id/status mutation - this is essential and
-// intentionally preserved: reaching parcel_picked_up is the only way the
-// inspection unlocks (see RequestDetails / InspectionSection), and there is no
-// other place to advance it. Every other status NAVIGATES to the authoritative
-// details screen; this helper never mutates inspection/quote/repair state.
+// Per-status CTA descriptor. Phase 7.6 relocated the early generic-status
+// advance (driver_assigned / rider_arriving) into the repair workspace, so those
+// now NAVIGATE to the job details screen where the advance control lives - the
+// list no longer mutates status inline for them. Only legacy pickup completion
+// remains an inline advance (legacy requests have no v2 workspace section for
+// it). Every v2 workflow status navigates to the authoritative details screen;
+// this helper never mutates inspection/quote/repair state.
 //   kind: 'advance' -> calls the status mutation with `nextStatus`
 //   kind: 'navigate' -> links to `to`
 export function getTechnicianAction(job) {
@@ -70,9 +71,9 @@ export function getTechnicianAction(job) {
 
     switch (status) {
         case 'driver_assigned':
-            return { kind: 'advance', label: 'Start journey', nextStatus: 'rider_arriving', variant: 'default' };
+            return { kind: 'navigate', label: 'Start pickup', to, variant: 'default' };
         case 'rider_arriving':
-            return { kind: 'advance', label: 'Start repair', nextStatus: 'parcel_picked_up', variant: 'default' };
+            return { kind: 'navigate', label: 'Device received', to, variant: 'default' };
         case 'parcel_picked_up':
             // v2 -> inspect at details; legacy -> complete via the generic status.
             return v2

@@ -1,40 +1,36 @@
 import RepairProgressTimeline from './RepairProgressTimeline';
+import { Badge } from '../ui/badge';
+import { formatAbsoluteDateTime } from '../../utils/relativeTime';
 
-// Read-only completed-repair view (Phase 6.4 Unit 7). Shown to everyone once the
-// repair is completed. Evidence images use the server's short-lived signed read
-// urls exactly as returned (memory-only, never persisted) - the client never
-// sees a storageKey or bucket.
-function formatDate(value) {
-    if (!value) return '';
-    const d = new Date(value);
-    return Number.isNaN(d.getTime()) ? '' : d.toLocaleString();
-}
-
+// Read-only completed-repair view (Phase 6.4 Unit 7) redesigned in 7.6A. Shown
+// to everyone once the repair is completed. Evidence images use the server's
+// short-lived signed read urls exactly as returned (memory-only, never
+// persisted) - the client never sees a storageKey or bucket.
 const RepairSummary = ({ repair }) => {
     const completion = repair?.completion;
     return (
         <div className="space-y-4">
-            <p>
-                <span className="badge badge-success">Repair completed</span>
-                {completion?.completedAt && <span className="text-sm opacity-70 ml-2">on {formatDate(completion.completedAt)}</span>}
-            </p>
+            <div className="flex items-center gap-2">
+                <Badge tone="success">Repair completed</Badge>
+                {completion?.completedAt && <span className="text-sm text-ds-muted-foreground">on {formatAbsoluteDateTime(completion.completedAt)}</span>}
+            </div>
 
             {completion?.summary && (
                 <div>
-                    <h4 className="font-semibold">Completion summary</h4>
-                    <p className="text-sm opacity-80 whitespace-pre-line">{completion.summary}</p>
+                    <h4 className="text-sm font-semibold text-ds-foreground">Completion summary</h4>
+                    <p className="whitespace-pre-line text-sm text-ds-muted-foreground">{completion.summary}</p>
                 </div>
             )}
 
             {Array.isArray(completion?.evidenceImages) && completion.evidenceImages.length > 0 && (
                 <div>
-                    <h4 className="font-semibold mb-2">Completion photos</h4>
+                    <h4 className="mb-2 text-sm font-semibold text-ds-foreground">Completion photos</h4>
                     <div className="flex flex-wrap gap-3">
-                        {completion.evidenceImages.map((img) => (
-                            <a key={img.imageId} href={img.url || undefined} target="_blank" rel="noreferrer" className="block">
-                                {img.url
-                                    ? <img src={img.url} alt="Repair completion evidence" className="w-28 h-28 object-cover rounded-lg border border-base-300" />
-                                    : <span className="w-28 h-28 flex items-center justify-center text-xs opacity-60 rounded-lg border border-base-300">Unavailable</span>}
+                        {completion.evidenceImages.map((image) => (
+                            <a key={image.imageId} href={image.url || undefined} target="_blank" rel="noreferrer" className="focus-ring block rounded-ds">
+                                {image.url
+                                    ? <img src={image.url} alt="Repair completion evidence" className="size-28 rounded-ds border border-ds-border object-cover" />
+                                    : <span className="flex size-28 items-center justify-center rounded-ds border border-ds-border text-xs text-ds-muted-foreground">Unavailable</span>}
                             </a>
                         ))}
                     </div>
@@ -43,7 +39,7 @@ const RepairSummary = ({ repair }) => {
 
             {Array.isArray(repair?.progressUpdates) && repair.progressUpdates.length > 0 && (
                 <div>
-                    <h4 className="font-semibold mb-2">Progress history</h4>
+                    <h4 className="mb-2 text-sm font-semibold text-ds-foreground">Progress history</h4>
                     <RepairProgressTimeline updates={repair.progressUpdates} />
                 </div>
             )}
