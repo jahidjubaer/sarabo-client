@@ -4,16 +4,20 @@ import useAuth from '../../../hooks/useAuth';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import { FiEdit } from 'react-icons/fi';
 import { FaBan } from 'react-icons/fa6';
-import { FaEye, FaCreditCard } from 'react-icons/fa';
+import { FaEye, FaCreditCard, FaTrash } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import { Link } from 'react-router';
 import Loading from '../../../components/Loading/Loading';
 import StatusBadge from '../../../components/StatusBadge/StatusBadge';
 import { getPaymentErrorMessage } from '../../../utils/paymentErrorMessage';
 import { getCancellationErrorMessage } from '../../../utils/cancellationErrorMessage';
+import { getDeletionErrorMessage } from '../../../utils/deletionErrorMessage';
 import { formatCurrency } from '../../../utils/formatCurrency';
 import { getRepairStatusLabel } from '../../../utils/repairStatus';
 import { canCancelRequest } from '../../../utils/cancellationEligibility';
+import { canDeleteRequest } from '../../../utils/deletionEligibility';
+import { deleteRepairRequest } from '../../../api/repairRequests';
+import { removeDeletedRequestCaches } from '../../../utils/removeDeletedRequestCaches';
 
 const MyRequests = () => {
     const { user } = useAuth();
@@ -23,6 +27,7 @@ const MyRequests = () => {
     const [statusFilter, setStatusFilter] = useState('all');
     const [payingId, setPayingId] = useState(null);
     const [cancellingId, setCancellingId] = useState(null);
+    const [deletingId, setDeletingId] = useState(null);
 
     const { data: requests = [], refetch, isLoading } = useQuery({
         queryKey: ['my-requests', user?.email],
@@ -80,6 +85,50 @@ const MyRequests = () => {
                     Swal.fire({ icon: 'error', title: 'Could not cancel request', text: getCancellationErrorMessage(error) });
                 })
                 .finally(() => setCancellingId(null));
+        });
+    }
+
+    // Hard deletion is offered only for a brand-new (pending-pickup, unassigned,
+    // unpaid, no inspection/quote/repair) request - canDeleteRequest gates the
+    // button, and the server independently re-verifies every one of those rules
+    // before removing anything. Deletion is permanent (unlike cancellation,
+    // which keeps the record), so the confirmation copy says so plainly.
+    const handleDeleteRequest = request => {
+        if (deletingId) return;
+
+        Swal.fire({
+            title: 'Delete repair request?',
+            text: 'This permanently removes the request and its photos. This cannot be undone. Once a technician, inspection, quote, or payment exists, a request can no longer be deleted - cancel it instead.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it'
+        }).then(result => {
+            if (!result.isConfirmed) return;
+
+            setDeletingId(request._id);
+            deleteRepairRequest(axiosSecure, request._id)
+                .then(() => {
+                    // The request is gone server-side, so drop every
+                    // request-specific private cache branch (including any
+                    // short-lived signed Storage read URLs) from memory now, not
+                    // merely mark them stale - see removeDeletedRequestCaches.
+                    removeDeletedRequestCaches(queryClient, request._id);
+                    // Then refresh the list itself so the deleted row disappears.
+                    queryClient.invalidateQueries({ queryKey: ['my-requests', user?.email] });
+                    refetch();
+                    Swal.fire({
+                        title: 'Request Deleted',
+                        text: 'Your repair request has been deleted.',
+                        icon: 'success'
+                    });
+                })
+                .catch(error => {
+                    if (import.meta.env.DEV) console.error('Deletion failed:', error);
+                    Swal.fire({ icon: 'error', title: 'Could not delete request', text: getDeletionErrorMessage(error) });
+                })
+                .finally(() => setDeletingId(null));
         });
     }
 
@@ -197,6 +246,18 @@ const MyRequests = () => {
                                                     aria-label="Cancel Request"
                                                     className='btn btn-square btn-sm btn-outline btn-error'>
                                                     <FaBan aria-hidden="true" />
+                                                </button>
+                                            </div>
+                                        }
+                                        {
+                                            canDeleteRequest(request) &&
+                                            <div className="tooltip" data-tip="Delete Request">
+                                                <button
+                                                    onClick={() => handleDeleteRequest(request)}
+                                                    disabled={deletingId === request._id}
+                                                    aria-label="Delete Request"
+                                                    className='btn btn-square btn-sm btn-error'>
+                                                    <FaTrash aria-hidden="true" />
                                                 </button>
                                             </div>
                                         }

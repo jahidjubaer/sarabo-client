@@ -20,3 +20,15 @@ export async function createRepairRequestV2(axiosSecure, payload) {
     }
     return { requestId: insertedId };
 }
+
+// Safe deletion of one repair request (Phase 6.5 Unit 8). DELETE /parcels/:id
+// requires verifyFBToken and enforces owner-or-admin + lifecycle eligibility
+// entirely server-side (see sarabo-server's controllers/parcelController.js#
+// deleteParcel) - this function sends only the id, never any authorization or
+// state hint the server would have to trust. The server responds with
+// `{ success, deletedRequestId }`; every guard failure surfaces as a normal
+// axios error the caller maps through utils/deletionErrorMessage.js.
+export async function deleteRepairRequest(axiosSecure, requestId) {
+    const res = await axiosSecure.delete(`/parcels/${requestId}`);
+    return res.data;
+}
