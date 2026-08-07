@@ -1,16 +1,25 @@
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { FaEye, FaUserCog } from 'react-icons/fa';
+import { Eye, UserCog, Search, X } from 'lucide-react';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
-import Loading from '../../../components/Loading/Loading';
-import StatusBadge from '../../../components/StatusBadge/StatusBadge';
-import { formatCurrency } from '../../../utils/formatCurrency';
-import { getRepairStatusLabel } from '../../../utils/repairStatus';
+import { PageHeader } from '../../../components/common/PageHeader';
+import { EmptyState } from '../../../components/common/EmptyState';
+import { ErrorState } from '../../../components/common/ErrorState';
+import { AdminDataTable } from '../../../components/admin/data-table/AdminDataTable';
+import { StatusBadge } from '../../../components/common/StatusBadge';
+import { Badge } from '../../../components/ui/badge';
+import { Button } from '../../../components/ui/button';
+import { buttonVariants } from '../../../components/ui/button-variants';
+import { Input } from '../../../components/ui/input';
+import { Label } from '../../../components/ui/label';
+import { getProductSummary } from '../../../utils/customerRequestPresentation';
+import { formatAbsoluteDateTime } from '../../../utils/relativeTime';
 import { getManageRepairRequestsErrorMessage } from '../../../utils/manageRepairRequestsErrorMessage';
+import { cn } from '../../../lib/utils';
 
 const STATUS_OPTIONS = [
-    { value: 'all', label: 'All Statuses' },
+    { value: 'all', label: 'All statuses' },
     { value: 'pending-pickup', label: 'Request Submitted' },
     { value: 'driver_assigned', label: 'Technician Assigned' },
     { value: 'rider_arriving', label: 'Technician On The Way' },
@@ -18,16 +27,24 @@ const STATUS_OPTIONS = [
     { value: 'parcel_delivered', label: 'Repair Completed' },
     { value: 'cancelled', label: 'Request Cancelled' },
 ];
-
 const PAYMENT_OPTIONS = [
-    { value: 'all', label: 'All Payments' },
+    { value: 'all', label: 'All payments' },
     { value: 'paid', label: 'Paid' },
     { value: 'unpaid', label: 'Unpaid' },
 ];
-
 const SEARCH_DEBOUNCE_MS = 400;
 const PAGE_LIMIT = 10;
+const selectClass = "h-10 rounded-ds border border-ds-input bg-ds-background px-3 text-sm text-ds-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-ring";
 
+function PaymentBadge({ paid }) {
+    return <Badge tone={paid ? 'success' : 'warning'}>{paid ? 'Paid' : 'Unpaid'}</Badge>;
+}
+
+// Phase 7.5: admin repair-request management on the design-system data table.
+// SERVER-side pagination/search/filtering via /admin/parcels is PRESERVED
+// exactly (same params, same { data, pagination } contract) - the table runs in
+// manual mode over the current page rather than pulling all rows. Actions
+// (view / assign) reuse the existing routes; no business logic changes.
 const ManageRepairRequests = () => {
     const axiosSecure = useAxiosSecure();
     const navigate = useNavigate();
@@ -38,9 +55,6 @@ const ManageRepairRequests = () => {
     const [paymentStatus, setPaymentStatus] = useState('all');
     const [page, setPage] = useState(1);
 
-    // Modest debounce so filtering/searching doesn't fire a request on every
-    // keystroke - resets back to page 1 once the debounced term actually
-    // changes, not on every keystroke.
     useEffect(() => {
         const handle = setTimeout(() => {
             setDebouncedSearch(searchInput.trim());
@@ -49,16 +63,13 @@ const ManageRepairRequests = () => {
         return () => clearTimeout(handle);
     }, [searchInput]);
 
-    const queryKey = ['adminRepairRequests', { page, search: debouncedSearch, status, paymentStatus }];
-
     const { data, isLoading, isError, error, isFetching, refetch } = useQuery({
-        queryKey,
+        queryKey: ['adminRepairRequests', { page, search: debouncedSearch, status, paymentStatus }],
         queryFn: async () => {
             const params = { page, limit: PAGE_LIMIT };
             if (debouncedSearch) params.search = debouncedSearch;
             if (status !== 'all') params.status = status;
             if (paymentStatus !== 'all') params.paymentStatus = paymentStatus;
-
             const res = await axiosSecure.get('/admin/parcels', { params });
             return res.data;
         },
@@ -66,15 +77,7 @@ const ManageRepairRequests = () => {
         retry: 1,
     });
 
-    const handleStatusChange = value => {
-        setStatus(value);
-        setPage(1);
-    };
-
-    const handlePaymentChange = value => {
-        setPaymentStatus(value);
-        setPage(1);
-    };
+    const hasActiveFilters = !!debouncedSearch || status !== 'all' || paymentStatus !== 'all';
 
     const handleResetFilters = () => {
         setSearchInput('');
@@ -84,166 +87,147 @@ const ManageRepairRequests = () => {
         setPage(1);
     };
 
-    const hasActiveFilters = !!debouncedSearch || status !== 'all' || paymentStatus !== 'all';
-
-    if (isLoading) {
-        return <Loading></Loading>
-    }
+    const columns = useMemo(() => [
+        {
+            id: 'tracking', accessorKey: 'trackingId', header: 'Tracking', enableSorting: false, enableHiding: false,
+            cell: ({ row }) => <span className="font-medium text-ds-foreground">{row.original.trackingId}</span>,
+            meta: { label: 'Tracking' },
+        },
+        {
+            id: 'customer', header: 'Customer', enableSorting: false,
+            cell: ({ row }) => (
+                <div className="min-w-0">
+                    <div className="truncate text-ds-foreground">{row.original.senderName}</div>
+                    <div className="truncate text-xs text-ds-muted-foreground">{row.original.senderEmail}</div>
+                </div>
+            ),
+            meta: { label: 'Customer' },
+        },
+        {
+            id: 'device', header: 'Device', enableSorting: false, enableHiding: false,
+            cell: ({ row }) => row.original.parcelName,
+            meta: { label: 'Device' },
+        },
+        {
+            id: 'status', header: 'Status', enableSorting: false, enableHiding: false,
+            cell: ({ row }) => <StatusBadge status={row.original.deliveryStatus || 'pending-pickup'} />,
+            meta: { label: 'Status' },
+        },
+        {
+            id: 'payment', header: 'Payment', enableSorting: false,
+            cell: ({ row }) => <PaymentBadge paid={row.original.paymentStatus === 'paid'} />,
+            meta: { label: 'Payment' },
+        },
+        {
+            id: 'technician', header: 'Technician', enableSorting: false,
+            cell: ({ row }) => row.original.riderName || <span className="text-ds-muted-foreground">Unassigned</span>,
+            meta: { label: 'Technician' },
+        },
+        {
+            id: 'created', header: 'Created', enableSorting: false,
+            cell: ({ row }) => <span className="whitespace-nowrap text-ds-muted-foreground">{row.original.createdAt ? formatAbsoluteDateTime(row.original.createdAt) : ''}</span>,
+            meta: { label: 'Created' },
+        },
+        {
+            id: 'actions', header: '', enableSorting: false, enableHiding: false,
+            cell: ({ row }) => (
+                <div className="flex justify-end gap-1">
+                    <Link to={`/dashboard/manage-repair-requests/${row.original._id}`} aria-label={`View request ${row.original.trackingId}`} className={buttonVariants({ variant: 'ghost', size: 'icon' })}>
+                        <Eye aria-hidden="true" className="size-4" />
+                    </Link>
+                    {row.original.canAssign && (
+                        <Button variant="ghost" size="icon" aria-label={`Assign technician for ${row.original.trackingId}`} onClick={() => navigate(`/dashboard/assign-technicians?request=${row.original._id}`)}>
+                            <UserCog aria-hidden="true" className="size-4" />
+                        </Button>
+                    )}
+                </div>
+            ),
+            meta: { label: 'Actions', headClassName: 'text-right', cellClassName: 'text-right' },
+        },
+    ], [navigate]);
 
     if (isError) {
         return (
-            <div>
-                <h2 className="text-4xl font-bold">Manage Repair Requests</h2>
-                <div className="alert alert-error mt-8">
-                    <span>{getManageRepairRequestsErrorMessage(error)}</span>
-                </div>
-                <button onClick={() => refetch()} className="btn btn-primary mt-4">Retry</button>
+            <div className="space-y-6">
+                <PageHeader eyebrow="Admin" title="Repair Requests" />
+                <ErrorState title="Couldn't load repair requests" description={getManageRepairRequestsErrorMessage(error)} onRetry={() => refetch()} />
             </div>
         );
     }
 
     const requests = data?.data ?? [];
-    const pagination = data?.pagination ?? { page: 1, limit: PAGE_LIMIT, totalItems: 0, totalPages: 1, hasNextPage: false, hasPreviousPage: false };
+    const pagination = data?.pagination ?? { page: 1, limit: PAGE_LIMIT, totalItems: 0, totalPages: 1 };
+
+    const renderCard = (request) => {
+        const { device } = getProductSummary(request);
+        return (
+            <div className="rounded-ds-lg border border-ds-border bg-ds-card p-4">
+                <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-ds-foreground">{device}</p>
+                        <p className="truncate text-xs text-ds-muted-foreground">{request.trackingId}</p>
+                    </div>
+                    <StatusBadge status={request.deliveryStatus || 'pending-pickup'} className="shrink-0" />
+                </div>
+                <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                    <div><dt className="text-ds-muted-foreground">Customer</dt><dd className="truncate text-ds-foreground">{request.senderName}</dd></div>
+                    <div><dt className="text-ds-muted-foreground">Technician</dt><dd className="truncate text-ds-foreground">{request.riderName || 'Unassigned'}</dd></div>
+                    <div><dt className="text-ds-muted-foreground">Payment</dt><dd><PaymentBadge paid={request.paymentStatus === 'paid'} /></dd></div>
+                    <div><dt className="text-ds-muted-foreground">Created</dt><dd className="text-ds-foreground">{request.createdAt ? formatAbsoluteDateTime(request.createdAt) : ''}</dd></div>
+                </dl>
+                <div className="mt-3 flex gap-2">
+                    <Link to={`/dashboard/manage-repair-requests/${request._id}`} className={buttonVariants({ variant: 'outline', size: 'sm' })}><Eye aria-hidden="true" />View</Link>
+                    {request.canAssign && <Button size="sm" onClick={() => navigate(`/dashboard/assign-technicians?request=${request._id}`)}><UserCog aria-hidden="true" />Assign</Button>}
+                </div>
+            </div>
+        );
+    };
+
+    const toolbar = (
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="relative min-w-0 flex-1 sm:max-w-xs">
+                <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ds-muted-foreground" />
+                <Label htmlFor="manage-search" className="sr-only">Search requests</Label>
+                <Input id="manage-search" type="search" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} placeholder="Search tracking, customer, device" className="pl-9" />
+            </div>
+            <Label htmlFor="manage-status" className="sr-only">Filter by status</Label>
+            <select id="manage-status" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} className={selectClass}>
+                {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            <Label htmlFor="manage-payment" className="sr-only">Filter by payment</Label>
+            <select id="manage-payment" value={paymentStatus} onChange={(e) => { setPaymentStatus(e.target.value); setPage(1); }} className={selectClass}>
+                {PAYMENT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            {hasActiveFilters && (
+                <Button variant="ghost" size="sm" onClick={handleResetFilters}><X aria-hidden="true" />Reset</Button>
+            )}
+        </div>
+    );
 
     return (
-        <div>
-            <h2 className="text-4xl font-bold">Manage Repair Requests</h2>
-            <p className="opacity-70 mt-2">
-                Complete operational view of every repair request - pending, assigned, in-progress, completed, cancelled, paid, and unpaid.
-            </p>
-            <p className="mt-2 font-semibold">Total requests: {pagination.totalItems}</p>
-
-            <div className="flex flex-col md:flex-row gap-4 my-6">
-                <label className="input" htmlFor="manage-requests-search">
-                    <svg className="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
-                        <g strokeLinejoin="round" strokeLinecap="round" strokeWidth="2.5" fill="none" stroke="currentColor">
-                            <circle cx="11" cy="11" r="8"></circle>
-                            <path d="m21 21-4.3-4.3"></path>
-                        </g>
-                    </svg>
-                    <input
-                        id="manage-requests-search"
-                        value={searchInput}
-                        onChange={e => setSearchInput(e.target.value)}
-                        type="search"
-                        className="grow"
-                        aria-label="Search repair requests by tracking code, customer name, email, or device"
-                        placeholder="Search by tracking code, customer, or device" />
-                </label>
-
-                <label className="sr-only" htmlFor="manage-requests-status">Filter by repair status</label>
-                <select
-                    id="manage-requests-status"
-                    value={status}
-                    onChange={e => handleStatusChange(e.target.value)}
-                    className="select">
-                    {STATUS_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                </select>
-
-                <label className="sr-only" htmlFor="manage-requests-payment">Filter by payment status</label>
-                <select
-                    id="manage-requests-payment"
-                    value={paymentStatus}
-                    onChange={e => handlePaymentChange(e.target.value)}
-                    className="select">
-                    {PAYMENT_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                </select>
-
-                {hasActiveFilters && (
-                    <button onClick={handleResetFilters} className="btn btn-outline">Reset Filters</button>
-                )}
-            </div>
-
-            {isFetching && <p className="opacity-60 text-sm mb-2" role="status">Updating results...</p>}
-
-            <div className="overflow-x-auto">
-                <table className="table table-zebra">
-                    <thead>
-                        <tr>
-                            <th></th>
-                            <th>Tracking Code</th>
-                            <th>Customer</th>
-                            <th>Device</th>
-                            <th>Repair Status</th>
-                            <th>Payment</th>
-                            <th>Cost</th>
-                            <th>Technician</th>
-                            <th>Created</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {requests.map((request, index) => (
-                            <tr key={request._id}>
-                                <th>{(pagination.page - 1) * pagination.limit + index + 1}</th>
-                                <td>{request.trackingId}</td>
-                                <td>
-                                    <div>{request.senderName}</div>
-                                    <div className="opacity-60 text-sm break-all">{request.senderEmail}</div>
-                                </td>
-                                <td>{request.parcelName}</td>
-                                <td><StatusBadge status={request.deliveryStatus || 'pending-pickup'} label={getRepairStatusLabel(request.deliveryStatus)} /></td>
-                                <td><StatusBadge status={request.paymentStatus === 'paid' ? 'paid' : 'unpaid'} /></td>
-                                <td>{formatCurrency(request.cost)}</td>
-                                <td>{request.riderName || 'Unassigned'}</td>
-                                <td>{request.createdAt ? new Date(request.createdAt).toLocaleDateString() : ''}</td>
-                                <td>
-                                    <div className="flex flex-wrap gap-2">
-                                        <div className="tooltip" data-tip="View details">
-                                            <Link
-                                                to={`/dashboard/manage-repair-requests/${request._id}`}
-                                                aria-label={`View details for request ${request.trackingId}`}
-                                                className="btn btn-square btn-sm hover:bg-primary">
-                                                <FaEye aria-hidden="true" />
-                                            </Link>
-                                        </div>
-                                        {request.canAssign && (
-                                            <div className="tooltip" data-tip="Assign Technician">
-                                                <button
-                                                    onClick={() => navigate(`/dashboard/assign-technicians?request=${request._id}`)}
-                                                    aria-label={`Assign technician for request ${request.trackingId}`}
-                                                    className="btn btn-square btn-sm hover:bg-primary">
-                                                    <FaUserCog aria-hidden="true" />
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-                {
-                    requests.length === 0 && !hasActiveFilters &&
-                    <p className="text-center py-8 opacity-60">No repair requests exist yet.</p>
+        <div className="space-y-6">
+            <PageHeader eyebrow="Admin" title="Repair Requests" description={`${pagination.totalItems} request${pagination.totalItems === 1 ? '' : 's'} across every stage`} />
+            <p className={cn("text-sm text-ds-muted-foreground transition-opacity", isFetching ? "opacity-100" : "opacity-0")} role="status" aria-live="polite">Updating results…</p>
+            <AdminDataTable
+                columns={columns}
+                data={requests}
+                isLoading={isLoading}
+                enableColumnVisibility
+                getRowId={(row) => row._id}
+                toolbar={toolbar}
+                renderCard={renderCard}
+                manualPagination
+                pageCount={pagination.totalPages}
+                pageIndex={pagination.page - 1}
+                onPageChange={(index) => setPage(index + 1)}
+                emptyState={
+                    <EmptyState
+                        title={hasActiveFilters ? 'No matching requests' : 'No repair requests yet'}
+                        description={hasActiveFilters ? 'No requests match your search or filters.' : 'Repair requests will appear here as customers submit them.'}
+                        action={hasActiveFilters ? <Button variant="outline" size="sm" onClick={handleResetFilters}>Reset filters</Button> : undefined}
+                    />
                 }
-                {
-                    requests.length === 0 && hasActiveFilters &&
-                    <p className="text-center py-8 opacity-60">No requests match your search or filters.</p>
-                }
-            </div>
-
-            {pagination.totalPages > 1 && (
-                <div className="join mt-6 flex justify-center">
-                    <button
-                        onClick={() => setPage(p => Math.max(p - 1, 1))}
-                        disabled={!pagination.hasPreviousPage}
-                        aria-label="Previous page"
-                        className="join-item btn">
-                        Previous
-                    </button>
-                    <span className="join-item btn btn-disabled">
-                        Page {pagination.page} of {pagination.totalPages}
-                    </span>
-                    <button
-                        onClick={() => setPage(p => p + 1)}
-                        disabled={!pagination.hasNextPage}
-                        aria-label="Next page"
-                        className="join-item btn">
-                        Next
-                    </button>
-                </div>
-            )}
+            />
         </div>
     );
 };

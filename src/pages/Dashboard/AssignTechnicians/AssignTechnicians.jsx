@@ -1,217 +1,244 @@
-import { useQuery } from '@tanstack/react-query';
-import React, { useEffect, useRef, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
+import { Search, UserCog, MapPin, Award, Star } from 'lucide-react';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
-import Swal from 'sweetalert2';
-import Loading from '../../../components/Loading/Loading';
-import { formatCurrency } from '../../../utils/formatCurrency';
+import { PageHeader } from '../../../components/common/PageHeader';
+import { EmptyState } from '../../../components/common/EmptyState';
+import { ErrorState } from '../../../components/common/ErrorState';
+import { AdminDataTable } from '../../../components/admin/data-table/AdminDataTable';
+import { Badge } from '../../../components/ui/badge';
+import { Button } from '../../../components/ui/button';
+import { Input } from '../../../components/ui/input';
+import { Label } from '../../../components/ui/label';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '../../../components/ui/sheet';
+import { Skeleton } from '../../../components/ui/skeleton';
+import { notify } from '../../../lib/notify';
+import { humanizeSlug } from '../../../utils/serviceDefinitionCatalog';
+import { getProductSummary } from '../../../utils/customerRequestPresentation';
+import { getWorkStatusLabel, getWorkStatusTone, formatRecommendationReasons, getServiceAreaLabel } from '../../../utils/adminPresentation';
+import { formatAbsoluteDateTime } from '../../../utils/relativeTime';
 import { getAssignmentErrorMessage } from '../../../utils/assignmentErrorMessage';
 
+// Phase 7.5: technician assignment rebuilt around the EXPERTISE-AWARE backend.
+// The assignment Sheet uses the authoritative eligible-technicians endpoint
+// (GET /parcels/:id/eligible-technicians) - only server-eligible, server-ranked
+// technicians are shown, with the server's own recommendation reasons. No
+// client-side suitability scoring. Assignment still goes through the existing
+// PATCH /parcels/:id (which re-validates eligibility server-side); no business
+// logic changes.
 const AssignTechnicians = () => {
-    const [selectedRequest, setSelectedRequest] = useState(null);
-    const [searchText, setSearchText] = useState('');
-    const [assigningId, setAssigningId] = useState(null);
     const axiosSecure = useAxiosSecure();
-    const technicianModalRef = useRef();
+    const queryClient = useQueryClient();
+    const [search, setSearch] = useState('');
+    const [selectedRequest, setSelectedRequest] = useState(null);
+    const [assigningId, setAssigningId] = useState(null);
     const [searchParams, setSearchParams] = useSearchParams();
-    // Supports being deep-linked from the Manage Repair Requests page with a
-    // specific request preselected (?request=<id>) - only ever auto-opens
-    // once per arrival at this page, and only for a request that is actually
-    // still in this pending-assignment list (never trusts the id alone).
     const preselectRequestId = searchParams.get('request');
     const [autoOpenedFor, setAutoOpenedFor] = useState(null);
 
-    const { data: requests = [], refetch: requestsRefetch, isLoading } = useQuery({
+    const { data: requests = [], refetch: refetchRequests, isLoading, isError } = useQuery({
         queryKey: ['requests', 'pending-assignment'],
-        queryFn: async () => {
-            const res = await axiosSecure.get('/parcels?deliveryStatus=pending-pickup')
-            return res.data;
-        }
-    })
+        queryFn: async () => (await axiosSecure.get('/parcels?deliveryStatus=pending-pickup')).data,
+    });
 
-    // todo: invalidate query after assigning a technician
-    const { data: technicians = [], refetch: techniciansRefetch } = useQuery({
-        queryKey: ['technicians', selectedRequest?.senderDistrict, 'available'],
-        enabled: !!selectedRequest,
-        queryFn: async () => {
-            const res = await axiosSecure.get(`/riders?status=approved&district=${selectedRequest?.senderDistrict}&workStatus=available`);
-            return res.data;
-        }
-    })
+    const eligibleQuery = useQuery({
+        queryKey: ['eligible-technicians', selectedRequest?._id],
+        enabled: !!selectedRequest?._id,
+        queryFn: async () => (await axiosSecure.get(`/parcels/${selectedRequest._id}/eligible-technicians`)).data,
+    });
 
-    const openAssignTechnicianModal = request => {
-        setSelectedRequest(request);
-
-        technicianModalRef.current.showModal()
-    }
-
+    // Preserved deep-link: open the assignment Sheet once for ?request=<id> if
+    // that request is actually still pending assignment.
     useEffect(() => {
         if (isLoading || !preselectRequestId || autoOpenedFor === preselectRequestId) return;
-
-        const match = requests.find(r => r._id === preselectRequestId);
-        if (match) {
-            openAssignTechnicianModal(match);
-        }
-        // Whether found or not, this preselect id has now been handled once -
-        // never keep retrying it (e.g. after the modal is closed) or fall
-        // back to a silent no-op forever if it wasn't eligible/found.
+        const match = requests.find((r) => r._id === preselectRequestId);
+        if (match) setSelectedRequest(match);
         setAutoOpenedFor(preselectRequestId);
-        // Drop the query param so a later manual refetch/reopen doesn't
-        // re-trigger the same preselection.
-        setSearchParams(params => {
-            params.delete('request');
-            return params;
-        }, { replace: true });
+        setSearchParams((params) => { params.delete('request'); return params; }, { replace: true });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isLoading, requests, preselectRequestId, autoOpenedFor]);
 
-    if (isLoading) {
-        return <Loading></Loading>
-    }
+    const filtered = useMemo(() => requests.filter((r) => {
+        const term = search.trim().toLowerCase();
+        if (!term) return true;
+        return (r.parcelName || '').toLowerCase().includes(term) || (r.senderDistrict || r.serviceLocation?.district || '').toLowerCase().includes(term);
+    }), [requests, search]);
 
-    const filteredRequests = requests.filter(r => !searchText ||
-        (r.parcelName || '').toLowerCase().includes(searchText.toLowerCase()) ||
-        (r.senderDistrict || '').toLowerCase().includes(searchText.toLowerCase()));
-
-    // Only riderId is required server-side (the technician's name/email are
-    // looked up and trusted from the database, not from this body) - the
-    // extra fields are harmless and kept for backward compatibility with
-    // any other consumer of this same request shape.
-    const handleAssignTechnician = technician => {
-        if (assigningId) return;
-        setAssigningId(technician._id);
-
-        const technicianAssignInfo = {
-            riderId: technician._id,
-            riderEmail: technician.email,
-            riderName: technician.name,
-            parcelId: selectedRequest._id,
-            trackingId: selectedRequest.trackingId
-        }
-        axiosSecure.patch(`/parcels/${selectedRequest._id}`, technicianAssignInfo)
-            .then(res => {
+    const handleAssign = (technician) => {
+        if (assigningId || !selectedRequest) return;
+        setAssigningId(technician.technicianId);
+        // Server needs only riderId (it looks up name/email from the DB and
+        // re-validates eligibility); riderName/trackingId are harmless extras.
+        axiosSecure.patch(`/parcels/${selectedRequest._id}`, { riderId: technician.technicianId, riderName: technician.displayName, trackingId: selectedRequest.trackingId })
+            .then((res) => {
                 if (res.data.modifiedCount) {
-                    technicianModalRef.current.close();
-                    requestsRefetch();
-                    techniciansRefetch();
-                    Swal.fire({
-                        position: "top-end",
-                        icon: "success",
-                        title: `Technician has been assigned.`,
-                        showConfirmButton: false,
-                        timer: 1500
-                    });
+                    setSelectedRequest(null);
+                    refetchRequests();
+                    queryClient.invalidateQueries({ queryKey: ['request-status-stats'] });
+                    queryClient.invalidateQueries({ queryKey: ['admin-all-requests'] });
+                    notify.success(`${technician.displayName} assigned`);
+                } else {
+                    refetchRequests();
+                    notify.info('No change was made - the list has been refreshed.');
                 }
             })
-            .catch(error => {
+            .catch((error) => {
                 if (import.meta.env.DEV) console.error('Technician assignment failed:', error);
-                Swal.fire({ icon: 'error', title: 'Could not assign technician', text: getAssignmentErrorMessage(error) });
-                // A conflict (already assigned/cancelled) means the lists
-                // shown are stale - refresh so the admin sees current state.
-                requestsRefetch();
-                techniciansRefetch();
+                notify.error(getAssignmentErrorMessage(error));
+                refetchRequests();
+                eligibleQuery.refetch();
             })
             .finally(() => setAssigningId(null));
+    };
+
+    const columns = useMemo(() => [
+        {
+            id: 'device', header: 'Device', enableSorting: true, enableHiding: false,
+            accessorFn: (row) => row.parcelName || '',
+            cell: ({ row }) => {
+                const { device, category } = getProductSummary(row.original);
+                return (
+                    <div className="min-w-0">
+                        <div className="truncate font-medium text-ds-foreground">{device}</div>
+                        {category && <div className="truncate text-xs text-ds-muted-foreground">{category}</div>}
+                    </div>
+                );
+            },
+            meta: { label: 'Device' },
+        },
+        { id: 'customer', header: 'Customer', enableSorting: false, cell: ({ row }) => <span className="truncate">{row.original.senderName || '—'}</span>, meta: { label: 'Customer' } },
+        { id: 'district', header: 'District', enableSorting: true, accessorFn: (row) => row.senderDistrict || row.serviceLocation?.district || '', cell: ({ row }) => row.original.senderDistrict || row.original.serviceLocation?.district || '—', meta: { label: 'District' } },
+        { id: 'created', header: 'Requested', enableSorting: false, cell: ({ row }) => <span className="whitespace-nowrap text-ds-muted-foreground">{row.original.createdAt ? formatAbsoluteDateTime(row.original.createdAt) : ''}</span>, meta: { label: 'Requested' } },
+        {
+            id: 'actions', header: '', enableSorting: false, enableHiding: false,
+            cell: ({ row }) => (
+                <div className="flex justify-end">
+                    <Button size="sm" onClick={() => setSelectedRequest(row.original)}><UserCog aria-hidden="true" />Find technicians</Button>
+                </div>
+            ),
+            meta: { label: 'Actions', headClassName: 'text-right', cellClassName: 'text-right' },
+        },
+    ], []);
+
+    if (isError) {
+        return (
+            <div className="space-y-6">
+                <PageHeader eyebrow="Admin" title="Assign Technicians" />
+                <ErrorState title="Couldn't load requests" description="We couldn't load requests awaiting assignment right now. Please try again." onRetry={() => refetchRequests()} />
+            </div>
+        );
     }
 
-    return (
-        <div>
-            <h2 className="text-4xl font-bold">Assign Technicians: {requests.length}</h2>
+    const summary = eligibleQuery.data?.requestSummary;
+    const eligibleTechnicians = eligibleQuery.data?.technicians ?? [];
 
-            <label className="input my-6">
-                <svg className="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                    <g strokeLinejoin="round" strokeLinecap="round" strokeWidth="2.5" fill="none" stroke="currentColor">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <path d="m21 21-4.3-4.3"></path>
-                    </g>
-                </svg>
-                <input
-                    onChange={(e) => setSearchText(e.target.value)}
-                    type="search"
-                    className="grow"
-                    placeholder="Search by device or district" />
-            </label>
-
-            <div className="overflow-x-auto">
-                <table className="table table-zebra">
-                    {/* head */}
-                    <thead>
-                        <tr>
-                            <th></th>
-                            <th>Name</th>
-                            <th>Repair Cost</th>
-                            <th>Created At</th>
-                            <th>Visit District</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredRequests.map((request, index) => <tr key={request._id}>
-                            <th>{index + 1}</th>
-                            <td>{request.parcelName}</td>
-                            <td>{formatCurrency(request.cost)}</td>
-                            <td>{request.createdAt}</td>
-                            <td>{request.senderDistrict}</td>
-                            <td>
-                                <button
-                                    onClick={() => openAssignTechnicianModal(request)}
-                                    className='btn btn-primary'>Find Technicians</button>
-                            </td>
-                        </tr>)}
-
-                    </tbody>
-                </table>
-                {
-                    requests.length === 0 && <p className='text-center py-8 opacity-60'>No repair requests are waiting for technician assignment right now.</p>
-                }
-                {
-                    requests.length > 0 && filteredRequests.length === 0 && <p className='text-center py-8 opacity-60'>No requests match your search.</p>
-                }
-            </div>
-            <dialog ref={technicianModalRef} className="modal modal-bottom sm:modal-middle">
-                <div className="modal-box">
-                    <h3 className="font-bold text-lg">Technicians: {technicians.length}</h3>
-
-                    <div className="overflow-x-auto">
-                        <table className="table table-zebra">
-                            {/* head */}
-                            <thead>
-                                <tr>
-                                    <th></th>
-                                    <th>Name</th>
-                                    <th>Email</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {technicians.map((technician, i) => <tr key={technician._id}>
-                                    <th>{i + 1}</th>
-                                    <td>{technician.name}</td>
-                                    <td>{technician.email}</td>
-                                    <td>
-                                        <button
-                                            onClick={() => handleAssignTechnician(technician)}
-                                            disabled={!!assigningId}
-                                            className='btn btn-primary'>{assigningId === technician._id ? 'Assigning...' : 'Assign'}</button>
-                                    </td>
-                                </tr>)}
-
-
-                            </tbody>
-                        </table>
-                        {
-                            technicians.length === 0 && <p className='text-center py-8 opacity-60'>No available technicians found for this service area.</p>
-                        }
-                    </div>
-
-                    <div className="modal-action">
-                        <form method="dialog">
-                            {/* if there is a button in form, it will close the modal */}
-                            <button className="btn">Close</button>
-                        </form>
-                    </div>
+    const renderCard = (request) => {
+        const { device, category } = getProductSummary(request);
+        return (
+            <div className="rounded-ds-lg border border-ds-border bg-ds-card p-4">
+                <p className="truncate text-sm font-semibold text-ds-foreground">{device}</p>
+                <p className="truncate text-xs text-ds-muted-foreground">{[category, request.senderName].filter(Boolean).join(' · ')}</p>
+                <div className="mt-2 flex items-center gap-2 text-xs text-ds-muted-foreground">
+                    <MapPin aria-hidden="true" className="size-3.5" />
+                    {request.senderDistrict || request.serviceLocation?.district || '—'}
                 </div>
-            </dialog>
+                <div className="mt-3 flex justify-end">
+                    <Button size="sm" onClick={() => setSelectedRequest(request)}><UserCog aria-hidden="true" />Find technicians</Button>
+                </div>
+            </div>
+        );
+    };
+
+    const toolbar = (
+        <div className="relative min-w-0 flex-1 sm:max-w-xs">
+            <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ds-muted-foreground" />
+            <Label htmlFor="assign-search" className="sr-only">Search requests</Label>
+            <Input id="assign-search" type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by device or district" className="pl-9" />
+        </div>
+    );
+
+    return (
+        <div className="space-y-6">
+            <PageHeader eyebrow="Admin" title="Assign Technicians" description={`${requests.length} request${requests.length === 1 ? '' : 's'} awaiting assignment`} />
+            <AdminDataTable
+                columns={columns}
+                data={filtered}
+                isLoading={isLoading}
+                getRowId={(row) => row._id}
+                toolbar={toolbar}
+                renderCard={renderCard}
+                emptyState={
+                    <EmptyState
+                        title={search ? 'No matching requests' : 'Nothing to assign'}
+                        description={search ? 'No requests match your search.' : 'No repair requests are waiting for technician assignment right now.'}
+                    />
+                }
+            />
+
+            <Sheet open={!!selectedRequest} onOpenChange={(open) => { if (!open) setSelectedRequest(null); }}>
+                <SheetContent side="right" className="w-full max-w-lg">
+                    <SheetHeader className="border-b border-ds-border">
+                        <SheetTitle>Recommended technicians</SheetTitle>
+                        <SheetDescription>
+                            {selectedRequest ? getProductSummary(selectedRequest).device : ''}
+                            {summary?.serviceArea?.district ? ` · ${summary.serviceArea.district}` : ''}
+                        </SheetDescription>
+                    </SheetHeader>
+
+                    <div className="min-h-0 flex-1 overflow-y-auto p-4">
+                        {summary && (
+                            <div className="mb-4 flex flex-wrap gap-2">
+                                {summary.productCategorySlug && <Badge tone="accent">{humanizeSlug(summary.productCategorySlug)}</Badge>}
+                                {summary.repairCategorySlug && <Badge tone="neutral">{humanizeSlug(summary.repairCategorySlug)}</Badge>}
+                                {summary.requiredExpertiseLevel && <Badge tone="info">Min: {humanizeSlug(summary.requiredExpertiseLevel)}</Badge>}
+                            </div>
+                        )}
+
+                        {eligibleQuery.isLoading ? (
+                            <div className="space-y-3">{[0, 1, 2].map((k) => <Skeleton key={k} className="h-24 w-full" />)}</div>
+                        ) : eligibleQuery.isError ? (
+                            <ErrorState
+                                title="Couldn't match technicians"
+                                description={getAssignmentErrorMessage(eligibleQuery.error)}
+                                onRetry={() => eligibleQuery.refetch()}
+                            />
+                        ) : eligibleTechnicians.length === 0 ? (
+                            <EmptyState title="No eligible technicians" description="No approved, available technician currently matches this request's expertise and service area." />
+                        ) : (
+                            <ul className="space-y-3">
+                                {eligibleTechnicians.map((tech, index) => (
+                                    <li key={tech.technicianId} className="rounded-ds-lg border border-ds-border p-4">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <p className="truncate font-medium text-ds-foreground">{tech.displayName}</p>
+                                                    {index === 0 && <Badge tone="success"><Star aria-hidden="true" />Top match</Badge>}
+                                                </div>
+                                                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ds-muted-foreground">
+                                                    <span className="inline-flex items-center gap-1"><Award aria-hidden="true" className="size-3.5" />{humanizeSlug(tech.expertiseLevel || '')}</span>
+                                                    <Badge tone={getWorkStatusTone(tech.workStatus)}>{getWorkStatusLabel(tech.workStatus)}</Badge>
+                                                    {tech.serviceAreaMatch?.matchLevel && <span>{getServiceAreaLabel(tech.serviceAreaMatch.matchLevel)}</span>}
+                                                </div>
+                                            </div>
+                                            <Button size="sm" disabled={!!assigningId} onClick={() => handleAssign(tech)}>
+                                                {assigningId === tech.technicianId ? 'Assigning…' : 'Assign'}
+                                            </Button>
+                                        </div>
+                                        {Array.isArray(tech.recommendationReasons) && tech.recommendationReasons.length > 0 && (
+                                            <div className="mt-2 flex flex-wrap gap-1">
+                                                {formatRecommendationReasons(tech.recommendationReasons).map((reason, i) => (
+                                                    <Badge key={i} tone="neutral">{reason}</Badge>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+                </SheetContent>
+            </Sheet>
         </div>
     );
 };

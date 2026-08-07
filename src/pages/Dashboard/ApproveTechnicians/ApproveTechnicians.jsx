@@ -1,230 +1,224 @@
 import { useQuery } from '@tanstack/react-query';
-import React, { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { Check, X, Eye, Search } from 'lucide-react';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
-import { FaEye, FaUserCheck } from 'react-icons/fa';
-import { IoPersonRemoveSharp } from 'react-icons/io5';
-import { FaTrashCan } from 'react-icons/fa6';
-import Swal from 'sweetalert2';
-import Loading from '../../../components/Loading/Loading';
-import StatusBadge from '../../../components/StatusBadge/StatusBadge';
-import { humanizeStatus } from '../../../utils/statusBadge';
+import { PageHeader } from '../../../components/common/PageHeader';
+import { EmptyState } from '../../../components/common/EmptyState';
+import { ErrorState } from '../../../components/common/ErrorState';
+import { AdminDataTable } from '../../../components/admin/data-table/AdminDataTable';
+import { Badge } from '../../../components/ui/badge';
+import { Button } from '../../../components/ui/button';
+import { Input } from '../../../components/ui/input';
+import { Label } from '../../../components/ui/label';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '../../../components/ui/sheet';
+import { notify } from '../../../lib/notify';
+import { humanizeSlug } from '../../../utils/serviceDefinitionCatalog';
+import { getWorkStatusLabel, getWorkStatusTone, getExpertiseBadges } from '../../../utils/adminPresentation';
 import { getTechnicianApprovalErrorMessage } from '../../../utils/technicianApprovalErrorMessage';
 
-// Technician work-status wording is display-only here - the stored
-// workStatus values ('available'/'in_delivery') are unchanged and still
-// used for querying (see AssignTechnicians.jsx's workStatus=available
-// filter); 'in_delivery' predates the repair-service rename and must never
-// be shown to an admin as-is.
-const WORK_STATUS_LABELS = { available: 'Available', in_delivery: 'On a Repair' };
-const getWorkStatusLabel = status => WORK_STATUS_LABELS[status] || humanizeStatus(status);
+const selectClass = "h-10 rounded-ds border border-ds-input bg-ds-background px-3 text-sm text-ds-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-ring";
 
+const APPLICATION_TONE = { pending: 'warning', approved: 'success', rejected: 'danger' };
+function ApplicationBadge({ status }) {
+    return <Badge tone={APPLICATION_TONE[status] || 'neutral'}>{status ? humanizeSlug(status) : 'Unknown'}</Badge>;
+}
+function ExpertiseBadges({ rider }) {
+    const badges = getExpertiseBadges(rider);
+    if (badges.length === 0) return <span className="text-xs text-ds-muted-foreground">—</span>;
+    return (
+        <div className="flex flex-wrap gap-1">
+            {badges.map((badge) => (
+                <Badge key={badge.key} tone="neutral">{badge.label}{badge.level ? ` · ${badge.level}` : ''}</Badge>
+            ))}
+        </div>
+    );
+}
+
+// Phase 7.5: technician management on the design-system data table. The
+// approve/reject mutation (PATCH /riders/:id) and its error mapper are
+// PRESERVED - only presentation, a details Sheet, expertise badges, and
+// Toastify feedback changed. No workStatus is guessed; only stored values shown.
 const ApproveTechnicians = () => {
     const axiosSecure = useAxiosSecure();
-    const [searchText, setSearchText] = useState('');
+    const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
-    const [selectedTechnician, setSelectedTechnician] = useState(null);
-    // Tracks which technician + which action is in flight, so only that
-    // technician's buttons disable/relabel - not the whole table.
     const [pendingAction, setPendingAction] = useState(null);
+    const [detailsFor, setDetailsFor] = useState(null);
 
-    const { refetch, data: technicians = [], isLoading } = useQuery({
-        queryKey: ['technicians', 'pending'],
-        queryFn: async () => {
-            const res = await axiosSecure.get('/riders');
-            return res.data;
-        }
-    })
-
-    if (isLoading) {
-        return <Loading></Loading>
-    }
-
-    const statusOptions = [...new Set(technicians.map(t => t.status).filter(Boolean))];
-
-    const filteredTechnicians = technicians.filter(t => {
-        const matchesSearch = !searchText ||
-            (t.name || '').toLowerCase().includes(searchText.toLowerCase()) ||
-            (t.email || '').toLowerCase().includes(searchText.toLowerCase());
-        const matchesStatus = statusFilter === 'all' || t.status === statusFilter;
-        return matchesSearch && matchesStatus;
+    const { refetch, data: technicians = [], isLoading, isError } = useQuery({
+        queryKey: ['technicians', 'all'],
+        queryFn: async () => (await axiosSecure.get('/riders')).data,
     });
 
-    // Only { status } is sent - the server always derives the linked user's
-    // email from the technician application record itself, never from this
-    // body (see riderController.updateRiderStatus).
-    const updateTechnicianStatus = (technician, status) => {
+    const statusOptions = useMemo(() => [...new Set(technicians.map((t) => t.status).filter(Boolean))], [technicians]);
+
+    const filtered = useMemo(() => technicians.filter((tech) => {
+        const term = search.trim().toLowerCase();
+        const matchesSearch = !term || (tech.name || '').toLowerCase().includes(term) || (tech.email || '').toLowerCase().includes(term);
+        const matchesStatus = statusFilter === 'all' || tech.status === statusFilter;
+        return matchesSearch && matchesStatus;
+    }), [technicians, search, statusFilter]);
+
+    const updateStatus = (technician, status) => {
         if (pendingAction) return;
         setPendingAction({ id: technician._id, status });
-
         axiosSecure.patch(`/riders/${technician._id}`, { status })
             .then(() => {
                 refetch();
-                Swal.fire({
-                    position: "top-end",
-                    icon: "success",
-                    title: `Technician status is set to ${status}.`,
-                    showConfirmButton: false,
-                    timer: 2000
-                });
+                notify.success(status === 'approved' ? `${technician.name} approved` : `${technician.name} rejected`);
             })
-            .catch(error => {
+            .catch((error) => {
                 if (import.meta.env.DEV) console.error('Technician status update failed:', error);
-                Swal.fire({ icon: 'error', title: 'Could not update technician', text: getTechnicianApprovalErrorMessage(error) });
-                // A conflict (e.g. already updated concurrently) means the
-                // list shown may be stale - refresh so the admin sees the
-                // current state.
+                notify.error(getTechnicianApprovalErrorMessage(error));
                 refetch();
             })
             .finally(() => setPendingAction(null));
+    };
+
+    const columns = useMemo(() => [
+        {
+            id: 'name', header: 'Technician', enableSorting: true, enableHiding: false,
+            accessorFn: (row) => row.name || '',
+            cell: ({ row }) => (
+                <div className="min-w-0">
+                    <div className="truncate font-medium text-ds-foreground">{row.original.name}</div>
+                    <div className="truncate text-xs text-ds-muted-foreground">{row.original.email}</div>
+                </div>
+            ),
+            meta: { label: 'Technician' },
+        },
+        { id: 'district', header: 'District', enableSorting: true, accessorFn: (row) => row.district || '', cell: ({ row }) => row.original.district || '—', meta: { label: 'District' } },
+        { id: 'expertise', header: 'Expertise', enableSorting: false, cell: ({ row }) => <ExpertiseBadges rider={row.original} />, meta: { label: 'Expertise' } },
+        { id: 'application', header: 'Application', enableSorting: false, cell: ({ row }) => <ApplicationBadge status={row.original.status} />, meta: { label: 'Application' } },
+        { id: 'work', header: 'Work status', enableSorting: false, cell: ({ row }) => <Badge tone={getWorkStatusTone(row.original.workStatus)}>{getWorkStatusLabel(row.original.workStatus)}</Badge>, meta: { label: 'Work status' } },
+        {
+            id: 'actions', header: '', enableSorting: false, enableHiding: false,
+            cell: ({ row }) => {
+                const tech = row.original;
+                const busy = pendingAction?.id === tech._id;
+                return (
+                    <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon" aria-label={`View ${tech.name}`} onClick={() => setDetailsFor(tech)}><Eye aria-hidden="true" className="size-4" /></Button>
+                        {tech.status !== 'approved' && (
+                            <Button variant="ghost" size="icon" className="text-ds-success hover:text-ds-success" aria-label={`Approve ${tech.name}`} disabled={busy} onClick={() => updateStatus(tech, 'approved')}><Check aria-hidden="true" className="size-4" /></Button>
+                        )}
+                        {tech.status !== 'rejected' && (
+                            <Button variant="ghost" size="icon" className="text-ds-destructive hover:text-ds-destructive" aria-label={`Reject ${tech.name}`} disabled={busy} onClick={() => updateStatus(tech, 'rejected')}><X aria-hidden="true" className="size-4" /></Button>
+                        )}
+                    </div>
+                );
+            },
+            meta: { label: 'Actions', headClassName: 'text-right', cellClassName: 'text-right' },
+        },
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    ], [pendingAction]);
+
+    if (isError) {
+        return (
+            <div className="space-y-6">
+                <PageHeader eyebrow="Admin" title="Technicians" />
+                <ErrorState title="Couldn't load technicians" description="We couldn't load the technician list right now. Please try again." onRetry={() => refetch()} />
+            </div>
+        );
     }
 
-    const handleApproval = technician => {
-        updateTechnicianStatus(technician, 'approved');
-    }
+    const renderCard = (tech) => {
+        const busy = pendingAction?.id === tech._id;
+        return (
+            <div className="rounded-ds-lg border border-ds-border bg-ds-card p-4">
+                <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-ds-foreground">{tech.name}</p>
+                        <p className="truncate text-xs text-ds-muted-foreground">{tech.email}</p>
+                    </div>
+                    <ApplicationBadge status={tech.status} />
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-ds-muted-foreground">
+                    <span>{tech.district || '—'}</span>
+                    <Badge tone={getWorkStatusTone(tech.workStatus)}>{getWorkStatusLabel(tech.workStatus)}</Badge>
+                </div>
+                <div className="mt-2"><ExpertiseBadges rider={tech} /></div>
+                <div className="mt-3 flex flex-wrap justify-end gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setDetailsFor(tech)}><Eye aria-hidden="true" />View</Button>
+                    {tech.status !== 'approved' && <Button size="sm" disabled={busy} onClick={() => updateStatus(tech, 'approved')}><Check aria-hidden="true" />Approve</Button>}
+                    {tech.status !== 'rejected' && <Button variant="outline" size="sm" className="text-ds-destructive hover:text-ds-destructive" disabled={busy} onClick={() => updateStatus(tech, 'rejected')}><X aria-hidden="true" />Reject</Button>}
+                </div>
+            </div>
+        );
+    };
 
-    const handleRejection = technician => {
-        updateTechnicianStatus(technician, 'rejected')
-    }
+    const toolbar = (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative min-w-0 flex-1 sm:max-w-xs">
+                <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ds-muted-foreground" />
+                <Label htmlFor="tech-search" className="sr-only">Search technicians</Label>
+                <Input id="tech-search" type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or email" className="pl-9" />
+            </div>
+            <Label htmlFor="tech-status" className="sr-only">Filter by application status</Label>
+            <select id="tech-status" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={selectClass}>
+                <option value="all">All applications</option>
+                {statusOptions.map((s) => <option key={s} value={s}>{humanizeSlug(s)}</option>)}
+            </select>
+        </div>
+    );
 
     return (
-        <div>
-            <h2 className="text-4xl font-bold">Technicians Pending Approval: {technicians.length}</h2>
-
-            <div className="flex flex-col md:flex-row gap-4 my-6">
-                <label className="input">
-                    <svg className="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                        <g strokeLinejoin="round" strokeLinecap="round" strokeWidth="2.5" fill="none" stroke="currentColor">
-                            <circle cx="11" cy="11" r="8"></circle>
-                            <path d="m21 21-4.3-4.3"></path>
-                        </g>
-                    </svg>
-                    <input
-                        onChange={(e) => setSearchText(e.target.value)}
-                        type="search"
-                        className="grow"
-                        placeholder="Search by name or email" />
-                </label>
-                <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="select">
-                    <option value="all">All Statuses</option>
-                    {statusOptions.map((s, i) => <option key={i} value={s}>{humanizeStatus(s)}</option>)}
-                </select>
-            </div>
-
-            <div className="overflow-x-auto">
-                <table className="table table-zebra">
-                    {/* head */}
-                    <thead>
-                        <tr>
-                            <th></th>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>District</th>
-                            <th>Application Status</th>
-                            <th>Work Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {
-                            filteredTechnicians.map((technician, index) => <tr key={technician._id}>
-                                <th>{index + 1}</th>
-                                <td>{technician.name}</td>
-                                <td>{technician.email}</td>
-                                <td>{technician.district}</td>
-                                <td>
-                                    <StatusBadge status={technician.status} />
-                                </td>
-                                <td><StatusBadge status={technician.workStatus} label={getWorkStatusLabel(technician.workStatus)} /></td>
-                                <td>
-                                    <div className="flex flex-wrap gap-2">
-                                        <div className="tooltip" data-tip="View details">
-                                            <button
-                                                onClick={() => setSelectedTechnician(technician)}
-                                                aria-label="View technician details"
-                                                className='btn btn-sm'>
-                                                <FaEye aria-hidden="true" />
-                                            </button>
-                                        </div>
-                                        {
-                                            technician.status !== 'approved' &&
-                                            <div className="tooltip" data-tip="Approve technician">
-                                                <button
-                                                    onClick={() => handleApproval(technician)}
-                                                    disabled={pendingAction?.id === technician._id}
-                                                    aria-label="Approve technician"
-                                                    className='btn btn-success text-black btn-sm'>
-                                                    {pendingAction?.id === technician._id && pendingAction.status === 'approved'
-                                                        ? 'Approving...'
-                                                        : <FaUserCheck aria-hidden="true" />}
-                                                </button>
-                                            </div>
-                                        }
-                                        {
-                                            technician.status !== 'rejected' &&
-                                            <div className="tooltip" data-tip="Reject technician">
-                                                <button
-                                                    onClick={() => handleRejection(technician)}
-                                                    disabled={pendingAction?.id === technician._id}
-                                                    aria-label="Reject technician"
-                                                    className='btn btn-error text-black btn-sm'>
-                                                    {pendingAction?.id === technician._id && pendingAction.status === 'rejected'
-                                                        ? 'Rejecting...'
-                                                        : <IoPersonRemoveSharp aria-hidden="true" />}
-                                                </button>
-                                            </div>
-                                        }
-                                        <div className="tooltip" data-tip="Deleting technicians is not available yet">
-                                            <button
-                                                type="button"
-                                                disabled
-                                                aria-disabled="true"
-                                                aria-label="Delete technician (not available yet)"
-                                                className='btn btn-error text-black btn-sm'>
-                                                <FaTrashCan aria-hidden="true" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </td>
-                            </tr>)
-                        }
-
-
-                    </tbody>
-                </table>
-                {
-                    technicians.length === 0 && <p className='text-center py-8 opacity-60'>No technician applications are pending approval.</p>
+        <div className="space-y-6">
+            <PageHeader eyebrow="Admin" title="Technicians" description={`${technicians.length} technician application${technicians.length === 1 ? '' : 's'}`} />
+            <AdminDataTable
+                columns={columns}
+                data={filtered}
+                isLoading={isLoading}
+                getRowId={(row) => row._id}
+                toolbar={toolbar}
+                renderCard={renderCard}
+                enableColumnVisibility
+                emptyState={
+                    <EmptyState
+                        title={search || statusFilter !== 'all' ? 'No matching technicians' : 'No technician applications'}
+                        description={search || statusFilter !== 'all' ? 'No technicians match your search or filter.' : 'Technician applications will appear here for review.'}
+                    />
                 }
-                {
-                    technicians.length > 0 && filteredTechnicians.length === 0 && <p className='text-center py-8 opacity-60'>No technicians match your search or filter.</p>
-                }
-            </div>
+            />
 
-            {
-                selectedTechnician && (
-                    <dialog open className="modal modal-bottom sm:modal-middle">
-                        <div className="modal-box">
-                            <h3 className="font-bold text-lg">{selectedTechnician.name}</h3>
-                            <div className="mt-4 space-y-1">
-                                <p><span className="font-semibold">Email:</span> {selectedTechnician.email}</p>
-                                <p><span className="font-semibold">Region:</span> {selectedTechnician.region}</p>
-                                <p><span className="font-semibold">District:</span> {selectedTechnician.district}</p>
-                                <p><span className="font-semibold">Address:</span> {selectedTechnician.address}</p>
-                                <p><span className="font-semibold">Skills / Specialization:</span> {selectedTechnician.license}</p>
-                                <p><span className="font-semibold">National ID:</span> {selectedTechnician.nid}</p>
-                                <p><span className="font-semibold">Experience:</span> {selectedTechnician.bike}</p>
-                                <p><span className="font-semibold">Application Status:</span> <StatusBadge status={selectedTechnician.status} /></p>
-                                <p><span className="font-semibold">Work Status:</span> <StatusBadge status={selectedTechnician.workStatus} label={getWorkStatusLabel(selectedTechnician.workStatus)} /></p>
+            <Sheet open={!!detailsFor} onOpenChange={(open) => { if (!open) setDetailsFor(null); }}>
+                <SheetContent side="right" className="w-full max-w-md">
+                    <SheetHeader className="border-b border-ds-border">
+                        <SheetTitle>{detailsFor?.name}</SheetTitle>
+                        <SheetDescription>Technician application details</SheetDescription>
+                    </SheetHeader>
+                    {detailsFor && (
+                        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 text-sm">
+                            {[
+                                ['Email', detailsFor.email],
+                                ['Region', detailsFor.region],
+                                ['District', detailsFor.district],
+                                ['Address', detailsFor.address],
+                                ['Skills / specialization', detailsFor.license],
+                                ['National ID', detailsFor.nid],
+                                ['Experience', detailsFor.bike],
+                            ].map(([label, value]) => (
+                                <div key={label} className="grid grid-cols-3 gap-2">
+                                    <dt className="text-ds-muted-foreground">{label}</dt>
+                                    <dd className="col-span-2 break-words text-ds-foreground">{value || '—'}</dd>
+                                </div>
+                            ))}
+                            <div className="grid grid-cols-3 gap-2">
+                                <dt className="text-ds-muted-foreground">Application</dt>
+                                <dd className="col-span-2"><ApplicationBadge status={detailsFor.status} /></dd>
                             </div>
-                            <div className="modal-action">
-                                <button onClick={() => setSelectedTechnician(null)} className="btn">Close</button>
+                            <div className="grid grid-cols-3 gap-2">
+                                <dt className="text-ds-muted-foreground">Work status</dt>
+                                <dd className="col-span-2"><Badge tone={getWorkStatusTone(detailsFor.workStatus)}>{getWorkStatusLabel(detailsFor.workStatus)}</Badge></dd>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2">
+                                <dt className="text-ds-muted-foreground">Expertise</dt>
+                                <dd className="col-span-2"><ExpertiseBadges rider={detailsFor} /></dd>
                             </div>
                         </div>
-                        <form method="dialog" className="modal-backdrop">
-                            <button onClick={() => setSelectedTechnician(null)}>close</button>
-                        </form>
-                    </dialog>
-                )
-            }
+                    )}
+                </SheetContent>
+            </Sheet>
         </div>
     );
 };
