@@ -18,6 +18,9 @@ const STATUS_BADGE_CLASSES = {
     'quote_submitted': 'badge-warning',
     'quote_approved': 'badge-success',
     'quote_rejected': 'badge-error',
+    'payment_completed': 'badge-info',
+    'repair_in_progress': 'badge-accent',
+    'repair_completed': 'badge-success',
     'parcel_delivered': 'badge-success',
 
     // technician application status

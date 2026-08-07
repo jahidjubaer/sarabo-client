@@ -11,6 +11,9 @@ const REPAIR_STATUS_LABELS = {
     'quote_submitted': 'Quote Sent',
     'quote_approved': 'Quote Approved',
     'quote_rejected': 'Quote Declined',
+    'payment_completed': 'Payment Completed',
+    'repair_in_progress': 'Repair In Progress',
+    'repair_completed': 'Repair Completed',
     'parcel_delivered': 'Repair Completed',
     'cancelled': 'Request Cancelled',
 };

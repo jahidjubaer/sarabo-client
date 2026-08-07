@@ -19,6 +19,7 @@ import DamageImageManager from '../../../components/damage-images/DamageImageMan
 import InspectionSection from '../../../components/inspection/InspectionSection';
 import QuoteSection from '../../../components/quote/QuoteSection';
 import V2PaymentSection from '../../../components/payment/V2PaymentSection';
+import RepairSection from '../../../components/repair/RepairSection';
 
 // Formats a v2 request's server-stored pricing snapshot (`request.pricing`,
 // shape { currency, estimateMin, estimateMax, ... } - built by
@@ -103,6 +104,10 @@ const RequestDetails = () => {
     // Quote submission (Phase 6.4 Unit 5) - offered to the assigned technician
     // once the inspection is completed. The server always revalidates.
     const canSubmitQuote = isAssignedTechnicianView && request.deliveryStatus === 'inspection_completed';
+    // Repair workflow (Phase 6.4 Unit 7). The repair card is only relevant once
+    // payment is complete and through completion; the assigned technician can
+    // manage it, everyone else sees it read-only. The server always revalidates.
+    const showRepair = isV2Request && ['payment_completed', 'repair_in_progress', 'repair_completed'].includes(request.deliveryStatus);
 
     const handleCancelRequest = () => {
         if (cancelling) return;
@@ -241,6 +246,19 @@ const RequestDetails = () => {
                 total, BDT); the client never sends an amount or currency. */}
             {isV2Request && isOwner && !isCancelled && (
                 <V2PaymentSection requestId={request._id} />
+            )}
+
+            {showRepair && (
+                <div className="card bg-base-200 p-6 mt-8">
+                    <h3 className="text-2xl font-semibold mb-4">Repair</h3>
+                    {/* Repair progress + completion are fetched from the
+                        dedicated, role-projected GET /parcels/:id/repair endpoint
+                        (never read off the raw parcel, which the server strips).
+                        Only the assigned technician can act; the server owns
+                        every id/timestamp and issues short-lived signed urls for
+                        completion evidence. */}
+                    <RepairSection requestId={request._id} canManage={isAssignedTechnicianView} deliveryStatus={request.deliveryStatus} />
+                </div>
             )}
 
             <div className="mt-8 flex flex-wrap gap-3">

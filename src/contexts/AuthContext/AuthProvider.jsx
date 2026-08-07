@@ -9,6 +9,7 @@ import { damageImageKeys } from '../../hooks/damageImageKeys';
 import { inspectionKeys } from '../../hooks/inspectionKeys';
 import { quoteKeys } from '../../hooks/quoteKeys';
 import { paymentKeys } from '../../hooks/paymentKeys';
+import { repairKeys } from '../../hooks/repairKeys';
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -96,6 +97,12 @@ const AuthProvider = ({ children }) => {
                 // never be read after a different account signs in within the tab.
                 queryClient.cancelQueries({ queryKey: paymentKeys.all });
                 queryClient.removeQueries({ queryKey: paymentKeys.all });
+                // Repair queries (Phase 6.4 Unit 7) carry progress history and
+                // short-lived signed evidence read urls - cleared on the same
+                // account-switch trigger so one account's repair data can never
+                // be read after a different account signs in within the tab.
+                queryClient.cancelQueries({ queryKey: repairKeys.all });
+                queryClient.removeQueries({ queryKey: repairKeys.all });
             }
             previousUidRef.current = nextUid;
 
