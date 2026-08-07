@@ -1,62 +1,69 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import React, { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { Link } from 'react-router';
+import { MotionConfig } from 'motion/react';
+import { Plus } from 'lucide-react';
+import Swal from 'sweetalert2';
 import useAuth from '../../../hooks/useAuth';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
-import { FiEdit } from 'react-icons/fi';
-import { FaBan } from 'react-icons/fa6';
-import { FaEye, FaCreditCard, FaTrash } from 'react-icons/fa';
-import Swal from 'sweetalert2';
-import { Link } from 'react-router';
-import Loading from '../../../components/Loading/Loading';
-import StatusBadge from '../../../components/StatusBadge/StatusBadge';
+import { PageHeader } from '../../../components/common/PageHeader';
+import { EmptyState } from '../../../components/common/EmptyState';
+import { ErrorState } from '../../../components/common/ErrorState';
+import { CardSkeleton } from '../../../components/common/Skeletons';
+import { buttonVariants } from '../../../components/ui/button-variants';
+import { RequestFilters } from '../../../components/customer/RequestFilters';
+import { RequestList } from '../../../components/customer/RequestList';
+import { notify } from '../../../lib/notify';
 import { getPaymentErrorMessage } from '../../../utils/paymentErrorMessage';
 import { getCancellationErrorMessage } from '../../../utils/cancellationErrorMessage';
 import { getDeletionErrorMessage } from '../../../utils/deletionErrorMessage';
-import { formatCurrency } from '../../../utils/formatCurrency';
-import { getRepairStatusLabel } from '../../../utils/repairStatus';
-import { canCancelRequest } from '../../../utils/cancellationEligibility';
-import { canDeleteRequest } from '../../../utils/deletionEligibility';
 import { deleteRepairRequest } from '../../../api/repairRequests';
 import { removeDeletedRequestCaches } from '../../../utils/removeDeletedRequestCaches';
+import { applyRequestView } from '../../../utils/customerRequestPresentation';
 
+// Phase 7.3: My Requests redesigned onto the design system (no DaisyUI here).
+// Deletion / cancellation / payment BUSINESS behaviour is unchanged - the same
+// authority helpers (canCancelRequest / canDeleteRequest inside the list item),
+// the same APIs, the same cache removal (removeDeletedRequestCaches), the same
+// error mappers. Only the presentation and the success/error feedback surface
+// (SweetAlert confirm kept for destructive actions; toast for the outcome)
+// changed. Search/filter/sort are pure client-side operations over the
+// already-loaded list (see utils/customerRequestPresentation.js).
 const MyRequests = () => {
     const { user } = useAuth();
     const axiosSecure = useAxiosSecure();
     const queryClient = useQueryClient();
-    const [searchText, setSearchText] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all');
+
+    const [search, setSearch] = useState('');
+    const [group, setGroup] = useState('all');
+    const [sort, setSort] = useState('newest');
     const [payingId, setPayingId] = useState(null);
     const [cancellingId, setCancellingId] = useState(null);
     const [deletingId, setDeletingId] = useState(null);
 
-    const { data: requests = [], refetch, isLoading } = useQuery({
+    const { data: requests = [], refetch, isLoading, isError } = useQuery({
         queryKey: ['my-requests', user?.email],
         queryFn: async () => {
-            // No email in the request URL - the server already scopes a
-            // non-admin caller to their own token-derived identity.
+            // No email in the URL - the server scopes a non-admin caller to
+            // their own token-derived identity.
             const res = await axiosSecure.get('/parcels');
             return res.data;
-        }
-    })
-
-    if (isLoading) {
-        return <Loading></Loading>
-    }
-
-    const statusOptions = [...new Set(requests.map(r => r.deliveryStatus).filter(Boolean))];
-
-    const filteredRequests = requests.filter(r => {
-        const matchesSearch = !searchText ||
-            (r.parcelName || '').toLowerCase().includes(searchText.toLowerCase()) ||
-            (r.trackingId || '').toLowerCase().includes(searchText.toLowerCase()) ||
-            (r.senderPhone || '').includes(searchText);
-        const matchesStatus = statusFilter === 'all' || r.deliveryStatus === statusFilter;
-        return matchesSearch && matchesStatus;
+        },
     });
 
-    const handleCancelRequest = request => {
-        if (cancellingId) return;
+    const visibleRequests = useMemo(
+        () => applyRequestView(requests, { search, group, sort }),
+        [requests, search, group, sort]
+    );
 
+    const clearFilters = () => {
+        setSearch('');
+        setGroup('all');
+        setSort('newest');
+    };
+
+    const handleCancelRequest = (request) => {
+        if (cancellingId) return;
         Swal.fire({
             title: 'Cancel this repair request?',
             text: "This is final - once cancelled, this request cannot be reopened. Assigned or in-progress repairs can no longer be cancelled here, and paid requests require support for cancellation or a refund.",
@@ -64,38 +71,27 @@ const MyRequests = () => {
             showCancelButton: true,
             confirmButtonColor: '#d33',
             cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Yes, cancel request'
-        }).then(result => {
+            confirmButtonText: 'Yes, cancel request',
+        }).then((result) => {
             if (!result.isConfirmed) return;
-
             setCancellingId(request._id);
             axiosSecure.patch(`/parcels/${request._id}/cancel`)
                 .then(() => {
                     queryClient.invalidateQueries({ queryKey: ['my-requests', user?.email] });
                     queryClient.invalidateQueries({ queryKey: ['parcels', request._id] });
                     refetch();
-                    Swal.fire({
-                        title: 'Request Cancelled',
-                        text: 'Your repair request has been cancelled.',
-                        icon: 'success'
-                    });
+                    notify.success('Your repair request has been cancelled.');
                 })
-                .catch(error => {
+                .catch((error) => {
                     if (import.meta.env.DEV) console.error('Cancellation failed:', error);
-                    Swal.fire({ icon: 'error', title: 'Could not cancel request', text: getCancellationErrorMessage(error) });
+                    notify.error(getCancellationErrorMessage(error));
                 })
                 .finally(() => setCancellingId(null));
         });
-    }
+    };
 
-    // Hard deletion is offered only for a brand-new (pending-pickup, unassigned,
-    // unpaid, no inspection/quote/repair) request - canDeleteRequest gates the
-    // button, and the server independently re-verifies every one of those rules
-    // before removing anything. Deletion is permanent (unlike cancellation,
-    // which keeps the record), so the confirmation copy says so plainly.
-    const handleDeleteRequest = request => {
+    const handleDeleteRequest = (request) => {
         if (deletingId) return;
-
         Swal.fire({
             title: 'Delete repair request?',
             text: 'This permanently removes the request and its photos. This cannot be undone. Once a technician, inspection, quote, or payment exists, a request can no longer be deleted - cancel it instead.',
@@ -103,37 +99,28 @@ const MyRequests = () => {
             showCancelButton: true,
             confirmButtonColor: '#d33',
             cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Yes, delete it'
-        }).then(result => {
+            confirmButtonText: 'Yes, delete it',
+        }).then((result) => {
             if (!result.isConfirmed) return;
-
             setDeletingId(request._id);
             deleteRepairRequest(axiosSecure, request._id)
                 .then(() => {
-                    // The request is gone server-side, so drop every
-                    // request-specific private cache branch (including any
-                    // short-lived signed Storage read URLs) from memory now, not
-                    // merely mark them stale - see removeDeletedRequestCaches.
+                    // The request is gone server-side - drop every request-specific
+                    // private cache branch (incl. signed image URLs) from memory now.
                     removeDeletedRequestCaches(queryClient, request._id);
-                    // Then refresh the list itself so the deleted row disappears.
                     queryClient.invalidateQueries({ queryKey: ['my-requests', user?.email] });
                     refetch();
-                    Swal.fire({
-                        title: 'Request Deleted',
-                        text: 'Your repair request has been deleted.',
-                        icon: 'success'
-                    });
+                    notify.success('Your repair request has been deleted.');
                 })
-                .catch(error => {
+                .catch((error) => {
                     if (import.meta.env.DEV) console.error('Deletion failed:', error);
-                    Swal.fire({ icon: 'error', title: 'Could not delete request', text: getDeletionErrorMessage(error) });
+                    notify.error(getDeletionErrorMessage(error));
                 })
                 .finally(() => setDeletingId(null));
         });
-    }
+    };
 
-    // Only the request's own id is sent - the amount and customer identity
-    // are always resolved server-side from trusted, stored data.
+    // Only the request id is sent - amount and identity are resolved server-side.
     const handlePayment = async (request) => {
         if (payingId) return;
         setPayingId(request._id);
@@ -142,140 +129,87 @@ const MyRequests = () => {
             window.location.assign(res.data.url);
         } catch (error) {
             if (import.meta.env.DEV) console.error('Checkout session creation failed:', error);
-            Swal.fire({ icon: 'error', title: 'Could not start payment', text: getPaymentErrorMessage(error) });
+            notify.error(getPaymentErrorMessage(error));
             setPayingId(null);
         }
+    };
+
+    const newRequestAction = (
+        <Link to="/dashboard/create-request" className={buttonVariants({ size: 'sm' })}>
+            <Plus aria-hidden="true" />
+            New Repair Request
+        </Link>
+    );
+
+    if (isLoading) {
+        return (
+            <div className="space-y-6">
+                <PageHeader eyebrow="Customer" title="My Requests" actions={newRequestAction} />
+                <div className="space-y-3">
+                    {[0, 1, 2, 3].map((key) => <CardSkeleton key={key} className="h-24" />)}
+                </div>
+            </div>
+        );
     }
 
-    const handleEditRequest = () => {
-        Swal.fire({
-            icon: 'info',
-            title: 'Editing is not available yet',
-            text: 'Changing an existing repair request isn\'t supported at the moment. Please cancel and create a new request, or contact support.'
-        });
+    if (isError) {
+        return (
+            <div className="space-y-6">
+                <PageHeader eyebrow="Customer" title="My Requests" actions={newRequestAction} />
+                <ErrorState
+                    title="Couldn't load your requests"
+                    description="We couldn't load your repair requests right now. Please try again."
+                    onRetry={() => refetch()}
+                />
+            </div>
+        );
     }
+
+    const total = requests.length;
+    const description = total === 0
+        ? 'You have not created any repair requests yet.'
+        : `${total} repair request${total === 1 ? '' : 's'}`;
 
     return (
-        <div>
-            <h2 className="text-4xl font-bold">My Repair Requests: {requests.length}</h2>
+        <MotionConfig reducedMotion="user">
+            <div className="space-y-6">
+                <PageHeader eyebrow="Customer" title="My Requests" description={description} actions={newRequestAction} />
 
-            <div className="flex flex-col md:flex-row gap-4 my-6">
-                <label className="input">
-                    <svg className="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                        <g strokeLinejoin="round" strokeLinecap="round" strokeWidth="2.5" fill="none" stroke="currentColor">
-                            <circle cx="11" cy="11" r="8"></circle>
-                            <path d="m21 21-4.3-4.3"></path>
-                        </g>
-                    </svg>
-                    <input
-                        onChange={(e) => setSearchText(e.target.value)}
-                        type="search"
-                        className="grow"
-                        placeholder="Search by device, request ID, or phone" />
-                </label>
-                <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="select">
-                    <option value="all">All Statuses</option>
-                    {statusOptions.map((s, i) => <option key={i} value={s}>{getRepairStatusLabel(s)}</option>)}
-                </select>
-            </div>
-
-            <div className="overflow-x-auto">
-                <table className="table table-zebra">
-                    {/* head */}
-                    <thead>
-                        <tr>
-                            <th></th>
-                            <th>Name</th>
-                            <th>Repair Cost</th>
-                            <th>Payment</th>
-                            <th>Request ID</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {
-                            filteredRequests.map((request, index) => {
-                                const isCancelled = request.deliveryStatus === 'cancelled';
-                                return <tr key={request._id}>
-                                <th>{index + 1}</th>
-                                <td>{request.parcelName}</td>
-                                <td>{formatCurrency(request.cost)}</td>
-                                <td>
-                                    {
-                                        request.paymentStatus === 'paid' ?
-                                            <StatusBadge status="paid" />
-                                            : !isCancelled &&
-                                            <button
-                                                onClick={() => handlePayment(request)}
-                                                disabled={payingId === request._id}
-                                                className="btn btn-sm btn-primary">
-                                                <FaCreditCard aria-hidden="true" /> {payingId === request._id ? 'Starting...' : 'Pay'}
-                                            </button>
-
-                                    }
-                                </td>
-                                <td>
-                                    <Link to={`/track-request/${request.trackingId}`}> {request.trackingId}</Link>
-                                </td>
-                                <td><StatusBadge status={request.deliveryStatus || 'pending-pickup'} label={getRepairStatusLabel(request.deliveryStatus)} /></td>
-                                <td>
-                                    <div className="flex flex-wrap gap-2">
-                                        <div className="tooltip" data-tip="View details">
-                                            <Link
-                                                to={`/dashboard/my-requests/${request._id}`}
-                                                aria-label="View request details"
-                                                className='btn btn-square btn-sm hover:bg-primary'>
-                                                <FaEye aria-hidden="true" />
-                                            </Link>
-                                        </div>
-                                        <div className="tooltip" data-tip="Editing is not available yet">
-                                            <button
-                                                onClick={handleEditRequest}
-                                                aria-label="Edit request (not available yet)"
-                                                className='btn btn-square btn-sm hover:bg-primary'>
-                                                <FiEdit aria-hidden="true" />
-                                            </button>
-                                        </div>
-                                        {
-                                            canCancelRequest(request) &&
-                                            <div className="tooltip" data-tip="Cancel Request">
-                                                <button
-                                                    onClick={() => handleCancelRequest(request)}
-                                                    disabled={cancellingId === request._id}
-                                                    aria-label="Cancel Request"
-                                                    className='btn btn-square btn-sm btn-outline btn-error'>
-                                                    <FaBan aria-hidden="true" />
-                                                </button>
-                                            </div>
-                                        }
-                                        {
-                                            canDeleteRequest(request) &&
-                                            <div className="tooltip" data-tip="Delete Request">
-                                                <button
-                                                    onClick={() => handleDeleteRequest(request)}
-                                                    disabled={deletingId === request._id}
-                                                    aria-label="Delete Request"
-                                                    className='btn btn-square btn-sm btn-error'>
-                                                    <FaTrash aria-hidden="true" />
-                                                </button>
-                                            </div>
-                                        }
-                                    </div>
-                                </td>
-                            </tr>})
+                {total === 0 ? (
+                    <EmptyState
+                        title="No repair requests yet"
+                        description="When you request a repair, it will appear here so you can track its progress."
+                        action={
+                            <Link to="/dashboard/create-request" className={buttonVariants({ size: 'sm' })}>
+                                <Plus aria-hidden="true" />
+                                Create repair request
+                            </Link>
                         }
-
-                    </tbody>
-                </table>
-                {
-                    requests.length === 0 && <p className='text-center py-8 opacity-60'>You haven&apos;t created any repair requests yet.</p>
-                }
-                {
-                    requests.length > 0 && filteredRequests.length === 0 && <p className='text-center py-8 opacity-60'>No requests match your search or filter.</p>
-                }
+                    />
+                ) : (
+                    <>
+                        <RequestFilters
+                            search={search}
+                            onSearchChange={setSearch}
+                            group={group}
+                            onGroupChange={setGroup}
+                            sort={sort}
+                            onSortChange={setSort}
+                        />
+                        <RequestList
+                            requests={visibleRequests}
+                            onClearFilters={clearFilters}
+                            onCancel={handleCancelRequest}
+                            onDelete={handleDeleteRequest}
+                            onPay={handlePayment}
+                            cancellingId={cancellingId}
+                            deletingId={deletingId}
+                            payingId={payingId}
+                        />
+                    </>
+                )}
             </div>
-        </div>
+        </MotionConfig>
     );
 };
 
