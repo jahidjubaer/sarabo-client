@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { notificationKeys } from '../../hooks/notificationKeys';
 import { roleKeys } from '../../hooks/roleKeys';
 import { damageImageKeys } from '../../hooks/damageImageKeys';
+import { inspectionKeys } from '../../hooks/inspectionKeys';
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -76,6 +77,12 @@ const AuthProvider = ({ children }) => {
                 // different account signs in within the same tab.
                 queryClient.cancelQueries({ queryKey: damageImageKeys.all });
                 queryClient.removeQueries({ queryKey: damageImageKeys.all });
+                // Inspection queries can carry admin/technician-only internal
+                // notes (Phase 6.4 Unit 4) - cleared on the same account-switch
+                // trigger so one account's inspection data can never be read
+                // after a different account signs in within the same tab.
+                queryClient.cancelQueries({ queryKey: inspectionKeys.all });
+                queryClient.removeQueries({ queryKey: inspectionKeys.all });
             }
             previousUidRef.current = nextUid;
 

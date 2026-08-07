@@ -1,9 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useState } from 'react';
+import { Link } from 'react-router';
 import useAuth from '../../../hooks/useAuth';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import Swal from 'sweetalert2';
-import { FaCheck, FaBan, FaRoute, FaClipboardCheck } from 'react-icons/fa';
+import { FaCheck, FaBan, FaRoute, FaClipboardCheck, FaClipboardList } from 'react-icons/fa';
 import Loading from '../../../components/Loading/Loading';
 import StatusBadge from '../../../components/StatusBadge/StatusBadge';
 import { getRepairStatusLabel } from '../../../utils/repairStatus';
@@ -135,6 +136,14 @@ const AssignedJobs = () => {
                                             ? PENDING_LABELS.parcel_delivered
                                             : ' Complete Repair'}
                                     </button>
+                                    {/* Detail view - where the assigned technician
+                                        submits/reviews the inspection (Phase 6.4
+                                        Unit 4). Available for v2 requests. */}
+                                    {request.schemaVersion === 2 && (
+                                        <Link to={`/dashboard/assigned-jobs/${request._id}`} className="btn btn-outline btn-sm">
+                                            <FaClipboardList aria-hidden="true" /> Details / Inspect
+                                        </Link>
+                                    )}
                                 </div>
                             </td>
                         </tr>)}

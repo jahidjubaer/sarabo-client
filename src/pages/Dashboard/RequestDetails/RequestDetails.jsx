@@ -16,6 +16,7 @@ import { canEditDamageImages } from '../../../utils/damageImageValidation';
 import { humanizeSlug } from '../../../utils/serviceDefinitionCatalog';
 import { formatMoneyRange } from '../../../utils/currency';
 import DamageImageManager from '../../../components/damage-images/DamageImageManager';
+import InspectionSection from '../../../components/inspection/InspectionSection';
 
 // Formats a v2 request's server-stored pricing snapshot (`request.pricing`,
 // shape { currency, estimateMin, estimateMax, ... } - built by
@@ -39,13 +40,15 @@ const RequestDetails = () => {
     const axiosSecure = useAxiosSecure();
     const queryClient = useQueryClient();
     const [cancelling, setCancelling] = useState(false);
-    // This same page is reused from two entry points (see routes/router.jsx):
-    // the customer's own my-requests/:id, and the admin's read-only
-    // manage-repair-requests/:id - the back link and not-found fallback
-    // should return to whichever list the viewer actually came from.
+    // This same page is reused from three entry points (see routes/router.jsx):
+    // the customer's own my-requests/:id, the admin's read-only
+    // manage-repair-requests/:id, and the assigned technician's
+    // assigned-jobs/:id (Phase 6.4 Unit 4) - the back link and not-found
+    // fallback should return to whichever list the viewer actually came from.
     const isAdminContext = location.pathname.startsWith('/dashboard/manage-repair-requests');
-    const backTo = isAdminContext ? '/dashboard/manage-repair-requests' : '/dashboard/my-requests';
-    const backLabel = isAdminContext ? 'Back to Manage Repair Requests' : 'Back to My Repair Requests';
+    const isTechnicianContext = location.pathname.startsWith('/dashboard/assigned-jobs');
+    const backTo = isAdminContext ? '/dashboard/manage-repair-requests' : (isTechnicianContext ? '/dashboard/assigned-jobs' : '/dashboard/my-requests');
+    const backLabel = isAdminContext ? 'Back to Manage Repair Requests' : (isTechnicianContext ? 'Back to Assigned Repairs' : 'Back to My Repair Requests');
 
     const { data: request, isLoading, isError, refetch } = useQuery({
         queryKey: ['parcels', id],
@@ -88,6 +91,13 @@ const RequestDetails = () => {
     // the server's own accessRole before any upload/delete control renders.
     const isV2Request = request.schemaVersion === 2;
     const damageImagesEditable = isOwner && !isAdminContext && canEditDamageImages(request);
+    // Technician inspection (Phase 6.4 Unit 4). The submission form is offered
+    // only to the assigned technician (viewing via the TechnicianRoute-gated
+    // assigned-jobs/:id path) on a picked-up v2 request - the server always
+    // independently revalidates role, assignment, lifecycle, and single-
+    // submission at commit time, so this is purely a UX gate.
+    const isAssignedTechnicianView = isV2Request && isTechnicianContext && request.riderEmail === user?.email;
+    const canInspect = isAssignedTechnicianView && request.deliveryStatus === 'parcel_picked_up';
 
     const handleCancelRequest = () => {
         if (cancelling) return;
@@ -191,6 +201,18 @@ const RequestDetails = () => {
             )}
             {!isV2Request && isOwner && (
                 <p className="text-sm opacity-70 mt-4">Damage photo upload is available for newer repair requests only.</p>
+            )}
+
+            {isV2Request && (
+                <div className="card bg-base-200 p-6 mt-8">
+                    <h3 className="text-2xl font-semibold mb-4">Technician Inspection</h3>
+                    {/* Inspection data is fetched from the dedicated,
+                        role-projected GET /parcels/:id/inspection endpoint (never
+                        read off the raw parcel, which the server strips) - the
+                        customer never receives internal technician notes or the
+                        submitter's identity. */}
+                    <InspectionSection requestId={request._id} canInspect={canInspect} isAssignedTechnicianView={isAssignedTechnicianView} />
+                </div>
             )}
 
             <div className="mt-8 flex flex-wrap gap-3">

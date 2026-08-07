@@ -7,6 +7,7 @@ const REPAIR_STATUS_LABELS = {
     'driver_assigned': 'Technician Assigned',
     'rider_arriving': 'Technician On The Way',
     'parcel_picked_up': 'Repair In Progress',
+    'inspection_completed': 'Inspection Completed',
     'parcel_delivered': 'Repair Completed',
     'cancelled': 'Request Cancelled',
 };

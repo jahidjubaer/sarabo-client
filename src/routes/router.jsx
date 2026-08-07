@@ -145,6 +145,14 @@ export const router = createBrowserRouter([
         element: <TechnicianRoute><AssignedJobs></AssignedJobs></TechnicianRoute>
       },
       {
+        // Assigned technician's detail view (Phase 6.4 Unit 4) - reuses the
+        // shared RequestDetails page (which renders the inspection form/summary
+        // for the assigned technician). Server-side getParcelById already
+        // authorizes the assigned rider.
+        path: 'assigned-jobs/:id',
+        element: <TechnicianRoute><RequestDetails></RequestDetails></TechnicianRoute>
+      },
+      {
         path: 'completed-jobs',
         element: <TechnicianRoute><CompletedJobs></CompletedJobs></TechnicianRoute>
       },
