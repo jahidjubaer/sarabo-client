@@ -18,6 +18,7 @@ import { formatMoneyRange } from '../../../utils/currency';
 import DamageImageManager from '../../../components/damage-images/DamageImageManager';
 import InspectionSection from '../../../components/inspection/InspectionSection';
 import QuoteSection from '../../../components/quote/QuoteSection';
+import V2PaymentSection from '../../../components/payment/V2PaymentSection';
 
 // Formats a v2 request's server-stored pricing snapshot (`request.pricing`,
 // shape { currency, estimateMin, estimateMax, ... } - built by
@@ -229,6 +230,17 @@ const RequestDetails = () => {
                         declines but can never alter the line items. */}
                     <QuoteSection requestId={request._id} isOwner={isOwner} canSubmitQuote={canSubmitQuote} isAssignedTechnicianView={isAssignedTechnicianView} />
                 </div>
+            )}
+
+            {/* V2 approved-quote payment (Phase 6.4 Unit 6). Owner-only and
+                only for a non-cancelled v2 request; the section itself asks the
+                server whether payment is eligible (GET /parcels/:id/payment-
+                eligibility) and renders Pay Now only when the server says so -
+                eligibility is never inferred from the quote status on the
+                client. The amount comes from the server (the approved quote
+                total, BDT); the client never sends an amount or currency. */}
+            {isV2Request && isOwner && !isCancelled && (
+                <V2PaymentSection requestId={request._id} />
             )}
 
             <div className="mt-8 flex flex-wrap gap-3">

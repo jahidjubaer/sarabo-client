@@ -8,6 +8,7 @@ import { roleKeys } from '../../hooks/roleKeys';
 import { damageImageKeys } from '../../hooks/damageImageKeys';
 import { inspectionKeys } from '../../hooks/inspectionKeys';
 import { quoteKeys } from '../../hooks/quoteKeys';
+import { paymentKeys } from '../../hooks/paymentKeys';
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -89,6 +90,12 @@ const AuthProvider = ({ children }) => {
                 // be read after a different account signs in within the tab.
                 queryClient.cancelQueries({ queryKey: quoteKeys.all });
                 queryClient.removeQueries({ queryKey: quoteKeys.all });
+                // Payment-eligibility queries (Phase 6.4 Unit 6) carry a
+                // per-request amount and payable state - cleared on the same
+                // account-switch trigger so one account's payment state can
+                // never be read after a different account signs in within the tab.
+                queryClient.cancelQueries({ queryKey: paymentKeys.all });
+                queryClient.removeQueries({ queryKey: paymentKeys.all });
             }
             previousUidRef.current = nextUid;
 

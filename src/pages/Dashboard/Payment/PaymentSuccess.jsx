@@ -50,6 +50,12 @@ const PaymentSuccess = () => {
                 // Partial-match invalidation: covers any currently-cached
                 // Request Details page (`['parcels', id]`) for this request.
                 queryClient.invalidateQueries({ queryKey: ['parcels'] });
+                // V2 approved-quote payments (Phase 6.4 Unit 6): once a payment
+                // is confirmed the request moves to payment_completed, so both
+                // the quote view and the payment-eligibility check must refetch
+                // (eligibility flips to ALREADY_PAID, hiding Pay Now).
+                queryClient.invalidateQueries({ queryKey: ['quote'] });
+                queryClient.invalidateQueries({ queryKey: ['payment-eligibility'] });
             })
             .catch(error => {
                 if (import.meta.env.DEV) console.error('Payment verification failed:', error);
