@@ -1,162 +1,138 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import React, { useState } from 'react';
-import { Link } from 'react-router';
+import { useMemo, useState } from 'react';
+import { MotionConfig } from 'motion/react';
 import useAuth from '../../../hooks/useAuth';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
-import Swal from 'sweetalert2';
-import { FaCheck, FaBan, FaRoute, FaClipboardCheck, FaClipboardList } from 'react-icons/fa';
-import Loading from '../../../components/Loading/Loading';
-import StatusBadge from '../../../components/StatusBadge/StatusBadge';
-import { getRepairStatusLabel } from '../../../utils/repairStatus';
+import { PageHeader } from '../../../components/common/PageHeader';
+import { EmptyState } from '../../../components/common/EmptyState';
+import { ErrorState } from '../../../components/common/ErrorState';
+import { CardSkeleton } from '../../../components/common/Skeletons';
+import { TechnicianJobFilters } from '../../../components/technician/TechnicianJobFilters';
+import { TechnicianJobList } from '../../../components/technician/TechnicianJobList';
+import { applyJobView } from '../../../utils/technicianJobPresentation';
+import { getStatusPresentation } from '../../../config/statusPresentation';
 import { getRepairStatusActionErrorMessage } from '../../../utils/repairStatusActionErrorMessage';
+import { notify } from '../../../lib/notify';
 
-const PENDING_LABELS = {
-    rider_arriving: 'Starting Journey...',
-    parcel_picked_up: 'Starting Repair...',
-    parcel_delivered: 'Completing Repair...'
-};
-
+// Phase 7.4: Assigned Jobs redesigned onto the design system (no DaisyUI).
+// Loads the technician's active assigned jobs (all non-delivered) - a broader,
+// more useful view than the old driver_assigned-only table. The status-advance
+// mutation (PATCH /parcels/:id/status) is PRESERVED exactly: it is the only way
+// to reach parcel_picked_up, which unlocks the inspection (see
+// RequestDetails / InspectionSection). Only its feedback moved to a toast.
+// Everything from pickup onward navigates to the authoritative details screen;
+// this page never mutates inspection/quote/repair state. Search/filter/sort are
+// pure client-side operations over the already-loaded jobs.
 const AssignedJobs = () => {
     const { user } = useAuth();
     const axiosSecure = useAxiosSecure();
     const queryClient = useQueryClient();
-    // Tracks which request + which action is in flight, so only that
-    // request's buttons disable/relabel - not the whole table.
+
+    const [search, setSearch] = useState('');
+    const [group, setGroup] = useState('all');
+    const [sort, setSort] = useState('priority');
+    // Tracks which request + action is in flight, so only that job's button
+    // disables/relabels - not the whole list.
     const [pendingAction, setPendingAction] = useState(null);
 
-    const { data: requests = [], refetch, isLoading } = useQuery({
-        queryKey: ['assignedJobs', user?.email],
+    const { data: jobs = [], refetch, isLoading, isError } = useQuery({
+        queryKey: ['tech-active-jobs', user?.email],
         queryFn: async () => {
-            const res = await axiosSecure.get(`/parcels/rider?riderEmail=${user.email}&deliveryStatus=driver_assigned`)
-
+            const res = await axiosSecure.get(`/parcels/rider?riderEmail=${user.email}`);
             return res.data;
-        }
-    })
+        },
+    });
 
-    if (isLoading) {
-        return <Loading></Loading>
-    }
+    const visibleJobs = useMemo(() => applyJobView(jobs, { search, group, sort }), [jobs, search, group, sort]);
 
-    // Only { deliveryStatus } is sent - the server always derives the
-    // assigned technician and trackingId from the repair request document
-    // itself, never from this body (see parcelController.updateParcelStatus
-    // / completeParcel).
-    const handleJobStatusUpdate = (request, status) => {
+    const clearFilters = () => {
+        setSearch('');
+        setGroup('all');
+        setSort('priority');
+    };
+
+    // Only { deliveryStatus } is sent - the server derives the assigned
+    // technician and trackingId from the request document itself (see
+    // parcelController.updateParcelStatus). Behaviour unchanged from the legacy
+    // page; feedback migrated from SweetAlert to a non-blocking toast.
+    const handleAdvance = (request, status) => {
         if (pendingAction) return;
         setPendingAction({ id: request._id, status });
-
-        const message = `Repair status updated: ${getRepairStatusLabel(status)}`;
-
         axiosSecure.patch(`/parcels/${request._id}/status`, { deliveryStatus: status })
             .then(() => {
                 refetch();
+                queryClient.invalidateQueries({ queryKey: ['tech-active-jobs', user?.email] });
                 queryClient.invalidateQueries({ queryKey: ['completedJobs', user?.email] });
-                Swal.fire({
-                    position: "top-end",
-                    icon: "success",
-                    title: message,
-                    showConfirmButton: false,
-                    timer: 1500
-                });
+                queryClient.invalidateQueries({ queryKey: ['tech-completed-jobs', user?.email] });
+                notify.success(`Updated: ${getStatusPresentation(status).label}`);
             })
-            .catch(error => {
+            .catch((error) => {
                 if (import.meta.env.DEV) console.error('Repair status update failed:', error);
-                Swal.fire({ icon: 'error', title: 'Could not update repair request', text: getRepairStatusActionErrorMessage(error) });
-                // A conflict (e.g. already updated concurrently) means the
-                // list shown may be stale - refresh so the technician sees
-                // the current state.
+                notify.error(getRepairStatusActionErrorMessage(error));
+                // A conflict (concurrent update) means the list may be stale -
+                // refresh so the technician sees the current state.
                 refetch();
             })
             .finally(() => setPendingAction(null));
+    };
+
+    if (isLoading) {
+        return (
+            <div className="space-y-6">
+                <PageHeader eyebrow="Technician" title="Assigned Jobs" />
+                <div className="space-y-3">
+                    {[0, 1, 2, 3].map((key) => <CardSkeleton key={key} className="h-24" />)}
+                </div>
+            </div>
+        );
     }
 
-    return (
-        <div>
-            <h2 className="text-4xl font-bold">Assigned Repairs: {requests.length}</h2>
-
-            <div className="overflow-x-auto">
-                <table className="table table-zebra">
-                    {/* head */}
-                    <thead>
-                        <tr>
-                            <th></th>
-                            <th>Name</th>
-                            <th>Confirm</th>
-                            <th>Other Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {requests.map((request, i) => <tr key={request._id}>
-                            <th>{i + 1}</th>
-                            <td>{request.parcelName}</td>
-                            <td>
-                                {
-                                    request.deliveryStatus === 'driver_assigned'
-                                        ? <div className="flex flex-wrap gap-2 items-center">
-                                            <button
-                                                onClick={() => handleJobStatusUpdate(request, 'rider_arriving')}
-                                                disabled={pendingAction?.id === request._id}
-                                                className='btn btn-primary btn-sm'>
-                                                <FaCheck aria-hidden="true" />
-                                                {pendingAction?.id === request._id && pendingAction.status === 'rider_arriving'
-                                                    ? PENDING_LABELS.rider_arriving
-                                                    : ' Start Journey'}
-                                            </button>
-                                            <div className="tooltip" data-tip="Rejecting jobs is not available yet">
-                                                <button
-                                                    type="button"
-                                                    disabled
-                                                    aria-disabled="true"
-                                                    className='btn btn-error text-black btn-sm'>
-                                                    <FaBan aria-hidden="true" /> Reject
-                                                </button>
-                                            </div>
-                                        </div>
-                                        : <StatusBadge status={request.deliveryStatus} label={getRepairStatusLabel(request.deliveryStatus)} />
-                                }
-
-                            </td>
-                            <td>
-                                <div className="flex flex-wrap gap-2">
-                                    <button
-                                        onClick={() => handleJobStatusUpdate(request, 'parcel_picked_up')}
-                                        disabled={pendingAction?.id === request._id}
-                                        className='btn btn-primary btn-sm'>
-                                        <FaRoute aria-hidden="true" />
-                                        {pendingAction?.id === request._id && pendingAction.status === 'parcel_picked_up'
-                                            ? PENDING_LABELS.parcel_picked_up
-                                            : ' Start Repair'}
-                                    </button>
-                                    <button
-                                        onClick={() => handleJobStatusUpdate(request, 'parcel_delivered')}
-                                        disabled={pendingAction?.id === request._id}
-                                        className='btn btn-primary btn-sm'>
-                                        <FaClipboardCheck aria-hidden="true" />
-                                        {pendingAction?.id === request._id && pendingAction.status === 'parcel_delivered'
-                                            ? PENDING_LABELS.parcel_delivered
-                                            : ' Complete Repair'}
-                                    </button>
-                                    {/* Detail view - where the assigned technician
-                                        submits/reviews the inspection (Phase 6.4
-                                        Unit 4). Available for v2 requests. */}
-                                    {request.schemaVersion === 2 && (
-                                        <Link to={`/dashboard/assigned-jobs/${request._id}`} className="btn btn-outline btn-sm">
-                                            <FaClipboardList aria-hidden="true" /> Details / Inspect
-                                        </Link>
-                                    )}
-                                </div>
-                            </td>
-                        </tr>)}
-
-
-                    </tbody>
-                </table>
-                {
-                    requests.length === 0 && <p className='text-center py-8 opacity-60'>You have no assigned repairs at the moment.</p>
-                }
+    if (isError) {
+        return (
+            <div className="space-y-6">
+                <PageHeader eyebrow="Technician" title="Assigned Jobs" />
+                <ErrorState
+                    title="Couldn't load your jobs"
+                    description="We couldn't load your assigned jobs right now. Please try again."
+                    onRetry={() => refetch()}
+                />
             </div>
+        );
+    }
 
-        </div >
+    const total = jobs.length;
+    const description = total === 0 ? 'You have no assigned jobs right now.' : `${total} assigned job${total === 1 ? '' : 's'}`;
+
+    return (
+        <MotionConfig reducedMotion="user">
+            <div className="space-y-6">
+                <PageHeader eyebrow="Technician" title="Assigned Jobs" description={description} />
+
+                {total === 0 ? (
+                    <EmptyState
+                        title="No assigned jobs"
+                        description="You don't have any repair jobs assigned right now. New assignments will appear here."
+                    />
+                ) : (
+                    <>
+                        <TechnicianJobFilters
+                            search={search}
+                            onSearchChange={setSearch}
+                            group={group}
+                            onGroupChange={setGroup}
+                            sort={sort}
+                            onSortChange={setSort}
+                        />
+                        <TechnicianJobList
+                            jobs={visibleJobs}
+                            onClearFilters={clearFilters}
+                            onAdvance={handleAdvance}
+                            pendingAction={pendingAction}
+                        />
+                    </>
+                )}
+            </div>
+        </MotionConfig>
     );
 };
 
