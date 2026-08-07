@@ -5,6 +5,20 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sarabo</title>
+    <!-- Theme anti-flash (Phase 7.2): apply the persisted design-system theme
+         to <html> before first paint so dark mode never flashes light on load.
+         Mirrors src/theme/ThemeProvider.jsx; failure is silently ignored. -->
+    <script>
+      (function () {
+        try {
+          var key = 'sarabo:theme';
+          var stored = localStorage.getItem(key);
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var dark = stored === 'dark' || ((!stored || stored === 'system') && prefersDark);
+          document.documentElement.classList.toggle('dark', dark);
+        } catch (e) { /* ignore */ }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
