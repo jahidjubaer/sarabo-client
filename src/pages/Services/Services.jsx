@@ -1,100 +1,77 @@
-import React from 'react';
+import { motion as Motion, MotionConfig } from 'motion/react';
 import { Link } from 'react-router';
-import { FaSnowflake, FaTv, FaMobileAlt, FaLaptop, FaTools } from 'react-icons/fa';
-import { GiWashingMachine } from 'react-icons/gi';
-import { MdKitchen, MdMicrowave } from 'react-icons/md';
+import { AirVent, Refrigerator, WashingMachine, Tv, Smartphone, Laptop, Microwave, Wrench, ArrowRight } from 'lucide-react';
+import SectionHeader from '../../components/public/SectionHeader';
+import CTAPanel from '../../components/public/CTAPanel';
+import { SERVICE_CATEGORIES, REQUEST_REPAIR_ROUTE, getRequestRepairAction } from '../../utils/publicContent';
+import { buttonVariants } from '../../components/ui/button-variants';
+import { staggerContainer, staggerItem } from '../../theme/motion';
 
-const services = [
-    {
-        label: 'AC',
-        icon: FaSnowflake,
-        description: 'Installation, gas refilling, cooling issues and general maintenance for split and window ACs.'
-    },
-    {
-        label: 'Refrigerator',
-        icon: MdKitchen,
-        description: 'Cooling problems, compressor issues, gas leakage and routine refrigerator servicing.'
-    },
-    {
-        label: 'Washing Machine',
-        icon: GiWashingMachine,
-        description: 'Drum, motor, drainage and control panel repairs for top-load and front-load machines.'
-    },
-    {
-        label: 'TV / Electronics',
-        icon: FaTv,
-        description: 'Display, sound and connectivity issues for TVs and other home electronics.'
-    },
-    {
-        label: 'Mobile Phone',
-        icon: FaMobileAlt,
-        description: 'Screen, battery, charging port and software troubleshooting for smartphones.'
-    },
-    {
-        label: 'Laptop / Computer',
-        icon: FaLaptop,
-        description: 'Hardware diagnostics, performance issues and general repair for laptops and desktops.'
-    },
-    {
-        label: 'Microwave',
-        icon: MdMicrowave,
-        description: 'Heating, turntable and control issues fixed for all microwave oven brands.'
-    },
-    {
-        label: 'Other',
-        icon: FaTools,
-        description: 'Have another appliance that needs a technician? We handle a wide range of repairs.'
-    },
-];
+const ICONS = {
+    ac: AirVent,
+    refrigerator: Refrigerator,
+    'washing-machine': WashingMachine,
+    tv: Tv,
+    mobile: Smartphone,
+    laptop: Laptop,
+    microwave: Microwave,
+    other: Wrench,
+};
 
-const Services = () => {
-    return (
-        <div className="px-4 py-12">
-            <div className="text-center max-w-2xl mx-auto mb-12">
-                <h2 className="text-4xl font-bold">Our Repair Services</h2>
-                <p className="mt-4 opacity-70">
-                    From home appliances to personal electronics, our verified technicians
-                    come to your doorstep to diagnose and fix the problem. Pick a category
-                    below to get started.
-                </p>
+// Public Services page (Phase 7.8), redesigned to ds-*. Categories/blurbs come
+// from the shared content module - customer-facing only (no slugs/ids/pricing
+// fields). Every card links to the request route; guards enforce access. No
+// pricing is shown (no server pricing is fetched here, so none is invented).
+const Services = () => (
+    <MotionConfig reducedMotion="user">
+        <div className="px-4 py-12 sm:px-6 lg:px-8">
+            <SectionHeader
+                title="Our repair services"
+                description="From home appliances to personal electronics, verified technicians diagnose and fix the problem through a managed workflow. Pick a category to get started."
+            />
+
+            <Motion.div
+                variants={staggerContainer}
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: true, amount: 0.1 }}
+                className="mx-auto mt-12 grid max-w-6xl grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4"
+            >
+                {SERVICE_CATEGORIES.map((service) => {
+                    const Icon = ICONS[service.iconKey] || Wrench;
+                    return (
+                        <Motion.div
+                            key={service.key}
+                            variants={staggerItem}
+                            className="flex flex-col rounded-ds-lg border border-ds-border bg-ds-card p-6"
+                        >
+                            <span className="flex size-11 items-center justify-center rounded-ds-lg bg-ds-primary/10 text-ds-primary">
+                                <Icon aria-hidden="true" className="size-5" />
+                            </span>
+                            <h3 className="mt-4 text-base font-semibold text-ds-foreground">{service.label}</h3>
+                            <p className="mt-2 flex-1 text-sm text-ds-muted-foreground">{service.blurb}</p>
+                            <Link to={REQUEST_REPAIR_ROUTE} className="focus-ring mt-4 inline-flex items-center gap-1 text-sm font-semibold text-ds-primary hover:underline">
+                                Request this service <ArrowRight aria-hidden="true" className="size-4" />
+                            </Link>
+                        </Motion.div>
+                    );
+                })}
+            </Motion.div>
+
+            <div className="mx-auto mt-16 max-w-6xl">
+                <CTAPanel
+                    heading="Can't find your device category?"
+                    description='No problem — choose "Other" when creating a request and describe the issue, and we’ll match you with the right technician.'
+                    primaryAction={getRequestRepairAction()}
+                />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {
-                    services.map((service, index) => {
-                        const Icon = service.icon;
-                        return (
-                            <div key={index} className="card bg-base-200 shadow-sm hover:shadow-md transition">
-                                <div className="card-body items-center text-center">
-                                    <div className="bg-base-100 rounded-full p-4">
-                                        <Icon className="text-4xl text-primary" />
-                                    </div>
-                                    <h3 className="card-title mt-2">{service.label}</h3>
-                                    <p className="text-sm opacity-70">{service.description}</p>
-                                    <div className="card-actions mt-4">
-                                        <Link to="/dashboard/create-request" className="btn btn-primary btn-sm">
-                                            Request this service
-                                        </Link>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })
-                }
-            </div>
-
-            <div className="mt-16 bg-base-200 rounded-2xl p-8 text-center">
-                <h3 className="text-2xl font-semibold">Can't find your device category?</h3>
-                <p className="mt-2 opacity-70">
-                    No problem — choose "Other" when creating a request and describe the issue,
-                    and we'll match you with the right technician.
-                </p>
-                <Link to="/dashboard/create-request" className="btn btn-primary mt-6">
-                    Create a Repair Request
-                </Link>
+            {/* Keep a plain in-flow request link too for users who scroll past. */}
+            <div className="mt-8 text-center">
+                <Link to={REQUEST_REPAIR_ROUTE} className={buttonVariants({ variant: 'default' })}>Create a repair request</Link>
             </div>
         </div>
-    );
-};
+    </MotionConfig>
+);
 
 export default Services;

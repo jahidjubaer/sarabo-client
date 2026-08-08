@@ -1,43 +1,62 @@
-import { FaClipboardList, FaUserCheck, FaRoute, FaCheckCircle } from 'react-icons/fa';
+import { motion as Motion, MotionConfig } from 'motion/react';
+import { ClipboardList, UserCheck, Search, FileCheck, CreditCard, CheckCircle2 } from 'lucide-react';
 import SectionHeader from '../../../components/public/SectionHeader';
+import { HOW_IT_WORKS_STEPS } from '../../../utils/publicContent';
+import { staggerContainer, staggerItem } from '../../../theme/motion';
 
-const steps = [
-    { icon: FaClipboardList, title: 'Submit Request', description: 'Share your device and repair issue through the request form.' },
-    { icon: FaUserCheck, title: 'Technician Assigned', description: 'An approved technician is assigned through the managed service workflow.' },
-    { icon: FaRoute, title: 'Repair and Track', description: 'Follow repair progress through clear status updates.' },
-    { icon: FaCheckCircle, title: 'Complete Service', description: 'Review the completed service details and payment history where applicable.' },
-];
+const ICONS = {
+    submit: ClipboardList,
+    assign: UserCheck,
+    inspect: Search,
+    quote: FileCheck,
+    pay: CreditCard,
+    complete: CheckCircle2,
+};
 
-// `scroll-mt-24` accounts for the sticky Navbar so the anchor target doesn't
-// land underneath it when reached via the Hero's "How It Works" link.
+// Public "How Sarabo works" (Phase 7.8), redesigned to ds-*. Steps are
+// user-facing labels from the content module - never internal status strings.
+// `scroll-mt-24` accounts for the sticky navbar so the Hero's "How it works"
+// anchor doesn't land underneath it. The numbered sequence is fully legible
+// without motion (reduced-motion just skips the entrance).
 const HowItWorks = () => (
-    <section id="how-it-works" className="scroll-mt-24 px-4 py-16 sm:px-6 lg:px-8">
-        <SectionHeader
-            eyebrow="Simple Process"
-            title="How Sarabo Works"
-            description="A clear, managed workflow from request to completed repair."
-        />
-        <div className="relative mt-12">
-            {/* Connector line sits behind the numbered circles - each circle's
-            solid background visually breaks it, so no per-item width math is needed. */}
-            <div className="absolute inset-x-[12%] top-6 hidden h-0.5 bg-base-300 lg:block" aria-hidden="true"></div>
-            <ol className="relative grid grid-cols-1 gap-8 lg:grid-cols-4">
-                {steps.map((step, index) => {
-                    const Icon = step.icon;
-                    return (
-                        <li key={step.title} className="flex flex-col items-center gap-2 text-center">
-                            <div className="relative z-10 flex h-12 w-12 items-center justify-center rounded-full bg-primary font-bold text-primary-content">
-                                {index + 1}
-                            </div>
-                            <Icon className="text-2xl text-primary" aria-hidden="true" />
-                            <h3 className="text-lg font-semibold">{step.title}</h3>
-                            <p className="text-sm opacity-70">{step.description}</p>
-                        </li>
-                    );
-                })}
-            </ol>
-        </div>
-    </section>
+    <MotionConfig reducedMotion="user">
+        <section id="how-it-works" className="scroll-mt-24 bg-ds-muted/40 px-4 py-16 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-6xl">
+                <SectionHeader
+                    eyebrow="Simple process"
+                    title="How Sarabo works"
+                    description="A clear, managed workflow from request to completed repair."
+                />
+                <Motion.ol
+                    variants={staggerContainer}
+                    initial="hidden"
+                    whileInView="show"
+                    viewport={{ once: true, amount: 0.15 }}
+                    className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
+                >
+                    {HOW_IT_WORKS_STEPS.map((step, index) => {
+                        const Icon = ICONS[step.key];
+                        return (
+                            <Motion.li
+                                key={step.key}
+                                variants={staggerItem}
+                                className="rounded-ds-lg border border-ds-border bg-ds-card p-5"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-ds-primary text-sm font-bold text-ds-primary-foreground">
+                                        {index + 1}
+                                    </span>
+                                    <Icon aria-hidden="true" className="size-5 text-ds-primary" />
+                                </div>
+                                <h3 className="mt-3 text-base font-semibold text-ds-foreground">{step.title}</h3>
+                                <p className="mt-1 text-sm text-ds-muted-foreground">{step.description}</p>
+                            </Motion.li>
+                        );
+                    })}
+                </Motion.ol>
+            </div>
+        </section>
+    </MotionConfig>
 );
 
 export default HowItWorks;

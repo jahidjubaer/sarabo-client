@@ -1,34 +1,47 @@
-import { FaUserCheck, FaUserShield, FaLock, FaHistory } from 'react-icons/fa';
+import { motion as Motion, MotionConfig } from 'motion/react';
+import { UserCheck, ShieldCheck, FileCheck, Lock, Activity, Image } from 'lucide-react';
 import SectionHeader from '../../../components/public/SectionHeader';
 import PublicFeatureCard from '../../../components/public/PublicFeatureCard';
+import { TRUST_POINTS } from '../../../utils/publicContent';
+import { staggerContainer, staggerItem } from '../../../theme/motion';
 
-// Four evidence-based trust points - no fake badges, certifications, quotes,
-// or statistics. Wording deliberately avoids overreaching claims (no "fully
-// secure", "fraud-proof", "bank-grade", "PCI compliant", "end-to-end
-// encrypted", "insured", "background-checked", or guarantee language).
-const trustPoints = [
-    { icon: FaUserCheck, title: 'Approved Technician Access', description: 'Technicians join the service workflow only after administrative approval.' },
-    { icon: FaUserShield, title: 'Role-Protected Operations', description: 'Customer, technician, and admin actions are separated through role-based access controls.' },
-    { icon: FaLock, title: 'Server-Validated Payments', description: 'Payment amounts and confirmation are validated on the server before completion is recorded.' },
-    { icon: FaHistory, title: 'Trackable Repair History', description: 'Important request, assignment, payment, and completion updates remain associated with the repair record.' },
-];
+// Capability-based trust points (Phase 7.8) sourced from the content module -
+// each reflects a real product mechanism. No fake badges, certifications,
+// quotes, or statistics; wording avoids overreaching security claims.
+const ICONS = {
+    'user-check': UserCheck,
+    shield: ShieldCheck,
+    'file-check': FileCheck,
+    lock: Lock,
+    activity: Activity,
+    image: Image,
+};
 
-// Muted (bg-base-200) rather than a second dark panel - RepairLifecycle
-// immediately above already provides the dark technical contrast beat, so
-// stacking another one here would read as monotone rather than restrained.
 const TrustAndSafety = () => (
-    <section className="bg-base-200 px-4 py-16 sm:px-6 lg:px-8">
-        <SectionHeader
-            eyebrow="Trust & Safety"
-            title="Built on Accountable Processes"
-            description="Sarabo's workflow is structured around administrative approval, role separation, and server-side validation."
-        />
-        <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {trustPoints.map(point => (
-                <PublicFeatureCard key={point.title} icon={point.icon} title={point.title} description={point.description} />
-            ))}
-        </div>
-    </section>
+    <MotionConfig reducedMotion="user">
+        <section className="bg-ds-muted/40 px-4 py-16 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-6xl">
+                <SectionHeader
+                    eyebrow="Trust & safety"
+                    title="Built on accountable processes"
+                    description="Sarabo's workflow is structured around administrative approval, role separation, and server-side validation."
+                />
+                <Motion.div
+                    variants={staggerContainer}
+                    initial="hidden"
+                    whileInView="show"
+                    viewport={{ once: true, amount: 0.12 }}
+                    className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
+                >
+                    {TRUST_POINTS.map((point) => (
+                        <Motion.div key={point.key} variants={staggerItem}>
+                            <PublicFeatureCard icon={ICONS[point.iconKey]} title={point.title} description={point.description} />
+                        </Motion.div>
+                    ))}
+                </Motion.div>
+            </div>
+        </section>
+    </MotionConfig>
 );
 
 export default TrustAndSafety;

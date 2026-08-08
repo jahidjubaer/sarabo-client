@@ -1,178 +1,168 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router';
-import { FaBars, FaTimes } from 'react-icons/fa';
+import { Menu, LayoutDashboard, LogOut } from 'lucide-react';
 import Logo from '../../../components/Logo/Logo';
-import Avatar from '../../../components/Avatar/Avatar';
 import useAuth from '../../../hooks/useAuth';
 import useRole from '../../../hooks/useRole';
-import useClickOutside from '../../../hooks/useClickOutside';
-import ProfileDropdown from './ProfileDropdown';
 import NotificationBell from '../../../components/notifications/NotificationBell';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../../../components/ui/sheet';
+import { buttonVariants } from '../../../components/ui/button-variants';
+import { PUBLIC_NAV_LINKS, shouldShowCreateRequestLink, getRequestRepairAction } from '../../../utils/publicContent';
 import { ROLE_SHORTCUTS } from './roleShortcuts';
+import { cn } from '../../../lib/utils';
 
-// Active state is shown via colour + weight + a bottom indicator together
-// (not colour alone), consistently on desktop and mobile.
+// Public site header (Phase 7.8), redesigned to ds-* with a Radix Sheet mobile
+// menu (real focus trap + Escape + scroll-lock). Auth behavior is unchanged -
+// it reads useAuth/useRole exactly as before and never rewrites authentication;
+// route guards remain the access boundary for every destination. Active state
+// is conveyed by colour + weight + a bottom indicator together (not colour
+// alone). The former DaisyUI navbar + ProfileDropdown are retired; the
+// logged-in cluster now shows Dashboard/role-shortcut/Log out actions in ds-*
+// rather than exposing avatar/email on the public bar.
 const navLinkClass = ({ isActive }) =>
-    `focus-ring block rounded-md border-b-2 px-1 py-2 text-sm font-medium transition-colors lg:py-1 ${isActive
-        ? 'border-primary text-primary font-semibold'
-        : 'border-transparent text-base-content/80 hover:text-primary'
-    }`;
+    cn(
+        'focus-ring rounded-ds border-b-2 px-1 py-1 text-sm font-medium transition-colors',
+        isActive
+            ? 'border-ds-primary text-ds-primary font-semibold'
+            : 'border-transparent text-ds-muted-foreground hover:text-ds-foreground'
+    );
 
-const mobileActionClass = 'focus-ring flex min-h-11 w-full items-center rounded-md px-3 py-2 text-sm hover:bg-base-200';
+const mobileLinkClass = ({ isActive }) =>
+    cn(
+        'focus-ring flex min-h-11 items-center rounded-ds px-3 text-sm font-medium',
+        isActive ? 'bg-ds-primary/10 text-ds-primary' : 'text-ds-foreground hover:bg-ds-muted'
+    );
 
 const NavBar = () => {
     const { user, logOut } = useAuth();
     const { role, roleLoading, isError } = useRole();
     const location = useLocation();
-
     const [mobileOpen, setMobileOpen] = useState(false);
-    const mobileNavRef = useRef(null);
-    const mobileTriggerRef = useRef(null);
 
-    // Memoized so useClickOutside's effect doesn't tear down and re-attach
-    // its document listener on every render while the menu is open.
-    const closeMobile = useCallback(() => setMobileOpen(false), []);
+    const closeMobile = () => setMobileOpen(false);
 
-    useClickOutside(mobileNavRef, closeMobile, mobileOpen);
-
-    // Closing on every route change is a safety net beyond per-link onClick -
-    // it also covers the Logo (outside this ref) and browser back/forward.
-    // Adjusted during render (React's sanctioned pattern for resetting state
-    // on prop/derived-value change) rather than in an effect, so it never
-    // triggers a synchronous setState-in-effect cascade.
-    const [prevPathname, setPrevPathname] = useState(location.pathname);
-    if (location.pathname !== prevPathname) {
-        setPrevPathname(location.pathname);
+    // Close the sheet on any route change (covers the Logo and back/forward),
+    // adjusted during render per React's sanctioned reset pattern.
+    const [prevPath, setPrevPath] = useState(location.pathname);
+    if (location.pathname !== prevPath) {
+        setPrevPath(location.pathname);
         if (mobileOpen) setMobileOpen(false);
     }
 
-    useEffect(() => {
-        if (!mobileOpen) return;
-        const onKeyDown = (event) => {
-            if (event.key === 'Escape') {
-                setMobileOpen(false);
-                mobileTriggerRef.current?.focus();
-            }
-        };
-        document.addEventListener('keydown', onKeyDown);
-        return () => document.removeEventListener('keydown', onKeyDown);
-    }, [mobileOpen]);
-
     const handleLogOut = () => {
-        logOut()
-            .catch(error => {
-                // Mirrors AuthProvider's own dev-only diagnostic pattern - no
-                // user-facing toast, no ungated console noise in production.
-                if (import.meta.env.DEV) console.error('Logout failed:', error.message);
-            });
+        logOut().catch((error) => {
+            if (import.meta.env.DEV) console.error('Logout failed:', error.message);
+        });
     };
 
     const roleKnown = !roleLoading && !isError;
-    const mobileShortcut = roleKnown ? ROLE_SHORTCUTS[role] : null;
+    const roleShortcut = roleKnown ? ROLE_SHORTCUTS[role] : null;
+    const showRequestCta = shouldShowCreateRequestLink({ user, role });
+    const requestAction = getRequestRepairAction();
 
-    const publicLinks = (
-        <>
-            <li><NavLink end to="/" className={navLinkClass} onClick={closeMobile}>Home</NavLink></li>
-            <li><NavLink to="/services" className={navLinkClass} onClick={closeMobile}>Services</NavLink></li>
-            <li><NavLink to="/service-areas" className={navLinkClass} onClick={closeMobile}>Service Areas</NavLink></li>
-            <li><NavLink to="/track-request" className={navLinkClass} onClick={closeMobile}>Track Repair</NavLink></li>
-            <li><NavLink to="/about" className={navLinkClass} onClick={closeMobile}>About</NavLink></li>
-            {/* Public before login (preserves existing anonymous behavior); once
-            signed in, customer-only - `role` is undefined for anonymous visitors,
-            while useRole is loading, and on a role-fetch error, so this never
-            flashes for admin/technician or briefly shows before it should. */}
-            {
-                (!user || role === 'user') &&
-                <li><NavLink to="/dashboard/create-request" className={navLinkClass} onClick={closeMobile}>Create Repair Request</NavLink></li>
-            }
-            <li><NavLink to="/become-technician" className={navLinkClass} onClick={closeMobile}>Become a Technician</NavLink></li>
-        </>
-    );
+    const desktopLinks = PUBLIC_NAV_LINKS.map((link) => (
+        <li key={link.to}>
+            <NavLink end={link.end} to={link.to} className={navLinkClass}>{link.label}</NavLink>
+        </li>
+    ));
+
+    const mobileLinks = PUBLIC_NAV_LINKS.map((link) => (
+        <NavLink key={link.to} end={link.end} to={link.to} className={mobileLinkClass} onClick={closeMobile}>{link.label}</NavLink>
+    ));
 
     return (
-        <div className="sticky top-0 z-50 navbar bg-base-100 border-b border-base-300 px-4 sm:px-6 lg:px-8">
-            <div className="navbar-start gap-2">
-                <button
-                    ref={mobileTriggerRef}
-                    type="button"
-                    onClick={() => setMobileOpen(prev => !prev)}
-                    aria-expanded={mobileOpen}
-                    aria-controls="mobile-nav-panel"
-                    aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
-                    className="focus-ring btn btn-ghost min-h-11 lg:hidden"
-                >
-                    {mobileOpen ? <FaTimes className="h-5 w-5" aria-hidden="true" /> : <FaBars className="h-5 w-5" aria-hidden="true" />}
-                </button>
-                <span className="btn btn-ghost text-xl">
-                    <Logo></Logo>
-                </span>
-            </div>
-
-            <div className="navbar-center hidden lg:flex">
-                <ul className="menu menu-horizontal items-center gap-1 px-1">
-                    {publicLinks}
-                </ul>
-            </div>
-
-            <div className="navbar-end gap-2">
-                {/* Visible at every breakpoint (unlike navbar-actions below,
-                which is desktop-only) so the bell stays reachable on mobile,
-                where the avatar/logout menu instead lives in the drawer. */}
-                {user && <NotificationBell />}
-                <div className="navbar-actions hidden lg:flex lg:items-center lg:gap-2">
-                    {
-                        user
-                            ? <ProfileDropdown user={user} role={role} roleLoading={roleLoading} isError={isError} onLogout={handleLogOut} />
-                            : <>
-                                <Link className="btn btn-outline" to="/login">Log in</Link>
-                                <Link className="btn btn-primary" to="/register">Register</Link>
-                            </>
-                    }
-                </div>
-            </div>
-
-            {mobileOpen && (
-                <div
-                    ref={mobileNavRef}
-                    id="mobile-nav-panel"
-                    className="absolute left-0 right-0 top-full z-50 border-b border-base-300 bg-base-100 shadow-lg lg:hidden"
-                >
-                    <ul className="menu w-full gap-1 p-4">
-                        {publicLinks}
-                    </ul>
-                    <div className="border-t border-base-300 p-4">
-                        {
-                            user
-                                ? <>
-                                    <div className="mb-3 flex items-center gap-3">
-                                        <Avatar src={user.photoURL} name={user.displayName || user.email} size="w-10 h-10" />
-                                        <div className="min-w-0">
-                                            <p className="truncate text-sm font-semibold" title={user.displayName || user.email}>
-                                                {user.displayName || user.email}
-                                            </p>
-                                            <p className="truncate text-xs opacity-70" title={user.email}>{user.email}</p>
-                                        </div>
+        <header className="sticky top-0 z-50 border-b border-ds-border bg-ds-background/95 backdrop-blur supports-[backdrop-filter]:bg-ds-background/80">
+            <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+                {/* Brand + mobile trigger */}
+                <div className="flex items-center gap-1">
+                    <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+                        <SheetTrigger
+                            aria-label="Open menu"
+                            className="focus-ring inline-flex size-10 items-center justify-center rounded-ds text-ds-foreground hover:bg-ds-muted lg:hidden"
+                        >
+                            <Menu aria-hidden="true" className="size-5" />
+                        </SheetTrigger>
+                        <SheetContent side="left" className="w-4/5 max-w-sm">
+                            <SheetHeader className="border-b border-ds-border">
+                                <SheetTitle>Menu</SheetTitle>
+                            </SheetHeader>
+                            <nav className="flex flex-col gap-1 p-4">
+                                {mobileLinks}
+                                {showRequestCta && (
+                                    <NavLink to={requestAction.to} className={mobileLinkClass} onClick={closeMobile}>
+                                        {requestAction.label}
+                                    </NavLink>
+                                )}
+                                <NavLink to="/become-technician" className={mobileLinkClass} onClick={closeMobile}>Become a Technician</NavLink>
+                            </nav>
+                            <div className="mt-auto border-t border-ds-border p-4">
+                                {user ? (
+                                    <div className="flex flex-col gap-2">
+                                        <Link to="/dashboard" className={buttonVariants({ variant: 'default' })} onClick={closeMobile}>
+                                            <LayoutDashboard aria-hidden="true" /> Dashboard
+                                        </Link>
+                                        {roleShortcut && (
+                                            <Link to={roleShortcut.to} className={buttonVariants({ variant: 'outline' })} onClick={closeMobile}>
+                                                {roleShortcut.label}
+                                            </Link>
+                                        )}
+                                        <Link to="/dashboard/profile" className={buttonVariants({ variant: 'ghost' })} onClick={closeMobile}>My Profile</Link>
+                                        <button
+                                            type="button"
+                                            onClick={() => { closeMobile(); handleLogOut(); }}
+                                            className={cn(buttonVariants({ variant: 'ghost' }), 'text-ds-destructive')}
+                                        >
+                                            <LogOut aria-hidden="true" /> Log out
+                                        </button>
                                     </div>
-                                    <ul className="flex flex-col gap-1">
-                                        <li><Link to="/dashboard/profile" className={mobileActionClass} onClick={closeMobile}>My Profile</Link></li>
-                                        {mobileShortcut && <li><Link to={mobileShortcut.to} className={mobileActionClass} onClick={closeMobile}>{mobileShortcut.label}</Link></li>}
-                                        <li><Link to="/dashboard" className={mobileActionClass} onClick={closeMobile}>Dashboard</Link></li>
-                                        <li>
-                                            <button type="button" onClick={() => { closeMobile(); handleLogOut(); }} className={`${mobileActionClass} text-error`}>
-                                                Logout
-                                            </button>
-                                        </li>
-                                    </ul>
-                                </>
-                                : <div className="flex flex-col gap-2">
-                                    <Link to="/login" className="btn btn-outline w-full" onClick={closeMobile}>Log in</Link>
-                                    <Link to="/register" className="btn btn-primary w-full" onClick={closeMobile}>Register</Link>
-                                </div>
-                        }
+                                ) : (
+                                    <div className="flex flex-col gap-2">
+                                        <Link to="/login" className={buttonVariants({ variant: 'outline' })} onClick={closeMobile}>Log in</Link>
+                                        <Link to="/register" className={buttonVariants({ variant: 'default' })} onClick={closeMobile}>Register</Link>
+                                    </div>
+                                )}
+                            </div>
+                        </SheetContent>
+                    </Sheet>
+                    <Logo />
+                </div>
+
+                {/* Desktop nav */}
+                <nav className="hidden lg:block">
+                    <ul className="flex items-center gap-4">{desktopLinks}</ul>
+                </nav>
+
+                {/* Right cluster */}
+                <div className="flex items-center gap-2">
+                    {user && <NotificationBell />}
+                    {showRequestCta && (
+                        <Link to={requestAction.to} className={cn(buttonVariants({ variant: 'default', size: 'sm' }), 'hidden sm:inline-flex')}>
+                            {requestAction.label}
+                        </Link>
+                    )}
+                    <div className="hidden items-center gap-2 lg:flex">
+                        {user ? (
+                            <>
+                                {roleShortcut && (
+                                    <Link to={roleShortcut.to} className={buttonVariants({ variant: 'ghost', size: 'sm' })}>{roleShortcut.label}</Link>
+                                )}
+                                <Link to="/dashboard" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+                                    <LayoutDashboard aria-hidden="true" /> Dashboard
+                                </Link>
+                                <button type="button" onClick={handleLogOut} aria-label="Log out" className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }), 'text-ds-muted-foreground hover:text-ds-destructive')}>
+                                    <LogOut aria-hidden="true" />
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <Link to="/login" className={buttonVariants({ variant: 'outline', size: 'sm' })}>Log in</Link>
+                                <Link to="/register" className={buttonVariants({ variant: 'default', size: 'sm' })}>Register</Link>
+                            </>
+                        )}
                     </div>
                 </div>
-            )}
-        </div>
+            </div>
+        </header>
     );
 };
 
