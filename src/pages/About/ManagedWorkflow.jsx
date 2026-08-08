@@ -1,4 +1,4 @@
-import { FaClipboardList, FaSearch, FaUserCheck, FaTools, FaFileInvoiceDollar, FaCheckCircle, FaBan } from 'react-icons/fa';
+import { ClipboardList, Search, UserCheck, Wrench, ReceiptText, CheckCircle2, Ban } from 'lucide-react';
 import DarkTechSection from '../../components/public/DarkTechSection';
 import { getRepairStatusLabel } from '../../utils/repairStatus';
 
@@ -8,43 +8,44 @@ import { getRepairStatusLabel } from '../../utils/repairStatus';
 // that correspond to a real stored status reuse getRepairStatusLabel();
 // "Request Reviewed", "Repair Activity Progresses", and "Payment Recorded
 // Where Applicable" are narrative steps with no raw status equivalent.
+// (Phase 7.9: icons migrated to Lucide; dark technical panel retained.)
 const workflowSteps = [
     {
-        icon: FaClipboardList,
+        icon: ClipboardList,
         label: getRepairStatusLabel('pending-pickup'),
         responsibility: 'A customer submits a repair request with the required device and issue details.',
     },
     {
-        icon: FaSearch,
-        label: 'Request Reviewed',
+        icon: Search,
+        label: 'Request reviewed',
         responsibility: 'The request becomes available for administrative oversight before technician assignment.',
     },
     {
-        icon: FaUserCheck,
+        icon: UserCheck,
         label: getRepairStatusLabel('driver_assigned'),
         responsibility: 'An approved technician is assigned to the request through a controlled administrative action.',
     },
     {
-        icon: FaTools,
-        label: 'Repair Activity Progresses',
+        icon: Wrench,
+        label: 'Repair activity progresses',
         responsibility: 'The assigned technician updates the repair status as service work moves forward.',
     },
     {
-        icon: FaFileInvoiceDollar,
-        label: 'Payment Recorded Where Applicable',
+        icon: ReceiptText,
+        label: 'Payment recorded where applicable',
         responsibility: 'Supported payment confirmation is validated on the server and recorded against the request.',
     },
 ];
 
 const alternateOutcomes = [
-    { icon: FaCheckCircle, label: getRepairStatusLabel('parcel_delivered'), note: 'The main sequence above reaches a completed state.' },
-    { icon: FaBan, label: getRepairStatusLabel('cancelled'), note: 'A request may instead be cancelled where it remains eligible - an alternate outcome, not a guaranteed final step for every request.' },
+    { icon: CheckCircle2, label: getRepairStatusLabel('parcel_delivered'), note: 'The main sequence above reaches a completed state.' },
+    { icon: Ban, label: getRepairStatusLabel('cancelled'), note: 'A request may instead be cancelled where it remains eligible - an alternate outcome, not a guaranteed final step for every request.' },
 ];
 
 const ManagedWorkflow = () => (
     <DarkTechSection
-        eyebrow="How Requests Are Managed"
-        title="Managed Repair Workflow"
+        eyebrow="How requests are managed"
+        title="Managed repair workflow"
         description="Each repair request moves through defined responsibilities rather than an unmanaged handoff between customer and technician."
     >
         <ol className="flex flex-col gap-6">
@@ -52,7 +53,7 @@ const ManagedWorkflow = () => (
                 const Icon = step.icon;
                 return (
                     <li key={step.label} className="flex gap-4">
-                        <Icon className="mt-1 h-6 w-6 shrink-0 text-brand-accent" aria-hidden="true" />
+                        <Icon className="mt-1 size-6 shrink-0 text-brand-accent" aria-hidden="true" />
                         <div>
                             <p className="font-semibold text-on-dark">{step.label}</p>
                             <p className="mt-1 text-sm text-on-dark/70">{step.responsibility}</p>
@@ -63,13 +64,13 @@ const ManagedWorkflow = () => (
         </ol>
 
         <div className="mt-10 border-t border-on-dark/20 pt-8">
-            <p className="text-sm font-semibold uppercase tracking-wide text-brand-accent">Final Outcome</p>
+            <p className="text-sm font-semibold uppercase tracking-wide text-brand-accent">Final outcome</p>
             <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {alternateOutcomes.map(outcome => {
+                {alternateOutcomes.map((outcome) => {
                     const Icon = outcome.icon;
                     return (
-                        <div key={outcome.label} className="flex gap-3 rounded-xl border border-on-dark/20 bg-white/5 p-4">
-                            <Icon className="mt-1 h-5 w-5 shrink-0 text-brand-accent" aria-hidden="true" />
+                        <div key={outcome.label} className="flex gap-3 rounded-ds-lg border border-on-dark/20 bg-white/5 p-4">
+                            <Icon className="mt-1 size-5 shrink-0 text-brand-accent" aria-hidden="true" />
                             <div>
                                 <p className="font-semibold text-on-dark">{outcome.label}</p>
                                 <p className="mt-1 text-sm text-on-dark/70">{outcome.note}</p>

@@ -1,15 +1,25 @@
 import { useQuery } from '@tanstack/react-query';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
+import { Search, CircleCheck } from 'lucide-react';
 import useAxios from '../../hooks/useAxios';
 import Loading from '../../components/Loading/Loading';
-import { getRepairStatusLabel } from '../../utils/repairStatus';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
+import { Badge } from '../../components/ui/badge';
+import { LoadingButton } from '../../components/common/LoadingButton';
+import { ErrorState } from '../../components/common/ErrorState';
+import { formatAbsoluteDateTime } from '../../utils/relativeTime';
+import {
+    buildPublicTrackingModel, getTrackingErrorCopy, isValidTrackingCode,
+} from '../../utils/trackingPresentation';
 
-// Matches the server's tracking-code format guard (controllers/trackingController.js) -
-// used here only for immediate client-side feedback on an obviously invalid
-// submission, never to decide whether to call the API.
-const TRACKING_CODE_PATTERN = /^[A-Za-z0-9_-]{6,64}$/;
-
+// Public repair tracking (Phase 7.9, redesigned ds-*). SECURITY UNCHANGED: this
+// stays the unauthenticated, sanitized contract (GET /public/trackings/:code) -
+// never the private dashboard logs endpoint. Query key, retry:false, the client
+// tracking-code format guard, and the returned fields are all preserved; the
+// view model is built by an explicit whitelist (trackingPresentation.js) so no
+// customer/email/address/technician/quote/payment field can ever be rendered.
 const TrackRequest = () => {
     const { requestId } = useParams();
     const navigate = useNavigate();
@@ -17,9 +27,6 @@ const TrackRequest = () => {
     const [codeInput, setCodeInput] = useState('');
     const [formError, setFormError] = useState('');
 
-    // Unauthenticated by design - this is the public, sanitized tracking
-    // contract (GET /public/trackings/:trackingCode), never the private
-    // /trackings/:trackingId/logs endpoint used by signed-in dashboards.
     const { data, isLoading, error } = useQuery({
         queryKey: ['public-tracking', requestId],
         queryFn: async () => {
@@ -27,13 +34,13 @@ const TrackRequest = () => {
             return res.data;
         },
         enabled: !!requestId,
-        retry: false
+        retry: false,
     });
 
-    const handleSubmit = e => {
+    const handleSubmit = (e) => {
         e.preventDefault();
         const trimmed = codeInput.trim();
-        if (!TRACKING_CODE_PATTERN.test(trimmed)) {
+        if (!isValidTrackingCode(trimmed)) {
             setFormError('Enter a valid tracking code.');
             return;
         }
@@ -41,93 +48,89 @@ const TrackRequest = () => {
         navigate(`/track-request/${encodeURIComponent(trimmed)}`);
     };
 
+    const SearchCard = (
+        <form onSubmit={handleSubmit} className="rounded-ds-lg border border-ds-border bg-ds-card p-5">
+            <Label htmlFor="tracking-code">Tracking code</Label>
+            <div className="mt-1.5 flex flex-col gap-2 sm:flex-row">
+                <Input
+                    id="tracking-code"
+                    value={codeInput}
+                    onChange={(e) => setCodeInput(e.target.value)}
+                    placeholder="e.g. SRB-..."
+                    aria-invalid={formError ? 'true' : 'false'}
+                    className="sm:flex-1"
+                />
+                <LoadingButton type="submit" className="shrink-0">
+                    <Search aria-hidden="true" /> Track repair
+                </LoadingButton>
+            </div>
+            {formError && <p role="alert" className="mt-2 text-xs font-medium text-ds-destructive">{formError}</p>}
+        </form>
+    );
+
     // Initial/instructions state - no tracking code in the URL yet.
     if (!requestId) {
         return (
-            <div className="p-8 max-w-md mx-auto">
-                <h2 className="text-4xl font-bold">Track Repair</h2>
-                <p className="opacity-70 mt-2">Enter your tracking code to see your repair progress.</p>
-                <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-3">
-                    <input
-                        type="text"
-                        value={codeInput}
-                        onChange={e => setCodeInput(e.target.value)}
-                        placeholder="e.g. SRB-..."
-                        className={`input w-full ${formError ? 'input-error' : ''}`}
-                        aria-invalid={formError ? 'true' : 'false'}
-                    />
-                    {formError && <p role="alert" className="text-red-500 text-sm">{formError}</p>}
-                    <button type="submit" className="btn btn-primary">Track Repair</button>
-                </form>
+            <div className="mx-auto max-w-lg px-4 py-12 sm:px-6">
+                <h1 className="text-2xl font-bold tracking-tight text-ds-foreground sm:text-3xl">Track repair</h1>
+                <p className="mt-2 text-sm text-ds-muted-foreground">Enter your tracking code to see your repair progress.</p>
+                <div className="mt-6">{SearchCard}</div>
             </div>
         );
     }
 
-    if (isLoading) {
-        return <Loading></Loading>
-    }
+    if (isLoading) return <Loading />;
 
     if (error) {
-        const httpStatus = error?.response?.status;
-        let title = 'Tracking Code Not Found';
-        let message = 'We could not find that tracking code. Please check it and try again.';
-        if (httpStatus === 429) {
-            title = 'Too Many Requests';
-            message = 'Please wait a moment before trying again.';
-        } else if (httpStatus >= 500 || !httpStatus) {
-            title = 'We Could Not Load Your Repair Tracking';
-            message = 'This looks temporary - please try again in a moment.';
-        }
+        const { title, message } = getTrackingErrorCopy(error);
         return (
-            <div className="p-8">
-                <h2 className="text-4xl font-bold">{title}</h2>
-                <div role="alert" className="alert alert-error mt-6">
-                    <span>{message}</span>
-                </div>
+            <div className="mx-auto max-w-lg px-4 py-12 sm:px-6">
+                <h1 className="text-2xl font-bold tracking-tight text-ds-foreground sm:text-3xl">Track repair</h1>
+                <div className="mt-6"><ErrorState title={title} description={message} onRetry={() => navigate('/track-request')} retryLabel="Try another code" /></div>
             </div>
         );
     }
 
-    return (
-        <div className="p-8">
-            <h2 className="text-4xl font-bold">Track Repair</h2>
-            <p className="opacity-70 mt-2">Tracking Code: {data.trackingCode}</p>
-            <p className="mt-4">
-                Current Repair Status: <span className="font-semibold">{getRepairStatusLabel(data.currentStatus)}</span>
-            </p>
-            <p className="opacity-60 text-sm mt-1">Last Updated: {new Date(data.updatedAt).toLocaleString()}</p>
+    const model = buildPublicTrackingModel(data);
 
-            <h3 className="text-2xl font-semibold mt-8 mb-2">Repair Progress</h3>
-            <ul className="timeline timeline-vertical">
-                {
-                    data.timeline.map((entry, i) => <li key={i}>
-                        <div className="timeline-start">
-                            {new Date(entry.timestamp).toLocaleString()}
-                        </div>
-                        <div className="timeline-middle">
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 20 20"
-                                fill="currentColor"
-                                className="h-5 w-5"
-                            >
-                                <path
-                                    fillRule="evenodd"
-                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
-                                    clipRule="evenodd"
-                                />
-                            </svg>
-                        </div>
-                        <div className="timeline-end timeline-box">
-                            <span className="text-xl">{getRepairStatusLabel(entry.status)}</span>
-                        </div>
-                        <hr />
-                    </li>)
-                }
-                {
-                    data.timeline.length === 0 && <p className="text-center py-8 opacity-60">No status updates yet. Check back once your request is reviewed.</p>
-                }
-            </ul>
+    return (
+        <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6">
+            <h1 className="text-2xl font-bold tracking-tight text-ds-foreground sm:text-3xl">Track repair</h1>
+
+            <div className="mt-6 rounded-ds-lg border border-ds-border bg-ds-card p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <p className="text-xs font-medium uppercase tracking-wide text-ds-muted-foreground">Tracking code</p>
+                        <p className="font-mono text-sm text-ds-foreground">{model.trackingCode || '—'}</p>
+                    </div>
+                    <Badge tone="info">{model.statusLabel}</Badge>
+                </div>
+                {model.updatedAt && (
+                    <p className="mt-3 text-xs text-ds-muted-foreground">Last updated: {formatAbsoluteDateTime(model.updatedAt)}</p>
+                )}
+            </div>
+
+            <h2 className="mt-8 text-base font-semibold text-ds-foreground">Repair progress</h2>
+            {model.timeline.length === 0 ? (
+                <p className="mt-3 rounded-ds-lg border border-dashed border-ds-border px-4 py-8 text-center text-sm text-ds-muted-foreground">
+                    No status updates yet. Check back once your request is reviewed.
+                </p>
+            ) : (
+                <ol className="mt-4 space-y-4">
+                    {model.timeline.map((entry, i) => (
+                        <li key={i} className="flex gap-3">
+                            <div className="flex flex-col items-center">
+                                <CircleCheck aria-hidden="true" className="size-5 text-ds-primary" />
+                                {i < model.timeline.length - 1 && <span aria-hidden="true" className="mt-1 w-px flex-1 bg-ds-border" />}
+                            </div>
+                            <div className="pb-2">
+                                <p className="text-sm font-medium text-ds-foreground">{entry.statusLabel}</p>
+                                {entry.timestamp && <p className="text-xs text-ds-muted-foreground">{formatAbsoluteDateTime(entry.timestamp)}</p>}
+                            </div>
+                        </li>
+                    ))}
+                </ol>
+            )}
         </div>
     );
 };

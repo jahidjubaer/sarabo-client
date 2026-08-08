@@ -3,11 +3,11 @@ import { useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router';
 import { MotionConfig, motion as Motion } from 'motion/react';
 import { History, Ban, CreditCard } from 'lucide-react';
-import Swal from 'sweetalert2';
 import useAuth from '../../../hooks/useAuth';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import { DetailSkeleton } from '../../../components/common/Skeletons';
 import { ErrorState } from '../../../components/common/ErrorState';
+import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
 import { Card, CardContent } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { buttonVariants } from '../../../components/ui/button-variants';
@@ -53,6 +53,7 @@ const RequestDetails = () => {
     const axiosSecure = useAxiosSecure();
     const queryClient = useQueryClient();
     const [cancelling, setCancelling] = useState(false);
+    const [cancelOpen, setCancelOpen] = useState(false);
     const [advancing, setAdvancing] = useState(false);
 
     const isAdminContext = location.pathname.startsWith('/dashboard/manage-repair-requests');
@@ -115,32 +116,28 @@ const RequestDetails = () => {
             .finally(() => setAdvancing(false));
     };
 
-    const handleCancelRequest = () => {
+    // Migrated from SweetAlert to the design-system ConfirmDialog (Phase 7.9).
+    // Same eligibility gate (canCancelRequest, below), same PATCH /parcels/:id/
+    // cancel mutation, same invalidations and Toastify feedback - the server
+    // re-authorizes and the business rules are unchanged; only the confirmation
+    // surface changed.
+    const performCancel = () => {
         if (cancelling) return;
-        Swal.fire({
-            title: 'Cancel this repair request?',
-            text: "This is final - once cancelled, this request cannot be reopened. Assigned or in-progress repairs can no longer be cancelled here, and paid requests require support for cancellation or a refund.",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Yes, cancel request',
-        }).then((result) => {
-            if (!result.isConfirmed) return;
-            setCancelling(true);
-            axiosSecure.patch(`/parcels/${id}/cancel`)
-                .then(() => {
-                    queryClient.invalidateQueries({ queryKey: ['parcels', id] });
-                    queryClient.invalidateQueries({ queryKey: ['my-requests', user?.email] });
-                    refetch();
-                    notify.success('Your repair request has been cancelled.');
-                })
-                .catch((error) => {
-                    if (import.meta.env.DEV) console.error('Cancellation failed:', error);
-                    notify.error(getCancellationErrorMessage(error));
-                })
-                .finally(() => setCancelling(false));
-        });
+        setCancelling(true);
+        axiosSecure.patch(`/parcels/${id}/cancel`)
+            .then(() => {
+                queryClient.invalidateQueries({ queryKey: ['parcels', id] });
+                queryClient.invalidateQueries({ queryKey: ['my-requests', user?.email] });
+                refetch();
+                setCancelOpen(false);
+                notify.success('Your repair request has been cancelled.');
+            })
+            .catch((error) => {
+                if (import.meta.env.DEV) console.error('Cancellation failed:', error);
+                setCancelOpen(false);
+                notify.error(getCancellationErrorMessage(error));
+            })
+            .finally(() => setCancelling(false));
     };
 
     const headerAction = (
@@ -154,7 +151,7 @@ const RequestDetails = () => {
                 </Link>
             )}
             {isOwner && canCancelRequest(request) && (
-                <Button variant="outline" size="sm" className="text-ds-destructive hover:text-ds-destructive" onClick={handleCancelRequest} disabled={cancelling}>
+                <Button variant="outline" size="sm" className="text-ds-destructive hover:text-ds-destructive" onClick={() => setCancelOpen(true)} disabled={cancelling}>
                     <Ban aria-hidden="true" /> {cancelling ? 'Cancelling…' : 'Cancel'}
                 </Button>
             )}
@@ -213,6 +210,17 @@ const RequestDetails = () => {
                     </Motion.div>
                 </Motion.div>
             </div>
+
+            <ConfirmDialog
+                open={cancelOpen}
+                onOpenChange={setCancelOpen}
+                title="Cancel this repair request?"
+                description="This is final - once cancelled, this request cannot be reopened. Assigned or in-progress repairs can no longer be cancelled here, and paid requests require support for cancellation or a refund."
+                confirmLabel="Yes, cancel request"
+                destructive
+                busy={cancelling}
+                onConfirm={performCancel}
+            />
         </MotionConfig>
     );
 };

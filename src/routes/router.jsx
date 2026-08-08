@@ -91,14 +91,11 @@ export const router = createBrowserRouter([
         Component: DashboardHome
       },
       {
-        // Phase 6.4 Unit 3A: this single route is already the sole
-        // customer-facing "Request a Repair" entry point across the app
-        // (NavBar, Home, Services, Footer, CustomerDashboardHome all link
-        // here) - swapping its rendered component to the v2 form reaches
-        // every existing entry point without any navigation change. The
-        // legacy CreateRequest component (src/pages/Dashboard/CreateRequest)
-        // is left in place, unrouted, per this unit's no-broad-cleanup
-        // instruction.
+        // This single route is the sole customer-facing "Request a Repair"
+        // entry point across the app (NavBar, Home, Services, Footer, and the
+        // customer dashboard all link here), rendering the v2 request form.
+        // The former unrouted legacy CreateRequest component was removed in
+        // Phase 7.9's dead-code cleanup.
         path: 'create-request',
         element: <CustomerRoute><RepairRequestV2Form></RepairRequestV2Form></CustomerRoute>,
         loader: () => fetch('/serviceAreas.json').then(res => res.json())
