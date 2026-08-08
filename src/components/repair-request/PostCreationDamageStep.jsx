@@ -1,62 +1,49 @@
-import { useEffect, useRef, useState } from 'react';
-import Swal from 'sweetalert2';
+import { useEffect, useRef } from 'react';
+import { Camera } from 'lucide-react';
+import { MAX_DAMAGE_IMAGES } from '../../utils/damageImageValidation';
 import DamageImageManager from '../damage-images/DamageImageManager';
 
-// Optional post-creation photo step (Phase 6.4 Unit 3A) - reuses the
-// existing Phase 6.4 Unit 3 DamageImageManager as-is (no duplicated upload
-// state machine, no File/Blob or signed-URL data handled here). `requestId`
-// is the just-created request's id; the manager is always rendered in
-// editable mode since the request was just created (pending-pickup, no
-// rider) by construction.
-const PostCreationDamageStep = ({ requestId, onContinue, onSkip }) => {
-    const [isBusy, setIsBusy] = useState(false);
+// Optional post-creation photo panel (Phase 6.4 Unit 3A, redesigned ds-* in
+// 7.7). Reuses the existing Phase 7.6 DamageImageManager as-is - no duplicated
+// upload state machine, no File/Blob or signed-URL data handled here. The
+// created request exists independently of any photo upload: an upload failure
+// is surfaced by the manager itself (its own Toastify errors) and never means
+// the request creation failed and never triggers a second create POST.
+//
+// Navigation lives in the parent success view; this panel only reports its
+// in-flight upload state upward via onBusyChange so the parent can gate
+// "continue" while an upload is actually running.
+const PostCreationDamageStep = ({ requestId, onBusyChange }) => {
     const headingRef = useRef(null);
 
-    // Accessibility (Phase T): focus lands on this step's heading the
-    // moment it mounts, i.e. right after a successful creation - screen
-    // reader users get an immediate, unambiguous cue that creation
-    // succeeded and a new step has appeared.
+    // Focus lands on this panel's heading the moment it mounts (right after a
+    // successful creation) so screen-reader users get an immediate, unambiguous
+    // cue that a new optional step appeared.
     useEffect(() => {
         headingRef.current?.focus();
     }, []);
 
-    const handleSkip = () => {
-        if (isBusy) return;
-        onSkip();
-    };
-
-    const handleContinue = () => {
-        if (isBusy) {
-            Swal.fire({
-                icon: 'info',
-                title: 'Upload in progress',
-                text: 'Please wait for the current photo upload to finish (or cancel it) before continuing.',
-            });
-            return;
-        }
-        onContinue();
-    };
-
     return (
-        <div className="card bg-base-200 p-6">
-            <h3 ref={headingRef} tabIndex={-1} className="text-2xl font-semibold mb-2">Add damage photos</h3>
-            <p className="text-sm opacity-70 mb-4">
-                Your repair request has been created. Adding photos is optional at this stage - up to three
-                images (JPEG, PNG, or WebP, 8 MB max each) help the technician understand the issue. You can
-                skip this and add photos later while the request remains editable.
-            </p>
-
-            <DamageImageManager requestId={requestId} canEdit onBusyChange={setIsBusy} />
-
-            <div className="mt-6 flex flex-wrap gap-3">
-                <button type="button" onClick={handleContinue} className="btn btn-primary">
-                    Continue to request details
-                </button>
-                <button type="button" onClick={handleSkip} disabled={isBusy} className="btn btn-outline">
-                    Skip for now
-                </button>
+        <div className="rounded-ds-lg border border-ds-border bg-ds-card p-5">
+            <div className="flex items-start gap-3">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-ds-lg bg-ds-primary/10 text-ds-primary">
+                    <Camera aria-hidden="true" className="size-5" />
+                </span>
+                <div className="min-w-0">
+                    <h3 ref={headingRef} tabIndex={-1} className="text-base font-semibold text-ds-foreground focus:outline-none">
+                        Add damage photos <span className="font-normal text-ds-muted-foreground">(optional)</span>
+                    </h3>
+                    <p className="mt-1 text-sm text-ds-muted-foreground">
+                        Photos help the technician understand the damage before inspection. You can add up to{' '}
+                        {MAX_DAMAGE_IMAGES} images (JPEG, PNG, or WebP, 8&nbsp;MB max each), or skip this and add
+                        them later while the request is still editable.
+                    </p>
+                </div>
             </div>
-            {isBusy && <p className="text-xs opacity-70 mt-2" role="status">An upload is in progress.</p>}
+
+            <div className="mt-4">
+                <DamageImageManager requestId={requestId} canEdit onBusyChange={onBusyChange} />
+            </div>
         </div>
     );
 };
