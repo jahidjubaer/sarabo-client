@@ -1,16 +1,34 @@
 import { useState } from 'react';
 import axios from 'axios';
-import Swal from 'sweetalert2';
+import { Pencil, User as UserIcon } from 'lucide-react';
 import useAuth from '../../../hooks/useAuth';
 import useRole from '../../../hooks/useRole';
-import Avatar from '../../../components/Avatar/Avatar';
+import { notify } from '../../../lib/notify';
+import { Avatar, AvatarImage, AvatarFallback } from '../../../components/ui/avatar';
+import { Badge } from '../../../components/ui/badge';
+import { Button } from '../../../components/ui/button';
+import { Input } from '../../../components/ui/input';
+import { Label } from '../../../components/ui/label';
+import { FormField } from '../../../components/common/FormField';
+import { LoadingButton } from '../../../components/common/LoadingButton';
 import RoleContextCard from './RoleContextCard';
 import AccountSecurityCard from './AccountSecurityCard';
 
-// Exact wording requested for this page - deliberately more formal than
-// Navbar's compact "Admin" badge, so this is not a duplicate of that mapping.
+// Formal role wording for this page (deliberately fuller than the navbar's
+// compact mapping).
 const PROFILE_ROLE_LABELS = { user: 'Customer', rider: 'Technician', admin: 'Administrator' };
 
+function getInitials(name) {
+    if (!name) return '';
+    return name.trim().split(/\s+/).slice(0, 2).map((word) => word[0]?.toUpperCase()).join('');
+}
+
+// My Profile (Phase 7.10: redesigned to ds-*/Lucide, Toastify, ds primitives).
+// Editing behavior is preserved exactly - the same updateUserProfile call and
+// the same imgbb photo upload; only display name + photo are editable (no
+// invented fields). Only whitelisted, already-available presentation values
+// are rendered (name, email, role label, auth method) - never uid, provider
+// tokens, or raw backend objects.
 const Profile = () => {
     const { user, updateUserProfile } = useAuth();
     const { role, roleLoading, isError } = useRole();
@@ -20,15 +38,12 @@ const Profile = () => {
     const [nameError, setNameError] = useState('');
     const [saving, setSaving] = useState(false);
 
-    // Identity (avatar/name/email) renders immediately from the already-loaded
-    // Firebase user - only the role-dependent text below waits on roleLoading.
     const roleKnown = !roleLoading && !isError;
     const roleDisplayText = roleKnown
         ? (PROFILE_ROLE_LABELS[role] || 'Role unavailable')
-        : (roleLoading ? 'Loading role...' : 'Unable to load role');
+        : (roleLoading ? 'Loading role…' : 'Unable to load role');
 
-    // Real, already-available Firebase data - not invented. Google accounts
-    // are provider "google.com"; email/password sign-ups are "password".
+    // Real, already-available Firebase provider data - not invented.
     const providerId = user?.providerData?.[0]?.providerId;
     const authMethodLabel = providerId === 'google.com' ? 'Google' : providerId === 'password' ? 'Email and password' : 'Not available';
 
@@ -56,7 +71,7 @@ const Profile = () => {
         }
         setNameError('');
 
-        // Nothing actually changed - avoid an unnecessary Firebase write.
+        // Nothing changed - avoid an unnecessary Firebase write.
         if (trimmedName === (user?.displayName || '') && !photoFile) {
             setIsEditing(false);
             return;
@@ -65,7 +80,6 @@ const Profile = () => {
         setSaving(true);
         try {
             let photoURL = user?.photoURL;
-
             if (photoFile) {
                 const formData = new FormData();
                 formData.append('image', photoFile);
@@ -78,88 +92,84 @@ const Profile = () => {
 
             setName(trimmedName);
             setPhotoFile(null);
-            Swal.fire({
-                position: "top-end",
-                icon: "success",
-                title: "Profile updated successfully",
-                showConfirmButton: false,
-                timer: 1500
-            });
+            notify.success('Profile updated successfully');
             setIsEditing(false);
         } catch {
             // Edit mode stays open on failure so nothing typed is lost.
-            Swal.fire({ icon: "error", title: "Could not update profile", text: "Please try again." });
+            notify.error('Could not update profile. Please try again.');
         } finally {
             setSaving(false);
         }
-    }
+    };
 
     return (
         <div>
-            <h1 className="text-3xl font-bold sm:text-4xl">My Profile</h1>
-            <p className="mt-2 max-w-2xl opacity-70">
+            <h1 className="text-2xl font-bold tracking-tight text-ds-foreground sm:text-3xl">My Profile</h1>
+            <p className="mt-2 max-w-2xl text-sm text-ds-muted-foreground">
                 Review your account identity and update the basic profile information supported by Sarabo.
             </p>
 
             <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
                 <div className="lg:col-span-2">
-                    <div className="card border border-base-300 bg-base-100 p-6">
-                        <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
-                            <Avatar src={user?.photoURL} name={user?.displayName} size="w-20 h-20" />
+                    <div className="rounded-ds-lg border border-ds-border bg-ds-card p-6">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                            <Avatar className="size-20 text-xl">
+                                {user?.photoURL ? <AvatarImage src={user.photoURL} alt="" /> : null}
+                                <AvatarFallback>{getInitials(user?.displayName) || <UserIcon className="size-7" aria-hidden="true" />}</AvatarFallback>
+                            </Avatar>
                             <div className="min-w-0 flex-1">
-                                <h2 className="text-2xl font-semibold">{user?.displayName || 'Unnamed Account'}</h2>
-                                <p className="truncate opacity-70" title={user?.email}>{user?.email}</p>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <h2 className="text-xl font-semibold text-ds-foreground">{user?.displayName || 'Unnamed account'}</h2>
+                                    {roleKnown && <Badge tone="accent">{roleDisplayText}</Badge>}
+                                </div>
+                                <p className="truncate text-sm text-ds-muted-foreground" title={user?.email}>{user?.email}</p>
                             </div>
                         </div>
 
-                        <div className="mt-6 grid grid-cols-1 gap-4 border-t border-base-300 pt-6 sm:grid-cols-2">
+                        <dl className="mt-6 grid grid-cols-1 gap-4 border-t border-ds-border pt-6 sm:grid-cols-2">
                             <div>
-                                <p className="text-xs font-semibold uppercase tracking-wide opacity-60">Email Address</p>
-                                <p className="mt-1 truncate" title={user?.email}>{user?.email}</p>
+                                <dt className="text-xs font-semibold uppercase tracking-wide text-ds-muted-foreground">Email address</dt>
+                                <dd className="mt-1 truncate text-sm text-ds-foreground" title={user?.email}>{user?.email}</dd>
                             </div>
                             <div>
-                                <p className="text-xs font-semibold uppercase tracking-wide opacity-60">Role</p>
-                                <p className="mt-1">{roleDisplayText}</p>
+                                <dt className="text-xs font-semibold uppercase tracking-wide text-ds-muted-foreground">Role</dt>
+                                <dd className="mt-1 text-sm text-ds-foreground">{roleDisplayText}</dd>
                             </div>
                             <div>
-                                <p className="text-xs font-semibold uppercase tracking-wide opacity-60">Authentication Account</p>
-                                <p className="mt-1">{authMethodLabel}</p>
+                                <dt className="text-xs font-semibold uppercase tracking-wide text-ds-muted-foreground">Authentication account</dt>
+                                <dd className="mt-1 text-sm text-ds-foreground">{authMethodLabel}</dd>
                             </div>
-                        </div>
+                        </dl>
 
                         {!isEditing ? (
-                            <button onClick={startEditing} className="focus-ring btn btn-primary mt-6">Edit Profile</button>
+                            <Button onClick={startEditing} className="mt-6"><Pencil aria-hidden="true" /> Edit profile</Button>
                         ) : (
-                            <form onSubmit={handleSave} className="mt-6 border-t border-base-300 pt-6" noValidate>
-                                <label htmlFor="profile-name" className="label">Name</label>
-                                <input
-                                    id="profile-name"
-                                    type="text"
-                                    value={name}
-                                    onChange={e => { setName(e.target.value); if (nameError) setNameError(''); }}
-                                    className="input w-full"
-                                    placeholder="Your Name"
-                                    autoFocus
-                                    disabled={saving}
-                                    aria-invalid={!!nameError}
-                                    aria-describedby={nameError ? 'profile-name-error' : undefined}
-                                />
-                                {nameError && <p id="profile-name-error" className="mt-1 text-sm text-error">{nameError}</p>}
-
-                                <label htmlFor="profile-photo" className="label mt-4">Photo</label>
-                                <input
-                                    id="profile-photo"
-                                    type="file"
-                                    onChange={e => setPhotoFile(e.target.files[0])}
-                                    className="file-input w-full"
-                                    accept="image/*"
-                                    disabled={saving} />
-
-                                <div className="mt-6 flex gap-2">
-                                    <button type="submit" disabled={saving} className="focus-ring btn btn-primary">
-                                        {saving ? 'Saving...' : 'Save'}
-                                    </button>
-                                    <button type="button" onClick={handleCancel} disabled={saving} className="focus-ring btn">Cancel</button>
+                            <form onSubmit={handleSave} className="mt-6 space-y-4 border-t border-ds-border pt-6" noValidate>
+                                <FormField id="profile-name" label="Name" required error={nameError}>
+                                    <Input
+                                        id="profile-name"
+                                        value={name}
+                                        onChange={(e) => { setName(e.target.value); if (nameError) setNameError(''); }}
+                                        placeholder="Your name"
+                                        autoFocus
+                                        disabled={saving}
+                                        aria-invalid={!!nameError}
+                                    />
+                                </FormField>
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="profile-photo">Photo</Label>
+                                    <input
+                                        id="profile-photo"
+                                        type="file"
+                                        accept="image/*"
+                                        disabled={saving}
+                                        onChange={(e) => setPhotoFile(e.target.files[0])}
+                                        className="focus-ring block w-full text-sm text-ds-muted-foreground file:mr-3 file:rounded-ds file:border-0 file:bg-ds-primary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-ds-primary-foreground hover:file:bg-ds-primary/90 disabled:opacity-50"
+                                    />
+                                </div>
+                                <div className="flex gap-2">
+                                    <LoadingButton type="submit" loading={saving} loadingText="Saving…">Save</LoadingButton>
+                                    <Button type="button" variant="outline" onClick={handleCancel} disabled={saving}>Cancel</Button>
                                 </div>
                             </form>
                         )}

@@ -1,37 +1,42 @@
 import { useState } from 'react';
-import { Link, NavLink, useLocation } from 'react-router';
-import { Menu, LayoutDashboard, LogOut } from 'lucide-react';
+import { Link, useLocation } from 'react-router';
+import { Menu, LayoutDashboard, LogOut, Wrench } from 'lucide-react';
 import Logo from '../../../components/Logo/Logo';
 import useAuth from '../../../hooks/useAuth';
 import useRole from '../../../hooks/useRole';
 import NotificationBell from '../../../components/notifications/NotificationBell';
+import { ThemeToggle } from '../../../components/layout/ThemeToggle';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../../../components/ui/sheet';
 import { buttonVariants } from '../../../components/ui/button-variants';
-import { PUBLIC_NAV_LINKS, shouldShowCreateRequestLink, getRequestRepairAction } from '../../../utils/publicContent';
+import {
+    PUBLIC_NAV_LINKS, shouldShowCreateRequestLink, shouldShowBecomeTechnicianLink,
+    getRequestRepairAction, isPublicNavLinkActive, BECOME_TECHNICIAN_ROUTE,
+} from '../../../utils/publicContent';
 import { ROLE_SHORTCUTS } from './roleShortcuts';
 import { cn } from '../../../lib/utils';
 
-// Public site header (Phase 7.8), redesigned to ds-* with a Radix Sheet mobile
-// menu (real focus trap + Escape + scroll-lock). Auth behavior is unchanged -
-// it reads useAuth/useRole exactly as before and never rewrites authentication;
-// route guards remain the access boundary for every destination. Active state
-// is conveyed by colour + weight + a bottom indicator together (not colour
-// alone). The former DaisyUI navbar + ProfileDropdown are retired; the
-// logged-in cluster now shows Dashboard/role-shortcut/Log out actions in ds-*
-// rather than exposing avatar/email on the public bar.
-const navLinkClass = ({ isActive }) =>
-    cn(
-        'focus-ring rounded-ds border-b-2 px-1 py-1 text-sm font-medium transition-colors',
-        isActive
-            ? 'border-ds-primary text-ds-primary font-semibold'
-            : 'border-transparent text-ds-muted-foreground hover:text-ds-foreground'
+// Public site header (Phase 7.10). ds-* only (no DaisyUI): a pill nav group
+// with an active "aura" (shape + weight + tint + ring, never colour alone),
+// a Radix Sheet mobile menu, the shared ThemeToggle (single ThemeProvider -
+// no second store), and a role-safe Become-a-Technician CTA. Auth behavior is
+// unchanged - it reads useAuth/useRole exactly as before; route guards remain
+// the access boundary. Active matching uses the exact/path-aware helper so
+// "Home" (/) never lights up on every route.
+function desktopPill(active) {
+    return cn(
+        'focus-ring rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
+        active
+            ? 'bg-ds-primary/10 text-ds-primary font-semibold ring-1 ring-ds-primary/30'
+            : 'text-ds-muted-foreground hover:bg-ds-muted hover:text-ds-foreground'
     );
+}
 
-const mobileLinkClass = ({ isActive }) =>
-    cn(
+function mobilePill(active) {
+    return cn(
         'focus-ring flex min-h-11 items-center rounded-ds px-3 text-sm font-medium',
-        isActive ? 'bg-ds-primary/10 text-ds-primary' : 'text-ds-foreground hover:bg-ds-muted'
+        active ? 'bg-ds-primary/10 text-ds-primary font-semibold' : 'text-ds-foreground hover:bg-ds-muted'
     );
+}
 
 const NavBar = () => {
     const { user, logOut } = useAuth();
@@ -58,17 +63,8 @@ const NavBar = () => {
     const roleKnown = !roleLoading && !isError;
     const roleShortcut = roleKnown ? ROLE_SHORTCUTS[role] : null;
     const showRequestCta = shouldShowCreateRequestLink({ user, role });
+    const showTechnicianCta = shouldShowBecomeTechnicianLink({ user, role });
     const requestAction = getRequestRepairAction();
-
-    const desktopLinks = PUBLIC_NAV_LINKS.map((link) => (
-        <li key={link.to}>
-            <NavLink end={link.end} to={link.to} className={navLinkClass}>{link.label}</NavLink>
-        </li>
-    ));
-
-    const mobileLinks = PUBLIC_NAV_LINKS.map((link) => (
-        <NavLink key={link.to} end={link.end} to={link.to} className={mobileLinkClass} onClick={closeMobile}>{link.label}</NavLink>
-    ));
 
     return (
         <header className="sticky top-0 z-50 border-b border-ds-border bg-ds-background/95 backdrop-blur supports-[backdrop-filter]:bg-ds-background/80">
@@ -87,15 +83,26 @@ const NavBar = () => {
                                 <SheetTitle>Menu</SheetTitle>
                             </SheetHeader>
                             <nav className="flex flex-col gap-1 p-4">
-                                {mobileLinks}
+                                {PUBLIC_NAV_LINKS.map((link) => {
+                                    const active = isPublicNavLinkActive(location.pathname, link);
+                                    return (
+                                        <Link key={link.to} to={link.to} aria-current={active ? 'page' : undefined} className={mobilePill(active)} onClick={closeMobile}>
+                                            {link.label}
+                                        </Link>
+                                    );
+                                })}
                                 {showRequestCta && (
-                                    <NavLink to={requestAction.to} className={mobileLinkClass} onClick={closeMobile}>
-                                        {requestAction.label}
-                                    </NavLink>
+                                    <Link to={requestAction.to} className={mobilePill(false)} onClick={closeMobile}>{requestAction.label}</Link>
                                 )}
-                                <NavLink to="/become-technician" className={mobileLinkClass} onClick={closeMobile}>Become a Technician</NavLink>
+                                {showTechnicianCta && (
+                                    <Link to={BECOME_TECHNICIAN_ROUTE} className={mobilePill(false)} onClick={closeMobile}>Become a Technician</Link>
+                                )}
                             </nav>
                             <div className="mt-auto border-t border-ds-border p-4">
+                                <div className="mb-3 flex items-center justify-between">
+                                    <span className="text-sm text-ds-muted-foreground">Theme</span>
+                                    <ThemeToggle />
+                                </div>
                                 {user ? (
                                     <div className="flex flex-col gap-2">
                                         <Link to="/dashboard" className={buttonVariants({ variant: 'default' })} onClick={closeMobile}>
@@ -127,14 +134,29 @@ const NavBar = () => {
                     <Logo />
                 </div>
 
-                {/* Desktop nav */}
-                <nav className="hidden lg:block">
-                    <ul className="flex items-center gap-4">{desktopLinks}</ul>
+                {/* Desktop nav pill group */}
+                <nav aria-label="Primary" className="hidden lg:block">
+                    <ul className="flex items-center gap-1 rounded-full border border-ds-border bg-ds-card/60 p-1">
+                        {PUBLIC_NAV_LINKS.map((link) => {
+                            const active = isPublicNavLinkActive(location.pathname, link);
+                            return (
+                                <li key={link.to}>
+                                    <Link to={link.to} aria-current={active ? 'page' : undefined} className={desktopPill(active)}>{link.label}</Link>
+                                </li>
+                            );
+                        })}
+                    </ul>
                 </nav>
 
                 {/* Right cluster */}
                 <div className="flex items-center gap-2">
                     {user && <NotificationBell />}
+                    <div className="hidden lg:block"><ThemeToggle /></div>
+                    {showTechnicianCta && (
+                        <Link to={BECOME_TECHNICIAN_ROUTE} className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'hidden xl:inline-flex')}>
+                            <Wrench aria-hidden="true" /> Become a Technician
+                        </Link>
+                    )}
                     {showRequestCta && (
                         <Link to={requestAction.to} className={cn(buttonVariants({ variant: 'default', size: 'sm' }), 'hidden sm:inline-flex')}>
                             {requestAction.label}
@@ -143,9 +165,6 @@ const NavBar = () => {
                     <div className="hidden items-center gap-2 lg:flex">
                         {user ? (
                             <>
-                                {roleShortcut && (
-                                    <Link to={roleShortcut.to} className={buttonVariants({ variant: 'ghost', size: 'sm' })}>{roleShortcut.label}</Link>
-                                )}
                                 <Link to="/dashboard" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
                                     <LayoutDashboard aria-hidden="true" /> Dashboard
                                 </Link>

@@ -1,4 +1,5 @@
 import { Link } from 'react-router';
+import { Home } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../ui/sheet';
 import { DashboardNavLinks } from './DashboardNavLinks';
 import { getNavSections, ROLE_LABELS } from '../../config/dashboardNavigation';
@@ -24,6 +25,15 @@ function MobileDashboardNav({ role, open, onOpenChange }) {
                 </SheetHeader>
                 <div className="min-h-0 flex-1 overflow-y-auto p-3">
                     <DashboardNavLinks sections={sections} onNavigate={close} />
+                </div>
+                <div className="mt-auto border-t border-ds-border p-3">
+                    <Link
+                        to="/"
+                        onClick={close}
+                        className="focus-ring flex min-h-11 items-center gap-2 rounded-ds px-3 text-sm font-medium text-ds-muted-foreground hover:bg-ds-muted hover:text-ds-foreground"
+                    >
+                        <Home className="size-5 shrink-0" aria-hidden="true" /> Back to Sarabo
+                    </Link>
                 </div>
             </SheetContent>
         </Sheet>

@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { PanelLeft, PanelLeftClose } from 'lucide-react';
+import { PanelLeft, PanelLeftClose, Home } from 'lucide-react';
 import { Button } from '../ui/button';
 import { DashboardNavLinks } from './DashboardNavLinks';
 import { getNavSections, ROLE_LABELS } from '../../config/dashboardNavigation';
@@ -30,7 +30,18 @@ function DashboardSidebar({ role, collapsed, onToggleCollapse }) {
                 <DashboardNavLinks sections={sections} collapsed={collapsed} />
             </div>
 
-            <div className={cn("border-t border-ds-border p-3", collapsed && "flex justify-center")}>
+            <div className={cn("border-t border-ds-border p-3", collapsed && "flex flex-col items-center gap-1")}>
+                <Link
+                    to="/"
+                    aria-label="Back to Sarabo public site"
+                    className={cn(
+                        "focus-ring flex items-center rounded-ds text-ds-muted-foreground hover:bg-ds-muted hover:text-ds-foreground",
+                        collapsed ? "size-9 justify-center" : "mb-1 w-full gap-2 px-3 py-2"
+                    )}
+                >
+                    <Home className="size-5 shrink-0" aria-hidden="true" />
+                    {!collapsed && <span className="text-sm">Back to Sarabo</span>}
+                </Link>
                 {!collapsed && role && (
                     <p className="mb-2 px-1 text-xs text-ds-muted-foreground">
                         Signed in as <span className="font-medium text-ds-foreground">{ROLE_LABELS[role] || 'Member'}</span>

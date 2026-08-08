@@ -120,3 +120,53 @@ export function shouldShowCreateRequestLink({ user, role } = {}) {
 export function getRequestRepairAction() {
     return { label: 'Request a Repair', to: REQUEST_REPAIR_ROUTE };
 }
+
+// Existing technician-application route (PrivateRoute-guarded; a logged-out
+// visitor is sent through the existing auth flow). No new route is created.
+export const BECOME_TECHNICIAN_ROUTE = '/become-technician';
+
+// Show "Become a Technician" to anyone who is not already a technician or an
+// admin - i.e. anonymous visitors and customers. Hidden for rider/admin (for
+// whom it is redundant) and never guessed while the role is mid-resolution
+// with a signed-in user.
+export function shouldShowBecomeTechnicianLink({ user, role } = {}) {
+    if (!user) return true;
+    return role === 'user';
+}
+
+// Exact/path-aware active matching for the public nav. A link marked `end`
+// (Home, "/") is active ONLY on an exact path match, so it never lights up on
+// every route just because "/" is a prefix; other links also match their own
+// nested paths (e.g. /services/anything).
+export function isPublicNavLinkActive(pathname, link) {
+    if (!link || typeof link.to !== 'string' || typeof pathname !== 'string') return false;
+    if (link.end) return pathname === link.to;
+    return pathname === link.to || pathname.startsWith(`${link.to}/`);
+}
+
+// Purpose-built hero carousel slides (Phase 7.10). Copy stays grounded in real
+// product capabilities - no stats, guarantees, or turnaround claims. `visual`
+// selects a designed CSS/Motion panel in the carousel (no imagery, no Swiper).
+export const HERO_SLIDES = [
+    {
+        key: 'journey',
+        eyebrow: 'Transparent repair journey',
+        headline: 'Trusted repairs, tracked from request to completion',
+        description: 'Submit a request, get matched with an approved technician, review a transparent quote, and follow every stage in one place.',
+        visual: 'lifecycle',
+    },
+    {
+        key: 'devices',
+        eyebrow: 'Many device categories',
+        headline: 'From smartphones to home appliances',
+        description: 'Phones, laptops, TVs, and major appliances - describe the problem and we route it to a technician who can help.',
+        visual: 'devices',
+    },
+    {
+        key: 'tracking',
+        eyebrow: 'End-to-end tracking',
+        headline: 'Follow the whole process, step by step',
+        description: 'Assignment, quote, payment, repair progress, and completion - each stage is visible and accountable.',
+        visual: 'process',
+    },
+];

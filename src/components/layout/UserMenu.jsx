@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { ChevronDown, LayoutDashboard, LogOut, User as UserIcon } from 'lucide-react';
+import { ChevronDown, LayoutDashboard, LogOut, User as UserIcon, Home } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar';
 import {
     DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuGroup,
@@ -60,6 +60,9 @@ function UserMenu({ role }) {
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                         <Link to="/dashboard/profile"><UserIcon aria-hidden="true" />Profile</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                        <Link to="/"><Home aria-hidden="true" />Public home</Link>
                     </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />

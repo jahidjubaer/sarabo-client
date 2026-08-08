@@ -1,3 +1,4 @@
+import WelcomeBanner from '../../../components/public/WelcomeBanner';
 import HeroSwiper from '../HeroSwiper/HeroSwiper';
 import ServiceCategories from '../ServiceCategories/ServiceCategories';
 import HowItWorks from '../HowItWorks/HowItWorks';
@@ -10,6 +11,7 @@ import FinalCTA from '../FinalCTA/FinalCTA';
 const Home = () => {
     return (
         <div>
+            <WelcomeBanner />
             <HeroSwiper></HeroSwiper>
             <ServiceCategories></ServiceCategories>
             <HowItWorks></HowItWorks>
