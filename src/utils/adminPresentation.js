@@ -148,6 +148,32 @@ export function getExpertiseBadges(rider) {
         }));
 }
 
+function isNonEmptyString(value) {
+    return typeof value === 'string' && value.trim().length > 0;
+}
+
+function isCompleteExpertiseEntry(entry) {
+    return !!entry
+        && isNonEmptyString(entry.productCategorySlug)
+        && Array.isArray(entry.repairCategorySlugs) && entry.repairCategorySlugs.length > 0
+        && isNonEmptyString(entry.level)
+        && Number.isFinite(Number(entry.experienceYears));
+}
+
+// UX-only guard mirroring the server's approval gate (Phase 8.7A): a technician
+// can only be matched once they have a complete service-area profile
+// (name/region/district) and at least one well-formed canonical expertise
+// entry. When this returns false the admin UI shows an "Incomplete matching
+// profile" state and blocks approval, so an admin never approves a technician
+// the eligible-technician matcher could never surface. The server remains
+// authoritative and independently rejects an incomplete approval.
+export function isTechnicianMatchable(rider) {
+    if (!rider) return false;
+    if (!isNonEmptyString(rider.name) || !isNonEmptyString(rider.region) || !isNonEmptyString(rider.district)) return false;
+    const expertise = Array.isArray(rider.expertise) ? rider.expertise : [];
+    return expertise.length > 0 && expertise.every(isCompleteExpertiseEntry);
+}
+
 // ---- Assignment recommendation presentation ----
 // Turns the server's terse recommendationReasons ("expertise:expert",
 // "serviceArea:same_district", "experience:3yrs", "completedRepairs:5") into

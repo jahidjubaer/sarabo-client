@@ -13,7 +13,7 @@ import { Label } from '../../../components/ui/label';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '../../../components/ui/sheet';
 import { notify } from '../../../lib/notify';
 import { humanizeSlug } from '../../../utils/serviceDefinitionCatalog';
-import { getWorkStatusLabel, getWorkStatusTone, getExpertiseBadges } from '../../../utils/adminPresentation';
+import { getWorkStatusLabel, getWorkStatusTone, getExpertiseBadges, isTechnicianMatchable } from '../../../utils/adminPresentation';
 import { getTechnicianApprovalErrorMessage } from '../../../utils/technicianApprovalErrorMessage';
 
 const selectClass = "h-10 rounded-ds border border-ds-input bg-ds-background px-3 text-sm text-ds-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-ring";
@@ -24,12 +24,18 @@ function ApplicationBadge({ status }) {
 }
 function ExpertiseBadges({ rider }) {
     const badges = getExpertiseBadges(rider);
-    if (badges.length === 0) return <span className="text-xs text-ds-muted-foreground">—</span>;
+    const matchable = isTechnicianMatchable(rider);
+    if (badges.length === 0) {
+        return matchable
+            ? <span className="text-xs text-ds-muted-foreground">—</span>
+            : <Badge tone="warning">Incomplete matching profile</Badge>;
+    }
     return (
         <div className="flex flex-wrap gap-1">
             {badges.map((badge) => (
                 <Badge key={badge.key} tone="neutral">{badge.label}{badge.level ? ` · ${badge.level}` : ''}</Badge>
             ))}
+            {!matchable && <Badge tone="warning">Incomplete matching profile</Badge>}
         </div>
     );
 }
@@ -96,11 +102,15 @@ const ApproveTechnicians = () => {
             cell: ({ row }) => {
                 const tech = row.original;
                 const busy = pendingAction?.id === tech._id;
+                const matchable = isTechnicianMatchable(tech);
                 return (
                     <div className="flex justify-end gap-1">
                         <Button variant="ghost" size="icon" aria-label={`View ${tech.name}`} onClick={() => setDetailsFor(tech)}><Eye aria-hidden="true" className="size-4" /></Button>
                         {tech.status !== 'approved' && (
-                            <Button variant="ghost" size="icon" className="text-ds-success hover:text-ds-success" aria-label={`Approve ${tech.name}`} disabled={busy} onClick={() => updateStatus(tech, 'approved')}><Check aria-hidden="true" className="size-4" /></Button>
+                            <Button variant="ghost" size="icon" className="text-ds-success hover:text-ds-success"
+                                aria-label={matchable ? `Approve ${tech.name}` : `Cannot approve ${tech.name} — incomplete matching profile`}
+                                title={matchable ? undefined : 'Incomplete matching profile — expertise and service area must be completed first'}
+                                disabled={busy || !matchable} onClick={() => updateStatus(tech, 'approved')}><Check aria-hidden="true" className="size-4" /></Button>
                         )}
                         {tech.status !== 'rejected' && (
                             <Button variant="ghost" size="icon" className="text-ds-destructive hover:text-ds-destructive" aria-label={`Reject ${tech.name}`} disabled={busy} onClick={() => updateStatus(tech, 'rejected')}><X aria-hidden="true" className="size-4" /></Button>
@@ -124,6 +134,7 @@ const ApproveTechnicians = () => {
 
     const renderCard = (tech) => {
         const busy = pendingAction?.id === tech._id;
+        const matchable = isTechnicianMatchable(tech);
         return (
             <div className="rounded-ds-lg border border-ds-border bg-ds-card p-4">
                 <div className="flex items-start justify-between gap-2">
@@ -138,9 +149,12 @@ const ApproveTechnicians = () => {
                     <Badge tone={getWorkStatusTone(tech.workStatus)}>{getWorkStatusLabel(tech.workStatus)}</Badge>
                 </div>
                 <div className="mt-2"><ExpertiseBadges rider={tech} /></div>
+                {!matchable && tech.status !== 'approved' && (
+                    <p className="mt-2 text-xs text-ds-muted-foreground">Complete the expertise and service area before approving.</p>
+                )}
                 <div className="mt-3 flex flex-wrap justify-end gap-2">
                     <Button variant="outline" size="sm" onClick={() => setDetailsFor(tech)}><Eye aria-hidden="true" />View</Button>
-                    {tech.status !== 'approved' && <Button size="sm" disabled={busy} onClick={() => updateStatus(tech, 'approved')}><Check aria-hidden="true" />Approve</Button>}
+                    {tech.status !== 'approved' && <Button size="sm" disabled={busy || !matchable} title={matchable ? undefined : 'Incomplete matching profile'} onClick={() => updateStatus(tech, 'approved')}><Check aria-hidden="true" />Approve</Button>}
                     {tech.status !== 'rejected' && <Button variant="outline" size="sm" className="text-ds-destructive hover:text-ds-destructive" disabled={busy} onClick={() => updateStatus(tech, 'rejected')}><X aria-hidden="true" />Reject</Button>}
                 </div>
             </div>
