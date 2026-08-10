@@ -8,14 +8,25 @@
 // deliberately stricter than canCancelRequest (cancellation stays available a
 // little longer) - anything past the very first stage should be cancelled, not
 // hard-deleted.
+//
+// Phase 8.5: general list responses no longer carry the inspection/quote/repair
+// sub-documents themselves (they held technician-private and provider-internal
+// data). Instead the server sends boolean existence markers hasInspection /
+// hasQuote / hasRepair. This heuristic only ever cared whether each stage had
+// started, so it reads those flags, falling back to the presence of the raw
+// sub-document for any older payload shape that still includes it.
+function stageStarted(request, flag, subdocument) {
+    return request[flag] === true || Boolean(request[subdocument]);
+}
+
 export function canDeleteRequest(request) {
     if (!request) return false;
     const status = request.deliveryStatus || 'pending-pickup';
     return status === 'pending-pickup'
         && !request.riderEmail
         && !request.riderId
-        && !request.inspection
-        && !request.quote
-        && !request.repair
+        && !stageStarted(request, 'hasInspection', 'inspection')
+        && !stageStarted(request, 'hasQuote', 'quote')
+        && !stageStarted(request, 'hasRepair', 'repair')
         && request.paymentStatus !== 'paid';
 }
