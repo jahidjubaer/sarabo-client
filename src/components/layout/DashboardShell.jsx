@@ -6,6 +6,7 @@ import { DashboardSidebar } from './DashboardSidebar';
 import { DashboardHeader } from './DashboardHeader';
 import { MobileDashboardNav } from './MobileDashboardNav';
 import { CommandMenu } from './CommandMenu';
+import DashboardVerificationBanner from './DashboardVerificationBanner';
 
 // UI-only, narrowly-namespaced storage for the sidebar collapse preference.
 // Any storage failure is swallowed so rendering never depends on it.
@@ -68,6 +69,7 @@ function DashboardShell() {
                         onOpenCommand={() => setCommandOpen(true)}
                     />
                     <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
+                        <DashboardVerificationBanner />
                         <Outlet />
                     </main>
                 </div>

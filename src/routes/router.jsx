@@ -7,6 +7,7 @@ import About from "../pages/About/About";
 import AuthLayout from "../layouts/AuthLayout";
 import Login from "../pages/Auth/Login/Login";
 import Register from "../pages/Auth/Register/Register";
+import VerifyEmail from "../pages/Auth/VerifyEmail/VerifyEmail";
 import PrivateRoute from "./PrivateRoute";
 import BecomeTechnician from "../pages/BecomeTechnician/BecomeTechnician";
 import RepairRequestV2Form from "../components/repair-request/RepairRequestV2Form";
@@ -44,6 +45,14 @@ export const router = createBrowserRouter([
         path: 'become-technician',
         element: <PrivateRoute><BecomeTechnician></BecomeTechnician></PrivateRoute>,
         loader: () => fetch('/serviceAreas.json').then(res => res.json())
+      },
+      {
+        // Email-verification screen (Phase 8.1). Only needs authentication
+        // (PrivateRoute) - reachable by any signed-in unverified user
+        // regardless of role, so it must NOT sit behind CustomerRoute. The
+        // page itself bounces already-verified users to their destination.
+        path: 'verify-email',
+        element: <PrivateRoute><VerifyEmail></VerifyEmail></PrivateRoute>
       },
       {
         path: 'service-areas',
@@ -97,7 +106,7 @@ export const router = createBrowserRouter([
         // The former unrouted legacy CreateRequest component was removed in
         // Phase 7.9's dead-code cleanup.
         path: 'create-request',
-        element: <CustomerRoute><RepairRequestV2Form></RepairRequestV2Form></CustomerRoute>,
+        element: <CustomerRoute requireVerified><RepairRequestV2Form></RepairRequestV2Form></CustomerRoute>,
         loader: () => fetch('/serviceAreas.json').then(res => res.json())
       },
       {
@@ -122,7 +131,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'payment/:requestId',
-        element: <CustomerRoute><Payment></Payment></CustomerRoute>
+        element: <CustomerRoute requireVerified><Payment></Payment></CustomerRoute>
       },
       {
         path: 'payment-history',

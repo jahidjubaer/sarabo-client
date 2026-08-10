@@ -10,6 +10,11 @@ export function getCancellationErrorMessage(error) {
             }
             return 'This request cannot be cancelled right now.';
         case 403:
+            // Phase 8.1A: an authenticated owner whose email is unverified is
+            // blocked with the canonical EMAIL_NOT_VERIFIED code.
+            if (code === 'EMAIL_NOT_VERIFIED') {
+                return 'Please verify your email address before cancelling this request.';
+            }
             return 'You are not authorized to cancel this request.';
         case 404:
             return 'This repair request could not be found.';

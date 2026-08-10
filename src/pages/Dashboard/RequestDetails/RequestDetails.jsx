@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Link, useLocation, useParams } from 'react-router';
+import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { MotionConfig, motion as Motion } from 'motion/react';
 import { History, Ban, CreditCard } from 'lucide-react';
 import useAuth from '../../../hooks/useAuth';
@@ -24,6 +24,7 @@ import { notify } from '../../../lib/notify';
 import { getViewerRole, getSectionVisibility, isLegacyRequest } from '../../../utils/workspacePresentation';
 import { getStatusPresentation } from '../../../config/statusPresentation';
 import { canCancelRequest } from '../../../utils/cancellationEligibility';
+import { isUserEmailVerified } from '../../../utils/emailVerification';
 import { canEditDamageImages } from '../../../utils/damageImageValidation';
 import { getCancellationErrorMessage } from '../../../utils/cancellationErrorMessage';
 import { getRepairStatusActionErrorMessage } from '../../../utils/repairStatusActionErrorMessage';
@@ -50,6 +51,7 @@ const RequestDetails = () => {
     const { id } = useParams();
     const { user } = useAuth();
     const location = useLocation();
+    const navigate = useNavigate();
     const axiosSecure = useAxiosSecure();
     const queryClient = useQueryClient();
     const [cancelling, setCancelling] = useState(false);
@@ -116,6 +118,18 @@ const RequestDetails = () => {
             .finally(() => setAdvancing(false));
     };
 
+    // Phase 8.1A: an unverified owner can still READ this page, but the cancel
+    // mutation is server-gated (403 EMAIL_NOT_VERIFIED). Match that in the UI -
+    // route them to verification instead of opening a confirm they can't
+    // complete. Verified users open the ConfirmDialog as before.
+    const handleCancelClick = () => {
+        if (!isUserEmailVerified(user)) {
+            navigate('/verify-email', { state: location.pathname });
+            return;
+        }
+        setCancelOpen(true);
+    };
+
     // Migrated from SweetAlert to the design-system ConfirmDialog (Phase 7.9).
     // Same eligibility gate (canCancelRequest, below), same PATCH /parcels/:id/
     // cancel mutation, same invalidations and Toastify feedback - the server
@@ -151,7 +165,7 @@ const RequestDetails = () => {
                 </Link>
             )}
             {isOwner && canCancelRequest(request) && (
-                <Button variant="outline" size="sm" className="text-ds-destructive hover:text-ds-destructive" onClick={() => setCancelOpen(true)} disabled={cancelling}>
+                <Button variant="outline" size="sm" className="text-ds-destructive hover:text-ds-destructive" onClick={handleCancelClick} disabled={cancelling}>
                     <Ban aria-hidden="true" /> {cancelling ? 'Cancelling…' : 'Cancel'}
                 </Button>
             )}

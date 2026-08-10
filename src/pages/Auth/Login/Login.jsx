@@ -5,6 +5,7 @@ import { Link, useLocation, useNavigate } from 'react-router';
 import SocialLogin from '../SocialLogin/SocialLogin';
 import Swal from 'sweetalert2';
 import { getAuthErrorMessage } from '../../../utils/authErrorMessage';
+import { isUserEmailVerified } from '../../../utils/emailVerification';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -20,8 +21,17 @@ const Login = () => {
         if (submitting) return;
         setSubmitting(true);
         try {
-            await signInUser(data.email, data.password);
-            navigate(location?.state || '/');
+            const result = await signInUser(data.email, data.password);
+            // Unverified email/password users are routed to verification rather
+            // than the protected flow (they still get an authenticated session
+            // so they can resend/verify). The intended route is preserved so
+            // they return here after verifying. Verified/Google users proceed
+            // exactly as before. (Phase 8.1)
+            if (result?.user && !isUserEmailVerified(result.user)) {
+                navigate('/verify-email', { state: location?.state, replace: true });
+            } else {
+                navigate(location?.state || '/');
+            }
         } catch (error) {
             if (import.meta.env.DEV) console.error('Login failed:', error);
             Swal.fire({ icon: 'error', title: 'Login failed', text: getAuthErrorMessage(error) });

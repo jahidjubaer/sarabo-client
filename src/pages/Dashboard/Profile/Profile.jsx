@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { Link } from 'react-router';
 import axios from 'axios';
-import { Pencil, User as UserIcon } from 'lucide-react';
+import { Pencil, User as UserIcon, ShieldCheck, ShieldAlert } from 'lucide-react';
 import useAuth from '../../../hooks/useAuth';
 import useRole from '../../../hooks/useRole';
 import { notify } from '../../../lib/notify';
@@ -11,6 +12,7 @@ import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
 import { FormField } from '../../../components/common/FormField';
 import { LoadingButton } from '../../../components/common/LoadingButton';
+import { isUserEmailVerified, getVerificationPresentation } from '../../../utils/emailVerification';
 import RoleContextCard from './RoleContextCard';
 import AccountSecurityCard from './AccountSecurityCard';
 
@@ -46,6 +48,10 @@ const Profile = () => {
     // Real, already-available Firebase provider data - not invented.
     const providerId = user?.providerData?.[0]?.providerId;
     const authMethodLabel = providerId === 'google.com' ? 'Google' : providerId === 'password' ? 'Email and password' : 'Not available';
+
+    // Verification status straight from the Firebase user (authority) - Phase 8.1.
+    const verified = isUserEmailVerified(user);
+    const verification = getVerificationPresentation(user);
 
     const startEditing = () => {
         setName(user?.displayName || '');
@@ -139,7 +145,25 @@ const Profile = () => {
                                 <dt className="text-xs font-semibold uppercase tracking-wide text-ds-muted-foreground">Authentication account</dt>
                                 <dd className="mt-1 text-sm text-ds-foreground">{authMethodLabel}</dd>
                             </div>
+                            <div>
+                                <dt className="text-xs font-semibold uppercase tracking-wide text-ds-muted-foreground">Email verification</dt>
+                                <dd className="mt-1">
+                                    <Badge tone={verification.tone} className="gap-1">
+                                        {verification.verified
+                                            ? <ShieldCheck aria-hidden="true" className="size-3.5" />
+                                            : <ShieldAlert aria-hidden="true" className="size-3.5" />}
+                                        {verification.label}
+                                    </Badge>
+                                </dd>
+                            </div>
                         </dl>
+
+                        {!verified && (
+                            <div className="mt-4 flex flex-col gap-2 rounded-ds border border-ds-warning/30 bg-ds-warning/10 p-3 text-sm sm:flex-row sm:items-center sm:justify-between" role="status">
+                                <span className="text-ds-foreground">Verify your email to submit repair requests and make payments.</span>
+                                <Link to="/verify-email" className="focus-ring shrink-0 font-medium text-ds-primary underline underline-offset-2">Verify email</Link>
+                            </div>
+                        )}
 
                         {!isEditing ? (
                             <Button onClick={startEditing} className="mt-6"><Pencil aria-hidden="true" /> Edit profile</Button>

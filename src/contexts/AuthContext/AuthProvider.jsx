@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AuthContext } from './AuthContext';
-import { createUserWithEmailAndPassword, GoogleAuthProvider, onAuthStateChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, signOut, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, GoogleAuthProvider, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, signOut, updateProfile } from 'firebase/auth';
 import { auth } from '../../firebase/firebase.init';
 import { useQueryClient } from '@tanstack/react-query';
 import { notificationKeys } from '../../hooks/notificationKeys';
@@ -16,6 +16,12 @@ const googleProvider = new GoogleAuthProvider();
 const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    // Bumped by refreshCurrentUser to force a re-render after a Firebase user
+    // reload. Firebase mutates the SAME currentUser object in place on reload()
+    // (onAuthStateChanged does NOT re-fire), so setUser(sameRef) would bail out
+    // of re-rendering - this counter guarantees consumers re-read the updated
+    // emailVerified. Value itself is never read; only the state change matters.
+    const [, setAuthVersion] = useState(0);
     const queryClient = useQueryClient();
     // `undefined` (never set) is distinct from `null` (known signed-out) so
     // the very first auth-state callback on app boot - whether it resolves
@@ -48,6 +54,37 @@ const AuthProvider = ({ children }) => {
 
     const resetPassword = (email) => {
         return sendPasswordResetEmail(auth, email);
+    }
+
+    // Send a Firebase email-verification link to the current user (Phase 8.1).
+    // Link-based (Firebase's own flow) - no OTP, no custom email. Uses the live
+    // auth.currentUser pointer so it works immediately after registration,
+    // before onAuthStateChanged/React state has settled.
+    const sendVerificationEmail = () => {
+        if (!auth.currentUser) {
+            return Promise.reject(new Error('No authenticated user to verify.'));
+        }
+        return sendEmailVerification(auth.currentUser);
+    }
+
+    // Re-check verification status (Phase 8.1). reload() pulls the latest
+    // emailVerified from Firebase; getIdToken(true) then FORCE-refreshes the ID
+    // token so the very next axiosSecure request carries the updated
+    // email_verified claim to the server (which is the real authority). The
+    // version bump forces a re-render so guards/UI read the new emailVerified.
+    // Returns the fresh verified boolean. Never persists a token manually.
+    const refreshCurrentUser = async () => {
+        if (!auth.currentUser) return false;
+        await auth.currentUser.reload();
+        try {
+            await auth.currentUser.getIdToken(true);
+        } catch (error) {
+            // A token-refresh hiccup must not mask a successful reload; the
+            // interceptor still force-refreshes on the next 401 if needed.
+            if (import.meta.env.DEV) console.error('Token force-refresh failed:', error);
+        }
+        setAuthVersion((v) => v + 1);
+        return auth.currentUser.emailVerified === true;
     }
 
     // observe user state
@@ -125,7 +162,9 @@ const AuthProvider = ({ children }) => {
         signInGoogle,
         logOut,
         updateUserProfile,
-        resetPassword
+        resetPassword,
+        sendVerificationEmail,
+        refreshCurrentUser
     }
 
     return (

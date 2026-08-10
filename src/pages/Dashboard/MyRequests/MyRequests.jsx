@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import { MotionConfig } from 'motion/react';
 import { Plus } from 'lucide-react';
 import Swal from 'sweetalert2';
@@ -20,6 +20,7 @@ import { getDeletionErrorMessage } from '../../../utils/deletionErrorMessage';
 import { deleteRepairRequest } from '../../../api/repairRequests';
 import { removeDeletedRequestCaches } from '../../../utils/removeDeletedRequestCaches';
 import { applyRequestView } from '../../../utils/customerRequestPresentation';
+import { isUserEmailVerified } from '../../../utils/emailVerification';
 
 // Phase 7.3: My Requests redesigned onto the design system (no DaisyUI here).
 // Deletion / cancellation / payment BUSINESS behaviour is unchanged - the same
@@ -33,6 +34,20 @@ const MyRequests = () => {
     const { user } = useAuth();
     const axiosSecure = useAxiosSecure();
     const queryClient = useQueryClient();
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    // Phase 8.1A: an unverified customer can still READ their requests, but the
+    // cancel/delete mutations are server-gated (403 EMAIL_NOT_VERIFIED). Match
+    // that in the UI - route them to verification instead of firing a mutation
+    // that will be rejected. Returns true when the action was intercepted.
+    const guardVerified = () => {
+        if (!isUserEmailVerified(user)) {
+            navigate('/verify-email', { state: location.pathname });
+            return true;
+        }
+        return false;
+    };
 
     const [search, setSearch] = useState('');
     const [group, setGroup] = useState('all');
@@ -64,6 +79,7 @@ const MyRequests = () => {
 
     const handleCancelRequest = (request) => {
         if (cancellingId) return;
+        if (guardVerified()) return;
         Swal.fire({
             title: 'Cancel this repair request?',
             text: "This is final - once cancelled, this request cannot be reopened. Assigned or in-progress repairs can no longer be cancelled here, and paid requests require support for cancellation or a refund.",
@@ -92,6 +108,7 @@ const MyRequests = () => {
 
     const handleDeleteRequest = (request) => {
         if (deletingId) return;
+        if (guardVerified()) return;
         Swal.fire({
             title: 'Delete repair request?',
             text: 'This permanently removes the request and its photos. This cannot be undone. Once a technician, inspection, quote, or payment exists, a request can no longer be deleted - cancel it instead.',

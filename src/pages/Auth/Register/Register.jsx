@@ -10,7 +10,7 @@ import { getAuthErrorMessage, getSyncErrorMessage } from '../../../utils/authErr
 
 const Register = () => {
     const { register, handleSubmit, formState: { errors } } = useForm();
-    const { registerUser, updateUserProfile } = useAuth();
+    const { registerUser, updateUserProfile, sendVerificationEmail } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
     const axiosSecure = useAxiosSecure();
@@ -18,9 +18,25 @@ const Register = () => {
     const [pendingUserInfo, setPendingUserInfo] = useState(null);
     const [syncFailed, setSyncFailed] = useState(false);
 
+    // Backend upsert only - navigation is handled by finishRegistration so the
+    // user is always routed to verification (never straight into the app) after
+    // a successful email/password registration. (Phase 8.1)
     const syncUserToBackend = async (userInfo) => {
         await axiosSecure.post('/users', userInfo);
-        navigate(location.state || '/');
+    }
+
+    // After the account + backend record exist, send the Firebase verification
+    // link (best-effort: the account already exists, so a send failure must not
+    // read as a failed registration - the user can resend on the verify page)
+    // and move the user into the verification-required screen, preserving their
+    // intended destination.
+    const finishRegistration = async () => {
+        try {
+            await sendVerificationEmail();
+        } catch (error) {
+            if (import.meta.env.DEV) console.error('Verification email send failed:', error);
+        }
+        navigate('/verify-email', { state: location.state, replace: true });
     }
 
     // react-hook-form's own required/pattern rules (below) already block this
@@ -77,6 +93,7 @@ const Register = () => {
 
         try {
             await syncUserToBackend(userInfo);
+            await finishRegistration();
         } catch (error) {
             if (import.meta.env.DEV) console.error('Backend sync failed:', error);
             setPendingUserInfo(userInfo);
@@ -92,6 +109,7 @@ const Register = () => {
         setSubmitting(true);
         try {
             await syncUserToBackend(pendingUserInfo);
+            await finishRegistration();
         } catch (error) {
             if (import.meta.env.DEV) console.error('Retry sync failed:', error);
             Swal.fire({ icon: 'error', title: 'Still unable to finish setup', text: getSyncErrorMessage() });
