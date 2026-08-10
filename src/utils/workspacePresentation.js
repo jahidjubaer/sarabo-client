@@ -16,7 +16,10 @@ export function isLegacyRequest(request) {
 // omitted rather than shown as permanently-upcoming.
 const V2_STAGES = [
     { key: 'submitted', label: 'Request submitted', statuses: ['pending-pickup'] },
-    { key: 'assigned', label: 'Technician assigned', statuses: ['driver_assigned', 'rider_arriving'] },
+    // Phase 8.2: assignment_pending (a technician has been offered the request
+    // but not yet accepted) keeps the "Technician assigned" stage CURRENT, not
+    // completed - the acceptance is what confirms it.
+    { key: 'assigned', label: 'Technician assigned', statuses: ['assignment_pending', 'driver_assigned', 'rider_arriving'] },
     { key: 'received', label: 'Device received', statuses: ['parcel_picked_up'] },
     { key: 'inspected', label: 'Inspection completed', statuses: ['inspection_completed'] },
     { key: 'quoted', label: 'Quote prepared', statuses: ['quote_submitted'] },
@@ -27,7 +30,10 @@ const V2_STAGES = [
 ];
 const LEGACY_STAGES = [
     { key: 'submitted', label: 'Request submitted', statuses: ['pending-pickup'] },
-    { key: 'assigned', label: 'Technician assigned', statuses: ['driver_assigned', 'rider_arriving'] },
+    // Legacy requests never reach assignment_pending (they assign straight to
+    // driver_assigned), but including it here is harmless and keeps the stage
+    // mapping identical to V2.
+    { key: 'assigned', label: 'Technician assigned', statuses: ['assignment_pending', 'driver_assigned', 'rider_arriving'] },
     { key: 'received', label: 'Device received', statuses: ['parcel_picked_up'] },
     { key: 'completed', label: 'Repair completed', statuses: ['parcel_delivered'] },
 ];

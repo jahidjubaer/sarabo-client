@@ -4,6 +4,9 @@
 // filtering, API calls, or status mutations.
 const REPAIR_STATUS_LABELS = {
     'pending-pickup': 'Request Submitted',
+    // Phase 8.2: a technician has been offered the request but has not yet
+    // accepted. Customer-safe, neutral wording - it never reveals a rejection.
+    'assignment_pending': 'Confirming Technician',
     'driver_assigned': 'Technician Assigned',
     'rider_arriving': 'Technician On The Way',
     'parcel_picked_up': 'Repair In Progress',

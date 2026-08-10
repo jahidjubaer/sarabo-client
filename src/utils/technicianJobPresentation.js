@@ -11,6 +11,7 @@ import { getRequestStatus, getProductSummary } from './customerRequestPresentati
 // technician is only waiting). repair_in_progress lives in its own "In Repair"
 // group rather than here, so the groups never overlap.
 const NEEDS_ATTENTION_STATUSES = new Set([
+    'assignment_pending',
     'driver_assigned',
     'rider_arriving',
     'parcel_picked_up',
@@ -20,6 +21,9 @@ const NEEDS_ATTENTION_STATUSES = new Set([
 
 // Non-overlapping technician groups.
 const STATUS_GROUP = {
+    // Phase 8.2: an offered-but-undecided assignment needs the technician's
+    // decision, so it belongs in "Needs Attention".
+    'assignment_pending': 'needs-attention',
     'driver_assigned': 'needs-attention',
     'rider_arriving': 'needs-attention',
     'parcel_picked_up': 'needs-attention',
@@ -70,6 +74,9 @@ export function getTechnicianAction(job) {
     const v2 = isV2Job(job);
 
     switch (status) {
+        case 'assignment_pending':
+            // The accept/reject decision lives in the details workspace.
+            return { kind: 'navigate', label: 'Review assignment', to, variant: 'default' };
         case 'driver_assigned':
             return { kind: 'navigate', label: 'Start pickup', to, variant: 'default' };
         case 'rider_arriving':

@@ -77,7 +77,7 @@ const AssignTechnicians = () => {
                     refetchRequests();
                     queryClient.invalidateQueries({ queryKey: ['request-status-stats'] });
                     queryClient.invalidateQueries({ queryKey: ['admin-all-requests'] });
-                    notify.success(`${technician.displayName} assigned`);
+                    notify.success(`${technician.displayName} offered this assignment — awaiting their decision.`);
                 } else {
                     refetchRequests();
                     notify.info('No change was made - the list has been refreshed.');

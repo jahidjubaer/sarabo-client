@@ -1,5 +1,5 @@
 import {
-    Clock, UserCheck, Truck, PackageCheck, ClipboardCheck, FileText,
+    Clock, UserCheck, UserRoundCheck, Truck, PackageCheck, ClipboardCheck, FileText,
     CircleCheckBig, CircleX, CreditCard, Wrench, BadgeCheck, Ban, CircleHelp,
 } from 'lucide-react';
 
@@ -35,6 +35,10 @@ import {
 // navigates to the details screen) lives in utils/technicianJobPresentation.js.
 const STATUS_PRESENTATION = {
     'pending-pickup': { label: 'Request Submitted', tone: 'warning', icon: Clock, customerDescription: "We've received your repair request and will assign a technician soon.", customerNextStep: null, technicianDescription: 'Awaiting technician assignment.', technicianNextStep: null },
+    // Phase 8.2: an admin has offered the request to a technician who has not
+    // yet accepted. Customer copy stays calm/neutral (never mentions a
+    // rejection); the technician is prompted to decide.
+    'assignment_pending': { label: 'Confirming Technician', tone: 'warning', icon: UserRoundCheck, customerDescription: "We're confirming a technician for your repair. You'll be updated once it's accepted.", customerNextStep: null, technicianDescription: 'This assignment is awaiting your decision.', technicianNextStep: 'Accept or reject this assignment.' },
     'driver_assigned': { label: 'Technician Assigned', tone: 'info', icon: UserCheck, customerDescription: 'A technician has been assigned and will arrange to collect your device.', customerNextStep: null, technicianDescription: 'Assigned to you.', technicianNextStep: 'Start the journey to collect the device.' },
     'rider_arriving': { label: 'Technician On The Way', tone: 'accent', icon: Truck, customerDescription: 'Your technician is on the way to collect the device.', customerNextStep: null, technicianDescription: 'On the way to collect the device.', technicianNextStep: 'Mark the device as picked up to begin.' },
     'parcel_picked_up': { label: 'Device Collected', tone: 'accent', icon: PackageCheck, customerDescription: "We've received your device and will begin inspection shortly.", customerNextStep: null, technicianDescription: 'Device received and ready for inspection.', technicianNextStep: 'Complete the inspection.' },

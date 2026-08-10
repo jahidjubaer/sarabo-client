@@ -28,6 +28,7 @@ import { isUserEmailVerified } from '../../../utils/emailVerification';
 import { canEditDamageImages } from '../../../utils/damageImageValidation';
 import { getCancellationErrorMessage } from '../../../utils/cancellationErrorMessage';
 import { getRepairStatusActionErrorMessage } from '../../../utils/repairStatusActionErrorMessage';
+import { validateRejectionReason, getAssignmentDecisionErrorMessage } from '../../../utils/assignmentDecision';
 import { staggerContainer, staggerItem } from '../../../theme/motion';
 
 function SectionCard({ title, children }) {
@@ -57,6 +58,8 @@ const RequestDetails = () => {
     const [cancelling, setCancelling] = useState(false);
     const [cancelOpen, setCancelOpen] = useState(false);
     const [advancing, setAdvancing] = useState(false);
+    const [deciding, setDeciding] = useState(false);
+    const [rejectOpen, setRejectOpen] = useState(false);
 
     const isAdminContext = location.pathname.startsWith('/dashboard/manage-repair-requests');
     const isTechnicianContext = location.pathname.startsWith('/dashboard/assigned-jobs');
@@ -116,6 +119,50 @@ const RequestDetails = () => {
                 refetch();
             })
             .finally(() => setAdvancing(false));
+    };
+
+    // Phase 8.2: technician accepts the offered assignment (assignment_pending
+    // -> driver_assigned). Server is authoritative + resolves concurrency; a
+    // concurrent decision surfaces as a safe mapped message.
+    const handleAccept = () => {
+        if (deciding) return;
+        setDeciding(true);
+        axiosSecure.post(`/parcels/${id}/assignment/accept`)
+            .then(() => {
+                queryClient.invalidateQueries({ queryKey: ['parcels', id] });
+                queryClient.invalidateQueries({ queryKey: ['tech-active-jobs', user?.email] });
+                refetch();
+                notify.success('Assignment accepted.');
+            })
+            .catch((error) => {
+                if (import.meta.env.DEV) console.error('Accept assignment failed:', error);
+                notify.error(getAssignmentDecisionErrorMessage(error));
+                refetch();
+            })
+            .finally(() => setDeciding(false));
+    };
+
+    // Technician rejects the offered assignment with a reason (assignment_pending
+    // -> pending-pickup; the request becomes reassignable and the technician is
+    // released). On success we leave the (now un-assigned) request and return to
+    // Assigned Jobs, since it is no longer theirs.
+    const handleRejectConfirm = (reason) => {
+        if (deciding) return;
+        setDeciding(true);
+        axiosSecure.post(`/parcels/${id}/assignment/reject`, { reason })
+            .then(() => {
+                queryClient.invalidateQueries({ queryKey: ['tech-active-jobs', user?.email] });
+                setRejectOpen(false);
+                notify.success('Assignment rejected. The request has been returned for reassignment.');
+                navigate('/dashboard/assigned-jobs', { replace: true });
+            })
+            .catch((error) => {
+                if (import.meta.env.DEV) console.error('Reject assignment failed:', error);
+                setRejectOpen(false);
+                notify.error(getAssignmentDecisionErrorMessage(error));
+                refetch();
+            })
+            .finally(() => setDeciding(false));
     };
 
     // Phase 8.1A: an unverified owner can still READ this page, but the cancel
@@ -185,6 +232,9 @@ const RequestDetails = () => {
                             isAssignedTechnicianView={technicianCanAdvance}
                             onAdvance={handleAdvance}
                             advancing={advancing}
+                            onAccept={handleAccept}
+                            onReject={() => setRejectOpen(true)}
+                            deciding={deciding}
                         />
 
                         {sections.showDamage && (
@@ -234,6 +284,21 @@ const RequestDetails = () => {
                 destructive
                 busy={cancelling}
                 onConfirm={performCancel}
+            />
+
+            <ConfirmDialog
+                open={rejectOpen}
+                onOpenChange={setRejectOpen}
+                title="Reject this assignment?"
+                description="Let the team know why you can't take this repair. The request will be returned for reassignment."
+                confirmLabel="Reject assignment"
+                destructive
+                busy={deciding}
+                reason
+                reasonLabel="Reason for rejecting"
+                reasonPlaceholder="e.g. Outside my current service area"
+                validateReason={validateRejectionReason}
+                onConfirm={handleRejectConfirm}
             />
         </MotionConfig>
     );
