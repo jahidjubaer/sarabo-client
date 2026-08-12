@@ -62,7 +62,7 @@ const AssignTechnicians = () => {
     const filtered = useMemo(() => requests.filter((r) => {
         const term = search.trim().toLowerCase();
         if (!term) return true;
-        return (r.parcelName || '').toLowerCase().includes(term) || (r.senderDistrict || r.serviceLocation?.district || '').toLowerCase().includes(term);
+        return (r.deviceName || '').toLowerCase().includes(term) || (r.senderDistrict || r.serviceLocation?.district || '').toLowerCase().includes(term);
     }), [requests, search]);
 
     const handleAssign = (technician) => {
@@ -95,7 +95,7 @@ const AssignTechnicians = () => {
     const columns = useMemo(() => [
         {
             id: 'device', header: 'Device', enableSorting: true, enableHiding: false,
-            accessorFn: (row) => row.parcelName || '',
+            accessorFn: (row) => row.deviceName || '',
             cell: ({ row }) => {
                 const { device, category } = getProductSummary(row.original);
                 return (

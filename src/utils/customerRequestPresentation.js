@@ -64,7 +64,7 @@ export function getRequestAction(request) {
 
 // Safe device/product identity from list-available fields only.
 export function getProductSummary(request) {
-    const device = (request?.parcelName || '').trim();
+    const device = (request?.deviceName || '').trim();
     const category = request?.product?.categorySlug ? humanizeSlug(request.product.categorySlug) : '';
     const brandModel = [request?.product?.brand, request?.product?.model].filter(Boolean).join(' ').trim();
     return { device: device || 'Repair request', category, brandModel };

@@ -51,7 +51,7 @@ function WorkspaceContextPanels({ request, showCustomer }) {
             <Panel title="Device">
                 {legacy ? (
                     <>
-                        <Row label="Device" value={request.parcelName} />
+                        <Row label="Device" value={request.deviceName} />
                     </>
                 ) : (
                     <>

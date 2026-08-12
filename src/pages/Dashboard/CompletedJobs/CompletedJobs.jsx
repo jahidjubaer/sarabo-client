@@ -52,7 +52,7 @@ const CompletedJobs = () => {
                     <tbody>
                         {requests.map((request, index) => <tr key={request._id}>
                             <th>{index + 1}</th>
-                            <td>{request.parcelName}</td>
+                            <td>{request.deviceName}</td>
                             <td>{request.createdAt}</td>
                             <td>{request.senderDistrict}</td>
                             <td>{formatCurrency(request.cost)}</td>

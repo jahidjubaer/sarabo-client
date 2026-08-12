@@ -8,7 +8,7 @@
 // token server-side, pricing is entirely server-derived).
 //
 // The server's insertOne-based response is `{ acknowledged, insertedId }`
-// (see models/RepairRequest.js#create) - no trackingId/parcelName/etc. are
+// (see models/RepairRequest.js#create) - no trackingId/deviceName/etc. are
 // returned. A response missing a valid string insertedId is treated as a
 // controlled client error, never fabricated into a usable id, and never
 // used to trigger the image-upload flow.

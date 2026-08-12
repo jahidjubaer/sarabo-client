@@ -53,10 +53,10 @@ const Payment = () => {
 
                         <div className="w-full mt-4 text-left bg-base-200 rounded-xl p-4 space-y-2">
                             {
-                                request?.parcelName &&
+                                request?.deviceName &&
                                 <div className="flex justify-between gap-4">
                                     <span className="opacity-70">Repair Request</span>
-                                    <span className="font-semibold text-right">{request.parcelName}</span>
+                                    <span className="font-semibold text-right">{request.deviceName}</span>
                                 </div>
                             }
                             {

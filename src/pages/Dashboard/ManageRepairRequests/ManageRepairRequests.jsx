@@ -105,7 +105,7 @@ const ManageRepairRequests = () => {
         },
         {
             id: 'device', header: 'Device', enableSorting: false, enableHiding: false,
-            cell: ({ row }) => row.original.parcelName,
+            cell: ({ row }) => row.original.deviceName,
             meta: { label: 'Device' },
         },
         {
