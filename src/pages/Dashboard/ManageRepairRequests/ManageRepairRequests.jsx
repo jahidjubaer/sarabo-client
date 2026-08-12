@@ -120,7 +120,7 @@ const ManageRepairRequests = () => {
         },
         {
             id: 'technician', header: 'Technician', enableSorting: false,
-            cell: ({ row }) => row.original.riderName || <span className="text-ds-muted-foreground">Unassigned</span>,
+            cell: ({ row }) => row.original.technicianName || <span className="text-ds-muted-foreground">Unassigned</span>,
             meta: { label: 'Technician' },
         },
         {
@@ -171,7 +171,7 @@ const ManageRepairRequests = () => {
                 </div>
                 <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
                     <div><dt className="text-ds-muted-foreground">Customer</dt><dd className="truncate text-ds-foreground">{request.senderName}</dd></div>
-                    <div><dt className="text-ds-muted-foreground">Technician</dt><dd className="truncate text-ds-foreground">{request.riderName || 'Unassigned'}</dd></div>
+                    <div><dt className="text-ds-muted-foreground">Technician</dt><dd className="truncate text-ds-foreground">{request.technicianName || 'Unassigned'}</dd></div>
                     <div><dt className="text-ds-muted-foreground">Payment</dt><dd><PaymentBadge paid={request.paymentStatus === 'paid'} /></dd></div>
                     <div><dt className="text-ds-muted-foreground">Created</dt><dd className="text-ds-foreground">{request.createdAt ? formatAbsoluteDateTime(request.createdAt) : ''}</dd></div>
                 </dl>

@@ -16,7 +16,7 @@ export const MAX_DAMAGE_IMAGES = 3;
 // gracefully by the upload/removal flow.
 export function canEditDamageImages(request) {
     const status = request?.deliveryStatus || 'pending-pickup';
-    return status === 'pending-pickup' && !request?.riderId && !request?.riderEmail;
+    return status === 'pending-pickup' && !request?.technicianId && !request?.technicianEmail;
 }
 
 function validateSingleFile(file, existingCount) {

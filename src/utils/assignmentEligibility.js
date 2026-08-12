@@ -7,5 +7,5 @@
 // that flag handy (e.g. a locally-cached row before refetch).
 export function canAssignRequest(request) {
     const status = request?.deliveryStatus || 'pending-pickup';
-    return status === 'pending-pickup' && !request?.riderEmail;
+    return status === 'pending-pickup' && !request?.technicianEmail;
 }

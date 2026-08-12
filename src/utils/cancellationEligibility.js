@@ -6,5 +6,5 @@
 // paid or cancelled.
 export function canCancelRequest(request) {
     const status = request?.deliveryStatus || 'pending-pickup';
-    return status === 'pending-pickup' && !request?.riderEmail && request?.paymentStatus !== 'paid';
+    return status === 'pending-pickup' && !request?.technicianEmail && request?.paymentStatus !== 'paid';
 }

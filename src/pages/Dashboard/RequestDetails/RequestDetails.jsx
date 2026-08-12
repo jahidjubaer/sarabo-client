@@ -92,7 +92,7 @@ const RequestDetails = () => {
     const isOwner = request.senderEmail === user?.email;
     const isV2Request = !isLegacyRequest(request);
     const damageImagesEditable = isOwner && !isAdminContext && canEditDamageImages(request);
-    const isAssignedTechnicianView = isV2Request && isTechnicianContext && request.riderEmail === user?.email;
+    const isAssignedTechnicianView = isV2Request && isTechnicianContext && request.technicianEmail === user?.email;
     const canInspect = isAssignedTechnicianView && request.deliveryStatus === 'parcel_picked_up';
     const canSubmitQuote = isAssignedTechnicianView && request.deliveryStatus === 'inspection_completed';
 
@@ -101,7 +101,7 @@ const RequestDetails = () => {
     // Legacy technician generic-status progression is offered to the assigned
     // technician too (the workspace is reached via assigned-jobs/:id); the panel
     // decides whether an advance exists for the current status.
-    const technicianCanAdvance = isTechnicianContext && request.riderEmail === user?.email && !isCancelled;
+    const technicianCanAdvance = isTechnicianContext && request.technicianEmail === user?.email && !isCancelled;
 
     const handleAdvance = (nextStatus) => {
         if (advancing) return;

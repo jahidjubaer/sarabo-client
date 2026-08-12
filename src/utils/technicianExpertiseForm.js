@@ -99,7 +99,7 @@ export function describeExpertiseSelections(selections) {
 
 // Assembles the exact POST /riders body. Deliberately carries ONLY the
 // applicant profile fields plus the canonical expertise array - never
-// workStatus, status, role, riderId, or any operational/authoritative field
+// workStatus, status, role, technicianId, or any operational/authoritative field
 // (those are server-owned; see sarabo-server's APPLICATION_ALLOWED_FIELDS).
 export function buildTechnicianApplicationPayload(profile, selections) {
     const p = profile || {};

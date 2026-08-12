@@ -142,7 +142,7 @@ const MyRequests = () => {
         if (payingId) return;
         setPayingId(request._id);
         try {
-            const res = await axiosSecure.post('/payment-checkout-session', { parcelId: request._id });
+            const res = await axiosSecure.post('/payment-checkout-session', { requestId: request._id });
             window.location.assign(res.data.url);
         } catch (error) {
             if (import.meta.env.DEV) console.error('Checkout session creation failed:', error);

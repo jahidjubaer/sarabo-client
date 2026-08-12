@@ -23,8 +23,8 @@ export function canDeleteRequest(request) {
     if (!request) return false;
     const status = request.deliveryStatus || 'pending-pickup';
     return status === 'pending-pickup'
-        && !request.riderEmail
-        && !request.riderId
+        && !request.technicianEmail
+        && !request.technicianId
         && !stageStarted(request, 'hasInspection', 'inspection')
         && !stageStarted(request, 'hasQuote', 'quote')
         && !stageStarted(request, 'hasRepair', 'repair')

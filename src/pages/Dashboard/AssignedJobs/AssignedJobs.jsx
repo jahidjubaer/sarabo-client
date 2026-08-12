@@ -38,7 +38,7 @@ const AssignedJobs = () => {
     const { data: jobs = [], refetch, isLoading, isError } = useQuery({
         queryKey: ['tech-active-jobs', user?.email],
         queryFn: async () => {
-            const res = await axiosSecure.get(`/parcels/rider?riderEmail=${user.email}`);
+            const res = await axiosSecure.get(`/parcels/rider?technicianEmail=${user.email}`);
             return res.data;
         },
     });

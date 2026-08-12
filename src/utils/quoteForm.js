@@ -57,7 +57,7 @@ export function validateQuoteForm(values) {
 
 // Builds the exact server payload via an explicit whitelist - never spreads the
 // form object, so no injected key (a MongoDB operator, or an authority field
-// like totalAmount/currency/status/riderId) can reach the request body. The
+// like totalAmount/currency/status/technicianId) can reach the request body. The
 // total and currency are deliberately never sent: the server owns them.
 export function buildQuotePayload(values) {
     const payload = {

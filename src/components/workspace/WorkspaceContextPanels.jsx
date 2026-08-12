@@ -69,7 +69,7 @@ function WorkspaceContextPanels({ request, showCustomer }) {
                 ) : (
                     <Row label="Location" value={[request.serviceLocation?.district, request.serviceLocation?.region].filter(Boolean).join(', ') || null} />
                 )}
-                <Row label="Technician" value={request.riderName} />
+                <Row label="Technician" value={request.technicianName} />
             </Panel>
 
             {showCustomer && (

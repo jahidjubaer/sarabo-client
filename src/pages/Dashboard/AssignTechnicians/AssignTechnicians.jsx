@@ -68,9 +68,9 @@ const AssignTechnicians = () => {
     const handleAssign = (technician) => {
         if (assigningId || !selectedRequest) return;
         setAssigningId(technician.technicianId);
-        // Server needs only riderId (it looks up name/email from the DB and
-        // re-validates eligibility); riderName/trackingId are harmless extras.
-        axiosSecure.patch(`/parcels/${selectedRequest._id}`, { riderId: technician.technicianId, riderName: technician.displayName, trackingId: selectedRequest.trackingId })
+        // Server needs only technicianId (it looks up name/email from the DB and
+        // re-validates eligibility); technicianName/trackingId are harmless extras.
+        axiosSecure.patch(`/parcels/${selectedRequest._id}`, { technicianId: technician.technicianId, technicianName: technician.displayName, trackingId: selectedRequest.trackingId })
             .then((res) => {
                 if (res.data.modifiedCount) {
                     setSelectedRequest(null);
