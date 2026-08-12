@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
-import { Search, UserCog, MapPin, Award, Star } from 'lucide-react';
+import { Search, UserCog, MapPin, Award, Star, Briefcase, Wrench } from 'lucide-react';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { EmptyState } from '../../../components/common/EmptyState';
@@ -218,8 +218,14 @@ const AssignTechnicians = () => {
                                                 <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ds-muted-foreground">
                                                     <span className="inline-flex items-center gap-1"><Award aria-hidden="true" className="size-3.5" />{humanizeSlug(tech.expertiseLevel || '')}</span>
                                                     <Badge tone={getWorkStatusTone(tech.workStatus)}>{getWorkStatusLabel(tech.workStatus)}</Badge>
-                                                    {tech.serviceAreaMatch?.matchLevel && <span>{getServiceAreaLabel(tech.serviceAreaMatch.matchLevel)}</span>}
+                                                    {tech.serviceAreaMatch?.matchLevel && <span className="inline-flex items-center gap-1"><MapPin aria-hidden="true" className="size-3.5" />{getServiceAreaLabel(tech.serviceAreaMatch.matchLevel)}</span>}
+                                                    {Number.isFinite(Number(tech.experienceYears)) && (
+                                                        <span className="inline-flex items-center gap-1"><Briefcase aria-hidden="true" className="size-3.5" />{tech.experienceYears} yr{Number(tech.experienceYears) === 1 ? '' : 's'} experience</span>
+                                                    )}
                                                 </div>
+                                                {Number.isFinite(Number(tech.completedRepairCount)) && (
+                                                    <p className="mt-1 inline-flex items-center gap-1 text-xs text-ds-muted-foreground"><Wrench aria-hidden="true" className="size-3.5" />Completed repairs: {tech.completedRepairCount}</p>
+                                                )}
                                             </div>
                                             <Button size="sm" disabled={!!assigningId} onClick={() => handleAssign(tech)}>
                                                 {assigningId === tech.technicianId ? 'Assigning…' : 'Assign'}

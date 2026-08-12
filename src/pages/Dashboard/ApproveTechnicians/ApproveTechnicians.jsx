@@ -40,6 +40,38 @@ function ExpertiseBadges({ technician }) {
     );
 }
 
+// Phase 8.9: full per-specialization expertise breakdown for the admin details
+// Sheet - product/device category, its repair-category labels, expertise level,
+// and experience years, all from canonical stored data and rendered through the
+// service-definition humanizer (never raw slugs). Admin-only surface.
+function TechnicianExpertiseDetails({ technician }) {
+    const expertise = Array.isArray(technician?.expertise) ? technician.expertise : [];
+    const entries = expertise.filter((entry) => entry && entry.productCategorySlug);
+    if (entries.length === 0) return <span className="text-xs text-ds-muted-foreground">—</span>;
+    return (
+        <ul className="space-y-2">
+            {entries.map((entry) => (
+                <li key={entry.productCategorySlug} className="rounded-ds border border-ds-border p-2.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-sm font-medium text-ds-foreground">{humanizeSlug(entry.productCategorySlug)}</span>
+                        {entry.level && <Badge tone="neutral">{humanizeSlug(entry.level)}</Badge>}
+                        {Number.isFinite(Number(entry.experienceYears)) && (
+                            <span className="text-xs text-ds-muted-foreground">{entry.experienceYears} yr{Number(entry.experienceYears) === 1 ? '' : 's'} experience</span>
+                        )}
+                    </div>
+                    {Array.isArray(entry.repairCategorySlugs) && entry.repairCategorySlugs.length > 0 && (
+                        <div className="mt-1.5 flex flex-wrap gap-1">
+                            {entry.repairCategorySlugs.map((slug) => (
+                                <Badge key={slug} tone="info">{humanizeSlug(slug)}</Badge>
+                            ))}
+                        </div>
+                    )}
+                </li>
+            ))}
+        </ul>
+    );
+}
+
 // Phase 7.5: technician management on the design-system data table. The
 // approve/reject mutation (PATCH /technicians/:id) and its error mapper are
 // PRESERVED - only presentation, a details Sheet, expertise badges, and
@@ -225,9 +257,9 @@ const ApproveTechnicians = () => {
                                 <dt className="text-ds-muted-foreground">Work status</dt>
                                 <dd className="col-span-2"><Badge tone={getWorkStatusTone(detailsFor.workStatus)}>{getWorkStatusLabel(detailsFor.workStatus)}</Badge></dd>
                             </div>
-                            <div className="grid grid-cols-3 gap-2">
+                            <div className="space-y-1.5">
                                 <dt className="text-ds-muted-foreground">Expertise</dt>
-                                <dd className="col-span-2"><ExpertiseBadges technician={detailsFor} /></dd>
+                                <dd><TechnicianExpertiseDetails technician={detailsFor} /></dd>
                             </div>
                         </div>
                     )}

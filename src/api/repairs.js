@@ -25,6 +25,14 @@ export async function completeRepair(axiosSecure, requestId, payload) {
     return res.data;
 }
 
+// Customer device-receipt confirmation (Phase 8.9). Owner-only, post-completion
+// handover acknowledgement. No body - the server derives everything from the
+// authenticated identity and the request id. Returns { customerReceiptConfirmation }.
+export async function confirmReceipt(axiosSecure, requestId) {
+    const res = await axiosSecure.post(`/repair-requests/${requestId}/confirm-receipt`, {});
+    return res.data;
+}
+
 // Two-step evidence upload: create a signed PUT session, then PUT the file
 // bytes straight to storage (never through the Sarabo API). Returns the
 // server-issued uploadSessionId, which is the evidenceImageId completion later

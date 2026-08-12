@@ -20,6 +20,7 @@ import InspectionSection from '../../../components/inspection/InspectionSection'
 import QuoteSection from '../../../components/quote/QuoteSection';
 import V2PaymentSection from '../../../components/payment/V2PaymentSection';
 import RepairSection from '../../../components/repair/RepairSection';
+import ReceiptConfirmationSection from '../../../components/repair/ReceiptConfirmationSection';
 import { notify } from '../../../lib/notify';
 import { getViewerRole, getSectionVisibility, isLegacyRequest } from '../../../utils/workspacePresentation';
 import { getStatusPresentation } from '../../../config/statusPresentation';
@@ -258,6 +259,10 @@ const RequestDetails = () => {
                                 <RepairSection requestId={request._id} canManage={isAssignedTechnicianView} deliveryStatus={request.deliveryStatus} />
                             </SectionCard>
                         )}
+                        {/* Phase 8.9: post-completion device-receipt confirmation.
+                            Self-guards on deliveryStatus === 'repair_completed', so it
+                            renders nothing until the repair is done. */}
+                        <ReceiptConfirmationSection requestId={request._id} request={request} isOwner={isOwner} />
 
                         {!isV2Request && (
                             <SectionCard title="Repair request">

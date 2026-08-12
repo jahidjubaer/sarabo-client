@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import useAxiosSecure from './useAxiosSecure';
 import { repairKeys } from './repairKeys';
-import { startRepair, addProgress, completeRepair } from '../api/repairs';
+import { startRepair, addProgress, completeRepair, confirmReceipt } from '../api/repairs';
 
 // Shared invalidation: after any repair write, refresh the repair query (so the
 // timeline/summary re-render), the request-detail query (deliveryStatus
@@ -39,6 +39,18 @@ export function useCompleteRepair(requestId) {
     const invalidate = useRepairInvalidation(requestId);
     return useMutation({
         mutationFn: (payload) => completeRepair(axiosSecure, requestId, payload),
+        onSettled: invalidate,
+    });
+}
+
+// Customer confirms they received the repaired device (Phase 8.9). Reuses the
+// shared invalidation so the request-detail query re-fetches and the stale
+// "Confirm Device Received" action is replaced by the confirmed state.
+export function useConfirmReceipt(requestId) {
+    const axiosSecure = useAxiosSecure();
+    const invalidate = useRepairInvalidation(requestId);
+    return useMutation({
+        mutationFn: () => confirmReceipt(axiosSecure, requestId),
         onSettled: invalidate,
     });
 }
