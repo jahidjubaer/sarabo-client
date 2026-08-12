@@ -24,7 +24,7 @@ export function validateProgressMessage(message) {
 }
 
 // Whitelisted progress payload - only the message is ever sent. The id,
-// timestamp, and rider identity are always server-generated.
+// timestamp, and technician identity are always server-generated.
 export function buildProgressPayload(values) {
     return { message: trimmed(values.message) };
 }

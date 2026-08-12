@@ -5,7 +5,7 @@ import { submitQuote, decideQuote } from '../api/quotes';
 
 // Shared invalidation: after any quote write, refresh the quote query (so the
 // form/summary/actions re-render), the request-detail query (deliveryStatus
-// changed), and the rider's assigned-jobs list. onSettled runs on both success
+// changed), and the technician's assigned-jobs list. onSettled runs on both success
 // and controlled refusal, so the UI always re-syncs to server truth.
 function useQuoteInvalidation(requestId) {
     const queryClient = useQueryClient();

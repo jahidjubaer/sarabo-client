@@ -8,7 +8,7 @@
 // token server-side, pricing is entirely server-derived).
 //
 // The server's insertOne-based response is `{ acknowledged, insertedId }`
-// (see models/Parcel.js#create) - no trackingId/parcelName/etc. are
+// (see models/RepairRequest.js#create) - no trackingId/parcelName/etc. are
 // returned. A response missing a valid string insertedId is treated as a
 // controlled client error, never fabricated into a usable id, and never
 // used to trigger the image-upload flow.
@@ -23,8 +23,8 @@ export async function createRepairRequestV2(axiosSecure, payload) {
 
 // Safe deletion of one repair request (Phase 6.5 Unit 8). DELETE /repair-requests/:id
 // requires verifyFBToken and enforces owner-or-admin + lifecycle eligibility
-// entirely server-side (see sarabo-server's controllers/parcelController.js#
-// deleteParcel) - this function sends only the id, never any authorization or
+// entirely server-side (see sarabo-server's controllers/repairRequestController.js#
+// deleteRepairRequest) - this function sends only the id, never any authorization or
 // state hint the server would have to trust. The server responds with
 // `{ success, deletedRequestId }`; every guard failure surfaces as a normal
 // axios error the caller maps through utils/deletionErrorMessage.js.

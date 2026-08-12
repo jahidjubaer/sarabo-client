@@ -153,8 +153,8 @@ export const router = createBrowserRouter([
       {
         // Assigned technician's detail view (Phase 6.4 Unit 4) - reuses the
         // shared RequestDetails page (which renders the inspection form/summary
-        // for the assigned technician). Server-side getParcelById already
-        // authorizes the assigned rider.
+        // for the assigned technician). Server-side getRepairRequestById already
+        // authorizes the assigned technician.
         path: 'assigned-jobs/:id',
         element: <TechnicianRoute><RequestDetails></RequestDetails></TechnicianRoute>
       },

@@ -7,7 +7,7 @@ import { formatAbsoluteDateTime } from '../../utils/relativeTime';
 // Workspace header (Phase 7.6): back navigation + device identity + canonical
 // status + request date + tracking id (already user-visible) + an optional
 // role-relevant primary action slot. Never shows schemaVersion / Mongo ids /
-// rider ids / storage keys.
+// technician ids / storage keys.
 function RepairWorkspaceHeader({ request, backTo, backLabel, action }) {
     const { device, category, brandModel } = getProductSummary(request);
     return (

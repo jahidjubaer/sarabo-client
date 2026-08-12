@@ -123,22 +123,22 @@ export function groupPaymentsByCurrency(payments) {
 }
 
 // ---- Technicians ----
-export function summarizeTechnicians(riders) {
-    const list = Array.isArray(riders) ? riders : [];
+export function summarizeTechnicians(technicians) {
+    const list = Array.isArray(technicians) ? technicians : [];
     let approved = 0;
     let pending = 0;
     let available = 0;
-    for (const rider of list) {
-        if (rider?.status === 'approved') approved += 1;
-        if (rider?.status === 'pending') pending += 1;
-        if (rider?.workStatus === 'available') available += 1;
+    for (const technician of list) {
+        if (technician?.status === 'approved') approved += 1;
+        if (technician?.status === 'pending') pending += 1;
+        if (technician?.workStatus === 'available') available += 1;
     }
     return { total: list.length, approved, pending, available };
 }
 
-// Compact expertise chips from a rider's expertise array. Never dumps raw JSON.
-export function getExpertiseBadges(rider) {
-    const expertise = Array.isArray(rider?.expertise) ? rider.expertise : [];
+// Compact expertise chips from a technician's expertise array. Never dumps raw JSON.
+export function getExpertiseBadges(technician) {
+    const expertise = Array.isArray(technician?.expertise) ? technician.expertise : [];
     return expertise
         .filter((entry) => entry && entry.productCategorySlug)
         .map((entry) => ({
@@ -167,10 +167,10 @@ function isCompleteExpertiseEntry(entry) {
 // profile" state and blocks approval, so an admin never approves a technician
 // the eligible-technician matcher could never surface. The server remains
 // authoritative and independently rejects an incomplete approval.
-export function isTechnicianMatchable(rider) {
-    if (!rider) return false;
-    if (!isNonEmptyString(rider.name) || !isNonEmptyString(rider.region) || !isNonEmptyString(rider.district)) return false;
-    const expertise = Array.isArray(rider.expertise) ? rider.expertise : [];
+export function isTechnicianMatchable(technician) {
+    if (!technician) return false;
+    if (!isNonEmptyString(technician.name) || !isNonEmptyString(technician.region) || !isNonEmptyString(technician.district)) return false;
+    const expertise = Array.isArray(technician.expertise) ? technician.expertise : [];
     return expertise.length > 0 && expertise.every(isCompleteExpertiseEntry);
 }
 

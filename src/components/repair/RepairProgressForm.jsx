@@ -18,7 +18,7 @@ function progressErrorMessage(error) {
 }
 
 // Technician-only add-progress form (Phase 6.4 Unit 7) redesigned in 7.6A. Sends
-// only the message text; id/timestamp/rider identity are server-generated. Same
+// only the message text; id/timestamp/technician identity are server-generated. Same
 // validation + useAddProgress wiring; feedback moved to Toastify.
 const RepairProgressForm = ({ requestId }) => {
     const [message, setMessage] = useState('');

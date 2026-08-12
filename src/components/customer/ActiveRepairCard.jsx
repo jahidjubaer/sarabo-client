@@ -10,7 +10,7 @@ import { cn } from '../../lib/utils';
 
 // Prominent-but-restrained snapshot of the customer's most relevant in-flight
 // repair. All copy comes from the canonical status presentation - no raw
-// statuses, ids, rider data, or storage metadata are shown.
+// statuses, ids, technician data, or storage metadata are shown.
 function ActiveRepairCard({ request, className }) {
     if (!request) return null;
 

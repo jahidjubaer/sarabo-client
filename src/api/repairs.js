@@ -2,7 +2,7 @@
 // 7). All use the caller's axiosSecure (Firebase bearer token). The signed PUT
 // for completion evidence reuses uploadFileToSignedUrl from the damage-image
 // api unchanged (it is a generic signed-URL transport, not damage-specific).
-// The client never sends a rider id, timestamp, status, storageKey, or url.
+// The client never sends a technician id, timestamp, status, storageKey, or url.
 import { uploadFileToSignedUrl } from './damageImages';
 
 export async function getRepair(axiosSecure, requestId) {

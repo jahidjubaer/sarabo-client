@@ -22,9 +22,9 @@ const APPLICATION_TONE = { pending: 'warning', approved: 'success', rejected: 'd
 function ApplicationBadge({ status }) {
     return <Badge tone={APPLICATION_TONE[status] || 'neutral'}>{status ? humanizeSlug(status) : 'Unknown'}</Badge>;
 }
-function ExpertiseBadges({ rider }) {
-    const badges = getExpertiseBadges(rider);
-    const matchable = isTechnicianMatchable(rider);
+function ExpertiseBadges({ technician }) {
+    const badges = getExpertiseBadges(technician);
+    const matchable = isTechnicianMatchable(technician);
     if (badges.length === 0) {
         return matchable
             ? <span className="text-xs text-ds-muted-foreground">—</span>
@@ -94,7 +94,7 @@ const ApproveTechnicians = () => {
             meta: { label: 'Technician' },
         },
         { id: 'district', header: 'District', enableSorting: true, accessorFn: (row) => row.district || '', cell: ({ row }) => row.original.district || '—', meta: { label: 'District' } },
-        { id: 'expertise', header: 'Expertise', enableSorting: false, cell: ({ row }) => <ExpertiseBadges rider={row.original} />, meta: { label: 'Expertise' } },
+        { id: 'expertise', header: 'Expertise', enableSorting: false, cell: ({ row }) => <ExpertiseBadges technician={row.original} />, meta: { label: 'Expertise' } },
         { id: 'application', header: 'Application', enableSorting: false, cell: ({ row }) => <ApplicationBadge status={row.original.status} />, meta: { label: 'Application' } },
         { id: 'work', header: 'Work status', enableSorting: false, cell: ({ row }) => <Badge tone={getWorkStatusTone(row.original.workStatus)}>{getWorkStatusLabel(row.original.workStatus)}</Badge>, meta: { label: 'Work status' } },
         {
@@ -148,7 +148,7 @@ const ApproveTechnicians = () => {
                     <span>{tech.district || '—'}</span>
                     <Badge tone={getWorkStatusTone(tech.workStatus)}>{getWorkStatusLabel(tech.workStatus)}</Badge>
                 </div>
-                <div className="mt-2"><ExpertiseBadges rider={tech} /></div>
+                <div className="mt-2"><ExpertiseBadges technician={tech} /></div>
                 {!matchable && tech.status !== 'approved' && (
                     <p className="mt-2 text-xs text-ds-muted-foreground">Complete the expertise and service area before approving.</p>
                 )}
@@ -227,7 +227,7 @@ const ApproveTechnicians = () => {
                             </div>
                             <div className="grid grid-cols-3 gap-2">
                                 <dt className="text-ds-muted-foreground">Expertise</dt>
-                                <dd className="col-span-2"><ExpertiseBadges rider={detailsFor} /></dd>
+                                <dd className="col-span-2"><ExpertiseBadges technician={detailsFor} /></dd>
                             </div>
                         </div>
                     )}
