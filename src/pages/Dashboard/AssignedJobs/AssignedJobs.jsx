@@ -17,7 +17,7 @@ import { notify } from '../../../lib/notify';
 // Phase 7.4: Assigned Jobs redesigned onto the design system (no DaisyUI).
 // Loads the technician's active assigned jobs (all non-delivered) - a broader,
 // more useful view than the old driver_assigned-only table. The status-advance
-// mutation (PATCH /parcels/:id/status) is PRESERVED exactly: it is the only way
+// mutation (PATCH /repair-requests/:id/status) is PRESERVED exactly: it is the only way
 // to reach parcel_picked_up, which unlocks the inspection (see
 // RequestDetails / InspectionSection). Only its feedback moved to a toast.
 // Everything from pickup onward navigates to the authoritative details screen;
@@ -38,7 +38,7 @@ const AssignedJobs = () => {
     const { data: jobs = [], refetch, isLoading, isError } = useQuery({
         queryKey: ['tech-active-jobs', user?.email],
         queryFn: async () => {
-            const res = await axiosSecure.get(`/parcels/rider?technicianEmail=${user.email}`);
+            const res = await axiosSecure.get(`/repair-requests/technician?technicianEmail=${user.email}`);
             return res.data;
         },
     });
@@ -58,7 +58,7 @@ const AssignedJobs = () => {
     const handleAdvance = (request, status) => {
         if (pendingAction) return;
         setPendingAction({ id: request._id, status });
-        axiosSecure.patch(`/parcels/${request._id}/status`, { deliveryStatus: status })
+        axiosSecure.patch(`/repair-requests/${request._id}/status`, { deliveryStatus: status })
             .then(() => {
                 refetch();
                 queryClient.invalidateQueries({ queryKey: ['tech-active-jobs', user?.email] });

@@ -47,7 +47,7 @@ function SectionCard({ title, children }) {
 // exactly; the server re-authorizes every action. Legacy requests render only
 // the sections meaningful to their data (no empty v2 workflow panels). The
 // early technician status progression (driver_assigned → rider_arriving →
-// device received) now lives here via the existing PATCH /parcels/:id/status.
+// device received) now lives here via the existing PATCH /repair-requests/:id/status.
 const RequestDetails = () => {
     const { id } = useParams();
     const { user } = useAuth();
@@ -67,8 +67,8 @@ const RequestDetails = () => {
     const backLabel = isAdminContext ? 'Back to Repair Requests' : (isTechnicianContext ? 'Back to Assigned Jobs' : 'Back to My Requests');
 
     const { data: request, isLoading, isError, refetch } = useQuery({
-        queryKey: ['parcels', id],
-        queryFn: async () => (await axiosSecure.get(`/parcels/${id}`)).data,
+        queryKey: ['repair-requests', id],
+        queryFn: async () => (await axiosSecure.get(`/repair-requests/${id}`)).data,
         retry: false,
     });
 
@@ -106,9 +106,9 @@ const RequestDetails = () => {
     const handleAdvance = (nextStatus) => {
         if (advancing) return;
         setAdvancing(true);
-        axiosSecure.patch(`/parcels/${id}/status`, { deliveryStatus: nextStatus })
+        axiosSecure.patch(`/repair-requests/${id}/status`, { deliveryStatus: nextStatus })
             .then(() => {
-                queryClient.invalidateQueries({ queryKey: ['parcels', id] });
+                queryClient.invalidateQueries({ queryKey: ['repair-requests', id] });
                 queryClient.invalidateQueries({ queryKey: ['tech-active-jobs', user?.email] });
                 refetch();
                 notify.success(`Updated: ${getStatusPresentation(nextStatus).label}`);
@@ -127,9 +127,9 @@ const RequestDetails = () => {
     const handleAccept = () => {
         if (deciding) return;
         setDeciding(true);
-        axiosSecure.post(`/parcels/${id}/assignment/accept`)
+        axiosSecure.post(`/repair-requests/${id}/assignment/accept`)
             .then(() => {
-                queryClient.invalidateQueries({ queryKey: ['parcels', id] });
+                queryClient.invalidateQueries({ queryKey: ['repair-requests', id] });
                 queryClient.invalidateQueries({ queryKey: ['tech-active-jobs', user?.email] });
                 refetch();
                 notify.success('Assignment accepted.');
@@ -149,7 +149,7 @@ const RequestDetails = () => {
     const handleRejectConfirm = (reason) => {
         if (deciding) return;
         setDeciding(true);
-        axiosSecure.post(`/parcels/${id}/assignment/reject`, { reason })
+        axiosSecure.post(`/repair-requests/${id}/assignment/reject`, { reason })
             .then(() => {
                 queryClient.invalidateQueries({ queryKey: ['tech-active-jobs', user?.email] });
                 setRejectOpen(false);
@@ -178,16 +178,16 @@ const RequestDetails = () => {
     };
 
     // Migrated from SweetAlert to the design-system ConfirmDialog (Phase 7.9).
-    // Same eligibility gate (canCancelRequest, below), same PATCH /parcels/:id/
+    // Same eligibility gate (canCancelRequest, below), same PATCH /repair-requests/:id/
     // cancel mutation, same invalidations and Toastify feedback - the server
     // re-authorizes and the business rules are unchanged; only the confirmation
     // surface changed.
     const performCancel = () => {
         if (cancelling) return;
         setCancelling(true);
-        axiosSecure.patch(`/parcels/${id}/cancel`)
+        axiosSecure.patch(`/repair-requests/${id}/cancel`)
             .then(() => {
-                queryClient.invalidateQueries({ queryKey: ['parcels', id] });
+                queryClient.invalidateQueries({ queryKey: ['repair-requests', id] });
                 queryClient.invalidateQueries({ queryKey: ['my-requests', user?.email] });
                 refetch();
                 setCancelOpen(false);

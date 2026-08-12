@@ -15,9 +15,9 @@ const Payment = () => {
     const [submitting, setSubmitting] = useState(false);
 
     const { isLoading, data: request } = useQuery({
-        queryKey: ['parcels', requestId],
+        queryKey: ['repair-requests', requestId],
         queryFn: async () => {
-            const res = await axiosSecure.get(`/parcels/${requestId}`);
+            const res = await axiosSecure.get(`/repair-requests/${requestId}`);
             return res.data;
         }
     })

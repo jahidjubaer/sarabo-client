@@ -22,10 +22,10 @@ import { getAssignmentErrorMessage } from '../../../utils/assignmentErrorMessage
 
 // Phase 7.5: technician assignment rebuilt around the EXPERTISE-AWARE backend.
 // The assignment Sheet uses the authoritative eligible-technicians endpoint
-// (GET /parcels/:id/eligible-technicians) - only server-eligible, server-ranked
+// (GET /repair-requests/:id/eligible-technicians) - only server-eligible, server-ranked
 // technicians are shown, with the server's own recommendation reasons. No
 // client-side suitability scoring. Assignment still goes through the existing
-// PATCH /parcels/:id (which re-validates eligibility server-side); no business
+// PATCH /repair-requests/:id (which re-validates eligibility server-side); no business
 // logic changes.
 const AssignTechnicians = () => {
     const axiosSecure = useAxiosSecure();
@@ -39,13 +39,13 @@ const AssignTechnicians = () => {
 
     const { data: requests = [], refetch: refetchRequests, isLoading, isError } = useQuery({
         queryKey: ['requests', 'pending-assignment'],
-        queryFn: async () => (await axiosSecure.get('/parcels?deliveryStatus=pending-pickup')).data,
+        queryFn: async () => (await axiosSecure.get('/repair-requests?deliveryStatus=pending-pickup')).data,
     });
 
     const eligibleQuery = useQuery({
         queryKey: ['eligible-technicians', selectedRequest?._id],
         enabled: !!selectedRequest?._id,
-        queryFn: async () => (await axiosSecure.get(`/parcels/${selectedRequest._id}/eligible-technicians`)).data,
+        queryFn: async () => (await axiosSecure.get(`/repair-requests/${selectedRequest._id}/eligible-technicians`)).data,
     });
 
     // Preserved deep-link: open the assignment Sheet once for ?request=<id> if
@@ -70,7 +70,7 @@ const AssignTechnicians = () => {
         setAssigningId(technician.technicianId);
         // Server needs only technicianId (it looks up name/email from the DB and
         // re-validates eligibility); technicianName/trackingId are harmless extras.
-        axiosSecure.patch(`/parcels/${selectedRequest._id}`, { technicianId: technician.technicianId, technicianName: technician.displayName, trackingId: selectedRequest.trackingId })
+        axiosSecure.patch(`/repair-requests/${selectedRequest._id}`, { technicianId: technician.technicianId, technicianName: technician.displayName, trackingId: selectedRequest.trackingId })
             .then((res) => {
                 if (res.data.modifiedCount) {
                     setSelectedRequest(null);

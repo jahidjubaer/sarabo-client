@@ -3,7 +3,7 @@ import { formatMoney } from './currency';
 
 // Customer-facing, PRESENTATION-ONLY helpers for the redesigned dashboard +
 // My Requests (Phase 7.3). Everything here is derived from data the list API
-// already returns (GET /parcels) - no new endpoints, no per-request eligibility
+// already returns (GET /repair-requests) - no new endpoints, no per-request eligibility
 // fetches, no changes to any record. Backend statuses are grouped for a
 // friendlier customer view; the underlying values are never modified.
 

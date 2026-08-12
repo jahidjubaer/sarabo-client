@@ -13,7 +13,7 @@ const CompletedJobs = () => {
     const { data: requests = [], isLoading } = useQuery({
         queryKey: ['completedJobs', user?.email],
         queryFn: async () => {
-            const res = await axiosSecure.get(`/parcels/rider?technicianEmail=${user.email}&deliveryStatus=parcel_delivered`)
+            const res = await axiosSecure.get(`/repair-requests/technician?technicianEmail=${user.email}&deliveryStatus=parcel_delivered`)
 
             return res.data;
         }

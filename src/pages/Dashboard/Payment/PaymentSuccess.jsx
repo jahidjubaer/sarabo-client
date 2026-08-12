@@ -48,8 +48,8 @@ const PaymentSuccess = () => {
                 queryClient.invalidateQueries({ queryKey: ['my-requests', user?.email] });
                 queryClient.invalidateQueries({ queryKey: ['payments', user?.email] });
                 // Partial-match invalidation: covers any currently-cached
-                // Request Details page (`['parcels', id]`) for this request.
-                queryClient.invalidateQueries({ queryKey: ['parcels'] });
+                // Request Details page (`['repair-requests', id]`) for this request.
+                queryClient.invalidateQueries({ queryKey: ['repair-requests'] });
                 // V2 approved-quote payments (Phase 6.4 Unit 6): once a payment
                 // is confirmed the request moves to payment_completed, so both
                 // the quote view and the payment-eligibility check must refetch

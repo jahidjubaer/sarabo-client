@@ -39,7 +39,7 @@ function CustomerOverview() {
     const { data: requests = [], isLoading, isError, refetch } = useQuery({
         queryKey: ['my-requests', user?.email],
         queryFn: async () => {
-            const res = await axiosSecure.get('/parcels');
+            const res = await axiosSecure.get('/repair-requests');
             return res.data;
         },
     });

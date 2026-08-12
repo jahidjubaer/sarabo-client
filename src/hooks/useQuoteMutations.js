@@ -11,7 +11,7 @@ function useQuoteInvalidation(requestId) {
     const queryClient = useQueryClient();
     return () => {
         queryClient.invalidateQueries({ queryKey: quoteKeys.request(requestId) });
-        queryClient.invalidateQueries({ queryKey: ['parcels', requestId] });
+        queryClient.invalidateQueries({ queryKey: ['repair-requests', requestId] });
         queryClient.invalidateQueries({ queryKey: ['assignedJobs'] });
     };
 }

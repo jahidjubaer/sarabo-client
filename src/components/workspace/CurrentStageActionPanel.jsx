@@ -10,7 +10,7 @@ import { cn } from '../../lib/utils';
 // through sections. For the technician's early generic-status stages
 // (driver_assigned → rider_arriving → device received, and legacy completion)
 // it renders the ACTUAL advance control here via onAdvance (PATCH
-// /parcels/:id/status). Phase 8.2: at assignment_pending the assigned
+// /repair-requests/:id/status). Phase 8.2: at assignment_pending the assigned
 // technician instead gets Accept / Reject controls (their own dedicated
 // endpoints), since the request must be accepted before pickup can begin.
 const TONE_STYLES = {

@@ -41,7 +41,7 @@ function PaymentBadge({ paid }) {
 }
 
 // Phase 7.5: admin repair-request management on the design-system data table.
-// SERVER-side pagination/search/filtering via /admin/parcels is PRESERVED
+// SERVER-side pagination/search/filtering via /admin/repair-requests is PRESERVED
 // exactly (same params, same { data, pagination } contract) - the table runs in
 // manual mode over the current page rather than pulling all rows. Actions
 // (view / assign) reuse the existing routes; no business logic changes.
@@ -70,7 +70,7 @@ const ManageRepairRequests = () => {
             if (debouncedSearch) params.search = debouncedSearch;
             if (status !== 'all') params.status = status;
             if (paymentStatus !== 'all') params.paymentStatus = paymentStatus;
-            const res = await axiosSecure.get('/admin/parcels', { params });
+            const res = await axiosSecure.get('/admin/repair-requests', { params });
             return res.data;
         },
         placeholderData: keepPreviousData,

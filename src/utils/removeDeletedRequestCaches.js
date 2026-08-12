@@ -12,12 +12,12 @@ import { repairKeys } from '../hooks/repairKeys';
 // and left sitting in the cache until a refetch that will never happen.
 //
 // Reuses the existing per-request key factories verbatim (never invents a
-// duplicate key shape), including the request-detail cache keyed ['parcels',
+// duplicate key shape), including the request-detail cache keyed ['repair-requests',
 // requestId]. The caller refreshes the My Requests list separately - that list
 // is a fresh fetch, not request-specific private data, so it is invalidated
 // rather than removed.
 export function removeDeletedRequestCaches(queryClient, requestId) {
-    queryClient.removeQueries({ queryKey: ['parcels', requestId] });
+    queryClient.removeQueries({ queryKey: ['repair-requests', requestId] });
     queryClient.removeQueries({ queryKey: damageImageKeys.request(requestId) });
     queryClient.removeQueries({ queryKey: inspectionKeys.request(requestId) });
     queryClient.removeQueries({ queryKey: quoteKeys.request(requestId) });

@@ -61,7 +61,7 @@ const MyRequests = () => {
         queryFn: async () => {
             // No email in the URL - the server scopes a non-admin caller to
             // their own token-derived identity.
-            const res = await axiosSecure.get('/parcels');
+            const res = await axiosSecure.get('/repair-requests');
             return res.data;
         },
     });
@@ -91,10 +91,10 @@ const MyRequests = () => {
         }).then((result) => {
             if (!result.isConfirmed) return;
             setCancellingId(request._id);
-            axiosSecure.patch(`/parcels/${request._id}/cancel`)
+            axiosSecure.patch(`/repair-requests/${request._id}/cancel`)
                 .then(() => {
                     queryClient.invalidateQueries({ queryKey: ['my-requests', user?.email] });
-                    queryClient.invalidateQueries({ queryKey: ['parcels', request._id] });
+                    queryClient.invalidateQueries({ queryKey: ['repair-requests', request._id] });
                     refetch();
                     notify.success('Your repair request has been cancelled.');
                 })

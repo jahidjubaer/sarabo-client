@@ -8,7 +8,7 @@
 // or { eligible:false, code }. The amount/currency are display-only, always
 // re-derived (and re-authorized) by the server on the actual charge.
 export async function getV2PaymentEligibility(axiosSecure, requestId) {
-    const res = await axiosSecure.get(`/parcels/${requestId}/payment-eligibility`);
+    const res = await axiosSecure.get(`/repair-requests/${requestId}/payment-eligibility`);
     return res.data;
 }
 
@@ -18,6 +18,6 @@ export async function getV2PaymentEligibility(axiosSecure, requestId) {
 // checkout - the exact same completion path (webhook + /payment-success
 // verification) the legacy flow already uses.
 export async function createV2Checkout(axiosSecure, requestId) {
-    const res = await axiosSecure.post(`/parcels/${requestId}/checkout-session`, {});
+    const res = await axiosSecure.post(`/repair-requests/${requestId}/checkout-session`, {});
     return res.data;
 }

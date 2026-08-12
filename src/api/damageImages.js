@@ -14,25 +14,25 @@ function assertValidRequestId(requestId) {
 
 export async function createDamageUploadSession(axiosSecure, requestId, { fileName, mimeType, size }) {
     assertValidRequestId(requestId);
-    const res = await axiosSecure.post(`/parcels/${requestId}/damage-images/upload-session`, { fileName, mimeType, size });
+    const res = await axiosSecure.post(`/repair-requests/${requestId}/damage-images/upload-session`, { fileName, mimeType, size });
     return res.data;
 }
 
 export async function finalizeDamageUpload(axiosSecure, requestId, uploadSessionId) {
     assertValidRequestId(requestId);
-    const res = await axiosSecure.post(`/parcels/${requestId}/damage-images/finalize`, { uploadSessionId });
+    const res = await axiosSecure.post(`/repair-requests/${requestId}/damage-images/finalize`, { uploadSessionId });
     return res.data;
 }
 
 export async function getDamageImages(axiosSecure, requestId) {
     assertValidRequestId(requestId);
-    const res = await axiosSecure.get(`/parcels/${requestId}/damage-images`);
+    const res = await axiosSecure.get(`/repair-requests/${requestId}/damage-images`);
     return res.data;
 }
 
 export async function removeDamageImage(axiosSecure, requestId, imageId) {
     assertValidRequestId(requestId);
-    const res = await axiosSecure.delete(`/parcels/${requestId}/damage-images/${encodeURIComponent(imageId)}`);
+    const res = await axiosSecure.delete(`/repair-requests/${requestId}/damage-images/${encodeURIComponent(imageId)}`);
     return res.data;
 }
 

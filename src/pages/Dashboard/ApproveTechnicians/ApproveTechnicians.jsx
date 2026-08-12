@@ -41,7 +41,7 @@ function ExpertiseBadges({ rider }) {
 }
 
 // Phase 7.5: technician management on the design-system data table. The
-// approve/reject mutation (PATCH /riders/:id) and its error mapper are
+// approve/reject mutation (PATCH /technicians/:id) and its error mapper are
 // PRESERVED - only presentation, a details Sheet, expertise badges, and
 // Toastify feedback changed. No workStatus is guessed; only stored values shown.
 const ApproveTechnicians = () => {
@@ -53,7 +53,7 @@ const ApproveTechnicians = () => {
 
     const { refetch, data: technicians = [], isLoading, isError } = useQuery({
         queryKey: ['technicians', 'all'],
-        queryFn: async () => (await axiosSecure.get('/riders')).data,
+        queryFn: async () => (await axiosSecure.get('/technicians')).data,
     });
 
     const statusOptions = useMemo(() => [...new Set(technicians.map((t) => t.status).filter(Boolean))], [technicians]);
@@ -68,7 +68,7 @@ const ApproveTechnicians = () => {
     const updateStatus = (technician, status) => {
         if (pendingAction) return;
         setPendingAction({ id: technician._id, status });
-        axiosSecure.patch(`/riders/${technician._id}`, { status })
+        axiosSecure.patch(`/technicians/${technician._id}`, { status })
             .then(() => {
                 refetch();
                 notify.success(status === 'approved' ? `${technician.name} approved` : `${technician.name} rejected`);

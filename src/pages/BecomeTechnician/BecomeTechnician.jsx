@@ -81,7 +81,7 @@ const BecomeTechnician = () => {
         setSubmitting(true);
 
         const payload = buildTechnicianApplicationPayload(data, expertise);
-        axiosSecure.post('/riders', payload)
+        axiosSecure.post('/technicians', payload)
             .then(res => {
                 if (res.data.insertedId) {
                     notify.success('Your application has been submitted. We will reach out to you in 1–5 days.');

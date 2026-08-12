@@ -6,22 +6,22 @@
 import { uploadFileToSignedUrl } from './damageImages';
 
 export async function getRepair(axiosSecure, requestId) {
-    const res = await axiosSecure.get(`/parcels/${requestId}/repair`);
+    const res = await axiosSecure.get(`/repair-requests/${requestId}/repair`);
     return res.data.repair;
 }
 
 export async function startRepair(axiosSecure, requestId) {
-    const res = await axiosSecure.post(`/parcels/${requestId}/repair/start`, {});
+    const res = await axiosSecure.post(`/repair-requests/${requestId}/repair/start`, {});
     return res.data;
 }
 
 export async function addProgress(axiosSecure, requestId, payload) {
-    const res = await axiosSecure.post(`/parcels/${requestId}/repair/progress`, payload);
+    const res = await axiosSecure.post(`/repair-requests/${requestId}/repair/progress`, payload);
     return res.data;
 }
 
 export async function completeRepair(axiosSecure, requestId, payload) {
-    const res = await axiosSecure.post(`/parcels/${requestId}/repair/complete`, payload);
+    const res = await axiosSecure.post(`/repair-requests/${requestId}/repair/complete`, payload);
     return res.data;
 }
 
@@ -30,7 +30,7 @@ export async function completeRepair(axiosSecure, requestId, payload) {
 // server-issued uploadSessionId, which is the evidenceImageId completion later
 // references.
 export async function uploadRepairEvidence(axiosSecure, requestId, file) {
-    const res = await axiosSecure.post(`/parcels/${requestId}/repair/evidence`, {
+    const res = await axiosSecure.post(`/repair-requests/${requestId}/repair/evidence`, {
         fileName: file.name,
         mimeType: file.type,
         size: file.size,

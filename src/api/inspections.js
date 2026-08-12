@@ -4,7 +4,7 @@
 // interaction here, and no private data is persisted anywhere client-side.
 
 export async function getInspection(axiosSecure, requestId) {
-    const res = await axiosSecure.get(`/parcels/${requestId}/inspection`);
+    const res = await axiosSecure.get(`/repair-requests/${requestId}/inspection`);
     // Server response shape: { inspection: { status, diagnosis, repairability,
     // estimate, submittedAt, version, internalNotes? } }. internalNotes is
     // only ever present for the admin/assigned-technician view - the server
@@ -13,7 +13,7 @@ export async function getInspection(axiosSecure, requestId) {
 }
 
 export async function submitInspection(axiosSecure, requestId, payload) {
-    const res = await axiosSecure.post(`/parcels/${requestId}/inspection`, payload);
+    const res = await axiosSecure.post(`/repair-requests/${requestId}/inspection`, payload);
     // { message, deliveryStatus, inspection }
     return res.data;
 }

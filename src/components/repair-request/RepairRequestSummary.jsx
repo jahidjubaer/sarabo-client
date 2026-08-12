@@ -4,7 +4,7 @@ import EstimateCard from './EstimateCard';
 // Read-only recap of what the customer is submitting / just submitted (Phase
 // 6.4 Unit 3A, redesigned ds-* in 7.7). Built entirely from local form values
 // via createRequestFlow.js#buildReviewModel and the already-fetched catalogue
-// definition - never from the POST /parcels response (which only returns
+// definition - never from the POST /repair-requests response (which only returns
 // { acknowledged, insertedId }). Shows only human-friendly fields, never raw
 // slugs and never every form key.
 function Row({ icon: Icon, label, children }) {

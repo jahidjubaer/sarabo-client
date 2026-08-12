@@ -2,7 +2,7 @@ import { getRequestStatus, getProductSummary } from './customerRequestPresentati
 
 // Technician-facing, PRESENTATION-ONLY helpers for the redesigned technician
 // dashboard + Assigned Jobs (Phase 7.4). Everything is derived from the data
-// the assigned-jobs API already returns (GET /parcels/rider). No new endpoints,
+// the assigned-jobs API already returns (GET /repair-requests/technician). No new endpoints,
 // no changes to assignment / eligibility / status semantics. Reuses the generic
 // request-identity + status helpers from customerRequestPresentation.
 

@@ -37,7 +37,7 @@ export function getRoleTone(role) {
 }
 
 // ---- Dashboard metrics from the authoritative status-stats aggregate ----
-// stats: [{ status, count }] from GET /parcels/delivery-status/stats.
+// stats: [{ status, count }] from GET /repair-requests/delivery-status/stats.
 const ACTIVE_STATUSES = new Set([
     'driver_assigned', 'rider_arriving', 'parcel_picked_up', 'inspection_completed',
     'quote_submitted', 'quote_approved', 'payment_completed', 'repair_in_progress',

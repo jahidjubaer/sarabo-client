@@ -25,9 +25,9 @@ function ChartEmpty({ message }) {
 function AdminOverview() {
     const axiosSecure = useAxiosSecure();
 
-    const statsQuery = useQuery({ queryKey: ['request-status-stats'], queryFn: async () => (await axiosSecure.get('/parcels/delivery-status/stats')).data });
-    const requestsQuery = useQuery({ queryKey: ['admin-all-requests'], queryFn: async () => (await axiosSecure.get('/parcels')).data });
-    const techniciansQuery = useQuery({ queryKey: ['admin-all-technicians'], queryFn: async () => (await axiosSecure.get('/riders')).data });
+    const statsQuery = useQuery({ queryKey: ['request-status-stats'], queryFn: async () => (await axiosSecure.get('/repair-requests/delivery-status/stats')).data });
+    const requestsQuery = useQuery({ queryKey: ['admin-all-requests'], queryFn: async () => (await axiosSecure.get('/repair-requests')).data });
+    const techniciansQuery = useQuery({ queryKey: ['admin-all-technicians'], queryFn: async () => (await axiosSecure.get('/technicians')).data });
     const paymentsQuery = useQuery({ queryKey: ['admin-all-payments'], queryFn: async () => (await axiosSecure.get('/payments')).data });
 
     const isLoading = statsQuery.isLoading || requestsQuery.isLoading || techniciansQuery.isLoading || paymentsQuery.isLoading;

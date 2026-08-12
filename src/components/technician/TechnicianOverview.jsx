@@ -39,7 +39,7 @@ function TechnicianOverview() {
     const { data: jobs = [], isLoading, isError, refetch } = useQuery({
         queryKey: ['tech-active-jobs', user?.email],
         queryFn: async () => {
-            const res = await axiosSecure.get(`/parcels/rider?technicianEmail=${user.email}`);
+            const res = await axiosSecure.get(`/repair-requests/technician?technicianEmail=${user.email}`);
             return res.data;
         },
     });
@@ -49,7 +49,7 @@ function TechnicianOverview() {
     const handleAdvance = (job, status) => {
         if (pendingAction) return;
         setPendingAction({ id: job._id, status });
-        axiosSecure.patch(`/parcels/${job._id}/status`, { deliveryStatus: status })
+        axiosSecure.patch(`/repair-requests/${job._id}/status`, { deliveryStatus: status })
             .then(() => {
                 refetch();
                 queryClient.invalidateQueries({ queryKey: ['tech-active-jobs', user?.email] });

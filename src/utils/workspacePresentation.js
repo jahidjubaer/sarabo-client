@@ -114,7 +114,7 @@ export function getWorkspaceNextStep({ request, viewerRole }) {
 }
 
 // The technician's early generic-status advance target (the only place this
-// runs is the workspace; it calls the existing PATCH /parcels/:id/status). Null
+// runs is the workspace; it calls the existing PATCH /repair-requests/:id/status). Null
 // when there is no early advance to make.
 export function getTechnicianAdvance({ request }) {
     const status = request?.deliveryStatus || 'pending-pickup';
