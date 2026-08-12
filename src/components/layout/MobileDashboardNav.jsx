@@ -1,6 +1,7 @@
 import { Link } from 'react-router';
 import { Home } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../ui/sheet';
+import Logo from '../Logo/Logo';
 import { DashboardNavLinks } from './DashboardNavLinks';
 import { getNavSections, ROLE_LABELS } from '../../config/dashboardNavigation';
 
@@ -15,11 +16,8 @@ function MobileDashboardNav({ role, open, onOpenChange }) {
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent side="left" className="gap-0">
                 <SheetHeader className="border-b border-ds-border">
-                    <SheetTitle asChild>
-                        <Link to="/dashboard" onClick={close} className="focus-ring flex items-center gap-2 rounded-ds">
-                            <span className="flex size-8 shrink-0 items-center justify-center rounded-ds bg-ds-primary text-sm font-bold text-ds-primary-foreground">S</span>
-                            <span className="text-base text-ds-foreground">Sarabo</span>
-                        </Link>
+                    <SheetTitle className="flex items-center">
+                        <Logo to="/dashboard" ariaLabel="Sarabo dashboard" onClick={close} />
                     </SheetTitle>
                     {role && <p className="text-xs text-ds-muted-foreground">{ROLE_LABELS[role]} workspace</p>}
                 </SheetHeader>

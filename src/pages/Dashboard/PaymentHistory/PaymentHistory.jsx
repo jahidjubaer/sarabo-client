@@ -3,7 +3,7 @@ import React from 'react';
 import useAuth from '../../../hooks/useAuth';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import Loading from '../../../components/Loading/Loading';
-import { formatCurrency } from '../../../utils/formatCurrency';
+import { formatMoney } from '../../../utils/currency';
 
 const PaymentHistory = () => {
     const { user } = useAuth();
@@ -43,7 +43,11 @@ const PaymentHistory = () => {
                             payments.map((payment, index) => <tr key={payment._id}>
                                 <th>{index + 1}</th>
                                 <td>{payment.customerEmail}</td>
-                                <td>{formatCurrency(payment.amount)}</td>
+                                {/* Phase 8.10: format each payment in its OWN persisted
+                                    currency (canonical V2 = BDT -> ৳; legacy V1 = USD -> $).
+                                    No conversion, no relabeling. formatMoney returns '' for a
+                                    non-finite amount, so fall back to a dash placeholder. */}
+                                <td>{formatMoney(payment.amount, payment.currency) || '—'}</td>
                                 <td>{payment.paidAt}</td>
                                 <td>{payment.transactionId}</td>
                             </tr>)

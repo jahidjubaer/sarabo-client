@@ -1,6 +1,7 @@
 import { Link } from 'react-router';
 import { PanelLeft, PanelLeftClose, Home } from 'lucide-react';
 import { Button } from '../ui/button';
+import Logo from '../Logo/Logo';
 import { DashboardNavLinks } from './DashboardNavLinks';
 import { getNavSections, ROLE_LABELS } from '../../config/dashboardNavigation';
 import { cn } from '../../lib/utils';
@@ -20,10 +21,7 @@ function DashboardSidebar({ role, collapsed, onToggleCollapse }) {
             )}
         >
             <div className={cn("flex h-14 items-center border-b border-ds-border", collapsed ? "justify-center px-0" : "px-4")}>
-                <Link to="/dashboard" aria-label="Sarabo dashboard" className="focus-ring flex items-center gap-2 rounded-ds font-semibold">
-                    <span className="flex size-8 shrink-0 items-center justify-center rounded-ds bg-ds-primary text-sm font-bold text-ds-primary-foreground">S</span>
-                    {!collapsed && <span className="text-base text-ds-foreground">Sarabo</span>}
-                </Link>
+                <Logo to="/dashboard" ariaLabel="Sarabo dashboard" showWordmark={!collapsed} />
             </div>
 
             <div className="flex-1 overflow-y-auto px-3 py-4">
