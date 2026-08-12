@@ -21,6 +21,7 @@ import QuoteSection from '../../../components/quote/QuoteSection';
 import V2PaymentSection from '../../../components/payment/V2PaymentSection';
 import RepairSection from '../../../components/repair/RepairSection';
 import ReceiptConfirmationSection from '../../../components/repair/ReceiptConfirmationSection';
+import TechnicianEarningSettlement from '../../../components/repair/TechnicianEarningSettlement';
 import { notify } from '../../../lib/notify';
 import { getViewerRole, getSectionVisibility, isLegacyRequest } from '../../../utils/workspacePresentation';
 import { getStatusPresentation } from '../../../config/statusPresentation';
@@ -263,6 +264,12 @@ const RequestDetails = () => {
                             Self-guards on deliveryStatus === 'repair_completed', so it
                             renders nothing until the repair is done. */}
                         <ReceiptConfirmationSection requestId={request._id} request={request} isOwner={isOwner} />
+                        {/* Phase 8.11: admin-only technician-earning settlement.
+                            request.technicianEarning is returned by the server only
+                            to admins; the component self-guards on its presence. */}
+                        {isAdminContext && request.deliveryStatus === 'repair_completed' && (
+                            <TechnicianEarningSettlement requestId={request._id} earning={request.technicianEarning} />
+                        )}
 
                         {!isV2Request && (
                             <SectionCard title="Repair request">

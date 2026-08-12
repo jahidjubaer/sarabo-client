@@ -1,75 +1,98 @@
-import React from 'react';
 import useAuth from '../../../hooks/useAuth';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import { useQuery } from '@tanstack/react-query';
-import { FaMoneyBillWave } from 'react-icons/fa';
 import Loading from '../../../components/Loading/Loading';
-import { formatCurrency } from '../../../utils/formatCurrency';
+import { formatMoney } from '../../../utils/currency';
+import { formatAbsoluteDateTime } from '../../../utils/relativeTime';
+import { humanizeSlug } from '../../../utils/serviceDefinitionCatalog';
+
+// Technician Completed Repairs + earnings (Phase 8.11). A canonical V2 repair is
+// completed when deliveryStatus === 'repair_completed' (set by the completion
+// endpoint) - NOT the legacy courier 'parcel_delivered'. The server scopes rows
+// to the caller's own technicianEmail and attaches a sanitized technicianEarning
+// (labor-only, no commission; paidBy withheld). Financial totals come from the
+// server-side earnings summary, never client aggregation. BDT throughout.
+const EARNING_STATUS_LABEL = { pending: 'Pending', paid: 'Paid' };
+
+function SummaryTile({ label, value }) {
+    return (
+        <div className="rounded-lg border border-base-300 p-4">
+            <p className="text-xs uppercase tracking-wide opacity-60">{label}</p>
+            <p className="mt-1 text-2xl font-bold">{value}</p>
+        </div>
+    );
+}
 
 const CompletedJobs = () => {
     const { user } = useAuth();
     const axiosSecure = useAxiosSecure();
 
     const { data: requests = [], isLoading } = useQuery({
-        queryKey: ['completedJobs', user?.email],
+        queryKey: ['completedRepairs', user?.email],
         queryFn: async () => {
-            const res = await axiosSecure.get(`/repair-requests/technician?technicianEmail=${user.email}&deliveryStatus=parcel_delivered`)
-
+            const res = await axiosSecure.get(`/repair-requests/technician?deliveryStatus=repair_completed`);
             return res.data;
-        }
-    })
+        },
+    });
+
+    // Server-authoritative earnings totals (never summed on the client).
+    const { data: summary } = useQuery({
+        queryKey: ['technicianEarningsSummary', user?.email],
+        queryFn: async () => (await axiosSecure.get('/repair-requests/technician/earnings-summary')).data,
+    });
 
     if (isLoading) {
-        return <Loading></Loading>
+        return <Loading></Loading>;
     }
 
-    const calculatePayout = request => {
-        if (request.senderDistrict === request.receiverDistrict) {
-            return request.cost * 0.8
-        }
-        else{
-            return request.cost * 0.6;
-        }
-    }
+    const currency = summary?.currency || 'bdt';
 
     return (
-        <div>
+        <div className="space-y-6">
             <h2 className='text-4xl font-bold'>Completed Repairs: {requests.length}</h2>
+
+            {summary && (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <SummaryTile label="Total earned" value={formatMoney(summary.totalEarned, currency) || '—'} />
+                    <SummaryTile label="Pending" value={formatMoney(summary.pendingAmount, currency) || '—'} />
+                    <SummaryTile label="Paid" value={formatMoney(summary.paidAmount, currency) || '—'} />
+                    <SummaryTile label="Completed repairs" value={summary.completedRepairCount ?? requests.length} />
+                </div>
+            )}
+
             <div className="overflow-x-auto">
                 <table className="table table-zebra">
                     {/* head */}
                     <thead>
                         <tr>
                             <th></th>
-                            <th>Name</th>
-                            <th>Created At</th>
-                            <th>Visit District</th>
-                            <th>Repair Cost</th>
-                            <th>Payout</th>
-                            <th>Action</th>
+                            <th>Device</th>
+                            <th>Service</th>
+                            <th>Completed</th>
+                            <th>Repair amount</th>
+                            <th>Your earning</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {requests.map((request, index) => <tr key={request._id}>
-                            <th>{index + 1}</th>
-                            <td>{request.deviceName}</td>
-                            <td>{request.createdAt}</td>
-                            <td>{request.senderDistrict}</td>
-                            <td>{formatCurrency(request.cost)}</td>
-                            <td>{formatCurrency(calculatePayout(request))}</td>
-                            <td>
-                                <div className="tooltip" data-tip="Payout processing is not available yet">
-                                    <button
-                                        type="button"
-                                        disabled
-                                        aria-disabled="true"
-                                        className='btn btn-primary btn-sm'>
-                                        <FaMoneyBillWave aria-hidden="true" /> Cash out
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>)}
-
+                        {requests.map((request, index) => {
+                            const earning = request.technicianEarning;
+                            return (
+                                <tr key={request._id}>
+                                    <th>{index + 1}</th>
+                                    <td>{request.deviceName || '—'}</td>
+                                    <td>{request.product?.categorySlug ? humanizeSlug(request.product.categorySlug) : '—'}</td>
+                                    <td>{request.updatedAt ? formatAbsoluteDateTime(request.updatedAt) : '—'}</td>
+                                    <td>{formatMoney(request.quote?.totalAmount, request.quote?.currency) || '—'}</td>
+                                    <td>{earning ? (formatMoney(earning.amount, earning.currency) || '—') : '—'}</td>
+                                    <td>
+                                        {earning
+                                            ? <span className={`badge ${earning.status === 'paid' ? 'badge-success' : 'badge-ghost'}`}>{EARNING_STATUS_LABEL[earning.status] || earning.status}</span>
+                                            : '—'}
+                                    </td>
+                                </tr>
+                            );
+                        })}
                     </tbody>
                 </table>
                 {
