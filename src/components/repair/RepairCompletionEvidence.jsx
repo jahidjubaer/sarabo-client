@@ -47,8 +47,8 @@ const RepairCompletionEvidence = ({ requestId, items, onChange, disabled }) => {
 
     return (
         <div className="space-y-2">
-            <Label>Completion photos ({items.length}/{MAX_EVIDENCE_IMAGES})</Label>
-            <p className="text-xs text-ds-muted-foreground">Add photos showing the completed repair (at least 1, up to {MAX_EVIDENCE_IMAGES}). JPG, PNG, or WebP.</p>
+            <Label>Completion photos (optional) · {items.length}/{MAX_EVIDENCE_IMAGES}</Label>
+            <p className="text-xs text-ds-muted-foreground">Add up to {MAX_EVIDENCE_IMAGES} photos showing the completed repair. JPG, PNG, or WebP.</p>
             <div className="flex flex-wrap gap-3">
                 {items.map((item) => (
                     <div key={item.imageId} className="relative">

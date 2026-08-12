@@ -22,10 +22,11 @@ function completeErrorMessage(error) {
 }
 
 // Technician-only completion form (Phase 6.4 Unit 7) redesigned in 7.6A.
-// Requires a summary + at least one completion photo. Sends only the summary
-// text and server-issued evidence image ids. Same validation +
-// buildCompletionPayload/useCompleteRepair wiring; confirm via design-system
-// dialog, feedback via Toastify.
+// Requires a summary; completion photos are OPTIONAL in the current local
+// release (cloud object storage not provisioned) - 0 photos is accepted. Sends
+// only the summary text and any server-issued evidence image ids. Same
+// validation + buildCompletionPayload/useCompleteRepair wiring; confirm via
+// design-system dialog, feedback via Toastify.
 const RepairCompletionForm = ({ requestId }) => {
     const [summary, setSummary] = useState('');
     const [evidence, setEvidence] = useState([]);

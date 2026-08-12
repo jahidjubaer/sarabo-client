@@ -35,9 +35,13 @@ export function validateCompletion(values) {
     if (summaryLen < COMPLETION_SUMMARY_MIN || summaryLen > COMPLETION_SUMMARY_MAX) {
         errors.summary = `Enter ${COMPLETION_SUMMARY_MIN}-${COMPLETION_SUMMARY_MAX} characters.`;
     }
+    // Completion photos are OPTIONAL in the current local release (cloud object
+    // storage is not provisioned): 0 photos is valid. Only the upper bound and
+    // uniqueness are still enforced here; the server (utils/repair.js) remains
+    // the authority. The uploader component itself is untouched.
     const ids = Array.isArray(values.evidenceImageIds) ? values.evidenceImageIds : [];
-    if (ids.length < MIN_EVIDENCE_IMAGES || ids.length > MAX_EVIDENCE_IMAGES) {
-        errors.evidenceImageIds = `Attach ${MIN_EVIDENCE_IMAGES}-${MAX_EVIDENCE_IMAGES} completion photo${MAX_EVIDENCE_IMAGES > 1 ? 's' : ''}.`;
+    if (ids.length > MAX_EVIDENCE_IMAGES) {
+        errors.evidenceImageIds = `Attach at most ${MAX_EVIDENCE_IMAGES} completion photo${MAX_EVIDENCE_IMAGES > 1 ? 's' : ''}.`;
     } else if (new Set(ids).size !== ids.length) {
         errors.evidenceImageIds = 'Each completion photo must be unique.';
     }
