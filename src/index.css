@@ -47,6 +47,63 @@
 }
 
 /* ==========================================================================
+ * Type scale (Phase 0b)
+ *
+ * Named ROLES, not sizes. Each one carries its size, line height, weight and
+ * tracking together, so a heading is styled with a single class and no screen
+ * hand-picks a weight or a tracking value of its own. This is the same
+ * argument as the radius scale: one central definition, no per-component
+ * overrides, no drift once thirteen phases have touched the app.
+ *
+ *   text-display   hero headline, one per page at most
+ *   text-title     section and page headings
+ *   text-heading   sub-sections, panel headings
+ *   text-subhead   card titles, list-row titles
+ *   text-body      default running text
+ *   text-body-sm   secondary/supporting text
+ *   text-micro     captions, hints, table meta
+ *
+ * Tailwind's own scale (text-sm, text-2xl, ...) is untouched and still works,
+ * so nothing already written breaks - these are additive.
+ *
+ * The two MONO roles are not here because a text-* token cannot carry a
+ * font-family or text-transform: they stay as the .ds-label and .ds-numeric
+ * classes below, which now read the single --font-mono definition.
+ * ========================================================================== */
+@theme {
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  --text-display: 3.25rem;
+  --text-display--line-height: 1.03;
+  --text-display--font-weight: 830;
+  --text-display--letter-spacing: -0.035em;
+
+  --text-title: 1.875rem;
+  --text-title--line-height: 1.12;
+  --text-title--font-weight: 790;
+  --text-title--letter-spacing: -0.028em;
+
+  --text-heading: 1.25rem;
+  --text-heading--line-height: 1.25;
+  --text-heading--font-weight: 780;
+  --text-heading--letter-spacing: -0.022em;
+
+  --text-subhead: 0.9688rem;
+  --text-subhead--line-height: 1.35;
+  --text-subhead--font-weight: 730;
+  --text-subhead--letter-spacing: -0.012em;
+
+  --text-body: 1rem;
+  --text-body--line-height: 1.6;
+
+  --text-body-sm: 0.8438rem;
+  --text-body-sm--line-height: 1.55;
+
+  --text-micro: 0.75rem;
+  --text-micro--line-height: 1.5;
+}
+
+/* ==========================================================================
  * Sarabo Design System foundation (Phase 7.1)
  *
  * Semantic, CSS-variable-driven tokens for the redesigned UI surfaces. They
@@ -233,6 +290,11 @@ body {
   font-family: "Urbanist", sans-serif;
   font-optical-sizing: auto;
   font-style: normal;
+  /* The approved body setting: 16px at 1.6. Phase 0b raises the inherited
+   * default from 1.5 so running text has the room the design calls for.
+   * Components that set their own size/leading are unaffected. */
+  font-size: var(--text-body);
+  line-height: 1.6;
 }
 
 /* ==========================================================================
@@ -275,7 +337,7 @@ body {
  * and only for machine-ish content - tracking codes, BDT amounts, stage
  * numbers, labels - so it reads as instrumentation rather than decoration. */
 .ds-label {
-  font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-family: var(--font-mono);
   font-size: 0.6875rem;
   font-weight: 700;
   letter-spacing: 0.16em;
@@ -285,7 +347,7 @@ body {
 
 /* Tracking codes, money and any column of digits. */
 .ds-numeric {
-  font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
