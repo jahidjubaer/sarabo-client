@@ -7,6 +7,7 @@
 // raw status string is ever surfaced.
 
 import { getRepairStatusLabel } from './repairStatus';
+import { getSpineModel, getFlowCaption, getSpineCounter } from './repairStage';
 
 // Matches the server's tracking-code format guard - used only for immediate
 // client-side feedback on an obviously invalid submission, never to decide
@@ -17,10 +18,57 @@ export function isValidTrackingCode(code) {
     return TRACKING_CODE_PATTERN.test((typeof code === 'string' ? code : '').trim());
 }
 
+// Derives the public service-spine presentation from the raw stored status.
+//
+// The raw status string is consumed HERE and never leaves this module. What
+// comes back is presentation only: stage names, stage states and a caption -
+// exactly the same information the page already showed through statusLabel,
+// expressed as a progression instead of a single word.
+//
+// getSpineModel() is the single source of truth for status -> stage (Phase 1),
+// so no mapping is duplicated and an unrecognised status keeps its existing
+// safe fallback: a complete model with nothing claimed, flagged `unknown`.
+//
+// A bare status string is passed rather than a request object on purpose. The
+// public tracking response is not a repair request, and this module must not
+// start reading further fields off it - schemaVersion included - just to
+// refine a presentation detail.
+//
+// The returned object is built field by field, never spread, so the raw status
+// cannot leak through here either.
+function buildPublicSpine(currentStatus) {
+    const model = getSpineModel(currentStatus);
+    const counter = getSpineCounter(model);
+
+    return {
+        stage: model.stage,
+        key: model.key,
+        label: model.label,
+        state: model.state,
+        currentLabel: model.currentLabel,
+        flow: model.flow,
+        caption: getFlowCaption(model),
+        terminal: model.terminal,
+        unknown: model.unknown,
+        counter: counter ? { current: counter.current, total: counter.total } : null,
+        stages: model.stages.map((stage) => ({
+            stage: stage.stage,
+            key: stage.key,
+            label: stage.label,
+            state: stage.state,
+        })),
+    };
+}
+
 // Explicit whitelist - NEVER spreads the raw response. Only trackingCode,
-// a status label, updatedAt, and a timeline of { timestamp, statusLabel } are
-// exposed. Any customer name/email/address/technician-id/quote/payment/notes
-// field the server might ever return is structurally dropped here.
+// a status label, updatedAt, a timeline of { timestamp, statusLabel } and the
+// DERIVED spine presentation are exposed. Any customer name/email/address/
+// technician-id/quote/payment/inspection-note field the server might ever
+// return is structurally dropped here.
+//
+// `currentStatus` is read to derive the label and the spine, and is
+// deliberately NOT part of the returned object - the page never sees a raw
+// persisted status string.
 export function buildPublicTrackingModel(raw) {
     if (!raw || typeof raw !== 'object') return null;
     const timelineSrc = Array.isArray(raw.timeline) ? raw.timeline : [];
@@ -28,6 +76,7 @@ export function buildPublicTrackingModel(raw) {
         trackingCode: typeof raw.trackingCode === 'string' ? raw.trackingCode : '',
         statusLabel: getRepairStatusLabel(raw.currentStatus),
         updatedAt: raw.updatedAt || null,
+        spine: buildPublicSpine(raw.currentStatus),
         timeline: timelineSrc.map((entry) => ({
             timestamp: entry?.timestamp || null,
             statusLabel: getRepairStatusLabel(entry?.status),
