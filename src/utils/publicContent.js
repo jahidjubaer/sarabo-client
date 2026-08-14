@@ -13,37 +13,42 @@ export const REQUEST_REPAIR_ROUTE = '/dashboard/create-request';
 // evaluation, not at call time.
 export const BECOME_TECHNICIAN_ROUTE = '/become-technician';
 
-// Hero copy - product-specific, not generic startup language. Actions point at
-// real routes; route guards remain the actual access boundary for the request
-// route (a logged-out visitor is sent through the existing auth flow).
+// Public, unauthenticated repair tracking. Named here so the homepage and the
+// nav reference one definition of the path rather than repeating the literal.
+export const TRACK_REPAIR_ROUTE = '/track-request';
+
+// Hero copy (Phase 3). Grounded, not promotional: every clause describes a
+// mechanism the platform actually implements. No counts, certifications,
+// turnaround promises, warranties, ratings or "genuine parts" claims.
 export const HERO = {
     eyebrow: 'Electronics & appliance repair',
-    headline: 'Trusted repairs, tracked from request to completion',
-    description: 'Submit a repair request, get matched with an approved technician, review a transparent quote, and follow every stage in one place.',
-    primaryAction: { label: 'Request a Repair', to: REQUEST_REPAIR_ROUTE },
-    secondaryAction: { label: 'How it works', to: '#how-it-works' },
+    // Split so the hero can highlight exactly one word. Rejoined they read as
+    // one sentence; nothing depends on the split but the underline.
+    headlineLead: 'Repair your electronics with a',
+    headlineAccent: 'clear process.',
+    description: 'Request a repair, have an approved technician inspect the device, review the quote before any work starts, and follow the repair through to completion.',
 };
 
-// Condensed four-beat lifecycle for the hero visual (a marketing
-// simplification). The status-accurate lifecycle lives in RepairLifecycle,
-// which maps real stored statuses through getRepairStatusLabel.
-export const HERO_LIFECYCLE = [
-    { key: 'request', label: 'Request' },
-    { key: 'inspect', label: 'Inspect' },
-    { key: 'quote', label: 'Quote' },
-    { key: 'repair', label: 'Repair' },
+// Three short statements for the hero. Each names a mechanism the platform
+// actually enforces - free submission, approval gating the work, and public
+// tracking by code. No counts, guarantees or turnaround claims.
+export const HERO_ASSURANCES = [
+    'Submitting a request is free',
+    'Nothing is repaired until you approve the quote',
+    'Track your repair by code, no login needed',
 ];
 
-// Public "How Sarabo works" steps - user-facing labels only, never internal
-// status strings (parcel_picked_up, inspection_completed, ...).
-export const HOW_IT_WORKS_STEPS = [
-    { key: 'submit', title: 'Submit a request', description: 'Tell us about your device and the problem through the request form.' },
-    { key: 'assign', title: 'Technician assigned', description: 'An approved technician is matched through the managed service workflow.' },
-    { key: 'inspect', title: 'Device inspection', description: 'The technician inspects the device and identifies what the repair needs.' },
-    { key: 'quote', title: 'Review the quote', description: 'You receive a transparent repair quote to review before any work begins.' },
-    { key: 'pay', title: 'Approve and pay', description: 'Repair starts only after you approve the quote and complete payment.' },
-    { key: 'complete', title: 'Repair completed', description: 'Track progress to completion, with photo evidence where provided.' },
-];
+// The four public stages, with one sentence each. The stage names themselves
+// come from SPINE_STAGES in utils/repairStage.js - the single source the whole
+// product uses - so this module only supplies the explanatory copy, keyed by
+// the canonical stage key. It can never drift into a fifth stage or a renamed
+// one.
+export const SPINE_STEP_COPY = {
+    request: 'Tell us what device needs repair and what is wrong with it.',
+    inspect: 'An approved technician collects the device and inspects the fault.',
+    approve: 'Review the itemised quote. Nothing is repaired until you approve it.',
+    repaired: 'Follow the repair through to completion, then confirm you have the device back.',
+};
 
 // Service categories shown on the homepage and Services page. Customer-facing
 // labels + blurbs only - no serviceDefinitionId, slug, pricingVersion, or raw
@@ -59,26 +64,35 @@ export const SERVICE_CATEGORIES = [
     { key: 'other', iconKey: 'other', label: 'Other Repairs', blurb: 'Another appliance or device? Choose “Other” and describe the issue.' },
 ];
 
-// Capability-based trust points - each one reflects a real product mechanism,
-// no numeric stats, badges, or certifications.
-export const TRUST_POINTS = [
-    { key: 'approved', iconKey: 'user-check', title: 'Approved technicians', description: 'Technicians join the workflow only after administrative approval.' },
-    { key: 'roles', iconKey: 'shield', title: 'Role-protected operations', description: 'Customer, technician, and admin actions are separated by role-based access.' },
-    { key: 'quote', iconKey: 'file-check', title: 'Transparent quotes', description: 'You review and approve the repair quote before any work begins.' },
-    { key: 'payment', iconKey: 'lock', title: 'Server-validated payments', description: 'Payment amounts and confirmation are validated on the server.' },
-    { key: 'progress', iconKey: 'activity', title: 'Repair progress tracking', description: 'Follow the repair through clear status updates from start to finish.' },
-    { key: 'evidence', iconKey: 'image', title: 'Completion evidence', description: 'Completed repairs can include photo evidence attached to the record.' },
-];
-
-// FAQ content - drawn from existing project copy / safe product facts. No
-// invented refund/warranty/turnaround promises.
+// FAQ (Phase 3). Every answer describes how the platform actually behaves -
+// assignment is administrative, the quote gates the repair, payment follows
+// approval, tracking is by code, and the customer confirms handover. No
+// refund, warranty or turnaround promises, because none exist.
 export const FAQS = [
-    { question: 'How do I submit a repair request?', answer: 'Create or sign in to your account, open the repair-request form, and provide the device and issue details the form asks for.' },
-    { question: 'Can I track a repair without opening the dashboard?', answer: 'Yes. Use the public tracking page and enter the repair tracking information provided for the request.' },
-    { question: 'How is a technician assigned?', answer: 'An approved technician is assigned through Sarabo’s managed service workflow, based on the available request and the administrative process.' },
-    { question: 'When is payment required?', answer: 'Payment depends on the applicable repair workflow. Where online payment is available, the platform validates the amount and confirmation before recording the result.' },
-    { question: 'Can I cancel a repair request?', answer: 'Eligible requests can be cancelled before the repair progresses beyond the allowed stage. The platform prevents cancellation once a request is too far along.' },
-    { question: 'How can I become a technician?', answer: 'Submit the technician application form. An administrator reviews the application before technician access is approved.' },
+    {
+        question: 'How does the repair process work?',
+        answer: 'You submit a repair request describing the device and the fault. An approved technician is assigned, collects the device and inspects it. You then receive an itemised quote to approve or decline, and the repair only begins once it is approved and paid.',
+    },
+    {
+        question: 'When do I find out the price?',
+        answer: 'After the inspection. Choosing a service shows an estimated range up front, but the real price is the quote the technician prepares once they have seen the device - and you see it before anything is repaired.',
+    },
+    {
+        question: 'Can I decline a quote?',
+        answer: 'Yes. Approving a quote is a decision, not a payment. If you decline, the repair does not go ahead.',
+    },
+    {
+        question: 'How do I track my repair?',
+        answer: 'Every request gets a tracking code you can enter on the public tracking page, without signing in. That view deliberately hides personal details. Signed in, you can see the full record of your own requests.',
+    },
+    {
+        question: 'How is a technician assigned?',
+        answer: 'An administrator assigns a technician whose approved expertise and service area match your request. Technicians can only take work after their application has been reviewed and approved.',
+    },
+    {
+        question: 'What happens once the repair is finished?',
+        answer: 'The technician marks the repair complete and you confirm that the device is back in your hands. That confirmation is recorded against the request.',
+    },
 ];
 
 // Footer navigation - only verified existing routes, no invented
@@ -115,7 +129,7 @@ export const FOOTER_GROUPS = [
 export const PUBLIC_NAV_LINKS = [
     { label: 'Home', to: '/', end: true },
     { label: 'Services', to: '/services' },
-    { label: 'Track Repair', to: '/track-request' },
+    { label: 'Track Repair', to: TRACK_REPAIR_ROUTE },
     { label: 'Service Areas', to: '/service-areas' },
     { label: 'About', to: '/about' },
     { label: 'Become a Technician', to: BECOME_TECHNICIAN_ROUTE, gate: 'technician' },
@@ -164,30 +178,3 @@ export function isPublicNavLinkActive(pathname, link) {
     if (link.end) return pathname === link.to;
     return pathname === link.to || pathname.startsWith(`${link.to}/`);
 }
-
-// Purpose-built hero carousel slides (Phase 7.10). Copy stays grounded in real
-// product capabilities - no stats, guarantees, or turnaround claims. `visual`
-// selects a designed CSS/Motion panel in the carousel (no imagery, no Swiper).
-export const HERO_SLIDES = [
-    {
-        key: 'journey',
-        eyebrow: 'Transparent repair journey',
-        headline: 'Trusted repairs, tracked from request to completion',
-        description: 'Submit a request, get matched with an approved technician, review a transparent quote, and follow every stage in one place.',
-        visual: 'lifecycle',
-    },
-    {
-        key: 'devices',
-        eyebrow: 'Many device categories',
-        headline: 'From smartphones to home appliances',
-        description: 'Phones, laptops, TVs, and major appliances - describe the problem and we route it to a technician who can help.',
-        visual: 'devices',
-    },
-    {
-        key: 'tracking',
-        eyebrow: 'End-to-end tracking',
-        headline: 'Follow the whole process, step by step',
-        description: 'Assignment, quote, payment, repair progress, and completion - each stage is visible and accountable.',
-        visual: 'process',
-    },
-];

@@ -1,62 +1,69 @@
-import { motion as Motion, MotionConfig } from 'motion/react';
-import { ClipboardList, UserCheck, Search, FileCheck, CreditCard, CheckCircle2 } from 'lucide-react';
-import SectionHeader from '../../../components/public/SectionHeader';
-import { HOW_IT_WORKS_STEPS } from '../../../utils/publicContent';
-import { staggerContainer, staggerItem } from '../../../theme/motion';
+import { SPINE_STAGES } from '../../../utils/repairStage';
+import { SPINE_STEP_COPY } from '../../../utils/publicContent';
 
-const ICONS = {
-    submit: ClipboardList,
-    assign: UserCheck,
-    inspect: Search,
-    quote: FileCheck,
-    pay: CreditCard,
-    complete: CheckCircle2,
-};
-
-// Public "How Sarabo works" (Phase 7.8), redesigned to ds-*. Steps are
-// user-facing labels from the content module - never internal status strings.
-// `scroll-mt-24` accounts for the sticky navbar so the Hero's "How it works"
-// anchor doesn't land underneath it. The numbered sequence is fully legible
-// without motion (reduced-motion just skips the entrance).
+// "How it works" (Phase 3) - the ink band, and the section that carries the
+// whole idea: the same four stages the product uses everywhere else.
+//
+// The stage names come from SPINE_STAGES, the single canonical source, so this
+// explainer can never drift into a fifth stage or a renamed one. Only the
+// explanatory sentences live in the content module.
+//
+// It does NOT render the ServiceSpine primitive. That component is
+// status-driven: every stage it draws is done, current, upcoming, blocked or
+// cancelled. This section describes the journey generically - there is no
+// repair and therefore no current stage - so it uses its own ink-surface rail
+// rather than claiming a state that does not exist, or forcing a variant onto
+// the Phase 1 primitive.
+//
+// The band is always dark in both themes, like the footer, so it is styled
+// from the ink token pair rather than the page surface tokens.
+//
+// `id` and `scroll-mt-24` are preserved: `#how-it-works` is the hero's
+// secondary action and a public anchor, and the sticky header would otherwise
+// cover the heading.
 const HowItWorks = () => (
-    <MotionConfig reducedMotion="user">
-        <section id="how-it-works" className="scroll-mt-24 bg-ds-muted/40 px-4 py-16 sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-6xl">
-                <SectionHeader
-                    eyebrow="Simple process"
-                    title="How Sarabo works"
-                    description="A clear, managed workflow from request to completed repair."
-                />
-                <Motion.ol
-                    variants={staggerContainer}
-                    initial="hidden"
-                    whileInView="show"
-                    viewport={{ once: true, amount: 0.15 }}
-                    className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
-                >
-                    {HOW_IT_WORKS_STEPS.map((step, index) => {
-                        const Icon = ICONS[step.key];
-                        return (
-                            <Motion.li
-                                key={step.key}
-                                variants={staggerItem}
-                                className="rounded-ds-lg border border-ds-border bg-ds-card p-5"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-ds-primary text-sm font-bold text-ds-primary-foreground">
-                                        {index + 1}
-                                    </span>
-                                    <Icon aria-hidden="true" className="size-5 text-ds-primary" />
-                                </div>
-                                <h3 className="mt-3 text-base font-semibold text-ds-foreground">{step.title}</h3>
-                                <p className="mt-1 text-sm text-ds-muted-foreground">{step.description}</p>
-                            </Motion.li>
-                        );
-                    })}
-                </Motion.ol>
+    <section id="how-it-works" className="scroll-mt-24 px-4 py-4 sm:px-6 lg:px-8">
+        <div className="tech-grid-pattern mx-auto max-w-6xl rounded-ds-xl border border-ds-ink-foreground/15 bg-ds-ink px-6 py-14 text-ds-ink-foreground sm:px-10 lg:px-14 lg:py-16">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                    <p className="ds-label text-ds-action">How a Sarabo repair runs</p>
+                    <h2 className="mt-4 max-w-[18ch] text-title text-ds-ink-foreground">
+                        Four stages. You control the one that matters.
+                    </h2>
+                </div>
+                <p className="max-w-md text-body-sm text-ds-ink-foreground/70">
+                    Most repair shops go quiet the moment you hand the device over. These four stages follow
+                    your repair through every screen in Sarabo.
+                </p>
             </div>
-        </section>
-    </MotionConfig>
+
+            {/* The rail. Markers and connectors are decorative - the ordered
+                list and its text carry the meaning, so nothing here depends on
+                colour or on the shapes being seen. */}
+            <ol className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
+                {SPINE_STAGES.map((stage, index) => {
+                    const isLast = index === SPINE_STAGES.length - 1;
+                    return (
+                        <li key={stage.key} className="relative">
+                            <div className="flex items-center gap-3">
+                                <span
+                                    aria-hidden="true"
+                                    className="ds-numeric flex size-9 shrink-0 items-center justify-center rounded-full border-2 border-ds-ink-foreground/25 bg-ds-ink text-body-sm font-bold text-ds-ink-foreground"
+                                >
+                                    {stage.stage}
+                                </span>
+                                {!isLast && (
+                                    <span aria-hidden="true" className="hidden h-0.5 flex-1 rounded-full bg-ds-ink-foreground/20 lg:block" />
+                                )}
+                            </div>
+                            <h3 className="mt-5 text-subhead text-ds-ink-foreground">{stage.label}</h3>
+                            <p className="mt-2 text-body-sm text-ds-ink-foreground/70">{SPINE_STEP_COPY[stage.key]}</p>
+                        </li>
+                    );
+                })}
+            </ol>
+        </div>
+    </section>
 );
 
 export default HowItWorks;
