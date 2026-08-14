@@ -3,8 +3,10 @@ import { cva } from 'class-variance-authority';
 // In its own module so badge.jsx only exports a component (fast-refresh rule).
 // Tones map to the `ds-` semantic scale; meaning is always paired with label
 // text (never colour alone) by the consumers.
+// Phase 0: status badges became full-round pills with slightly more weight.
+// Meaning is still carried by label + icon, never colour alone.
 export const badgeVariants = cva(
-    "inline-flex items-center gap-1.5 rounded-ds-sm border px-2 py-0.5 text-xs font-medium whitespace-nowrap [&_svg]:size-3.5 [&_svg]:shrink-0",
+    "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap [&_svg]:size-3.5 [&_svg]:shrink-0",
     {
         variants: {
             tone: {

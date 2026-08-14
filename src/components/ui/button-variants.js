@@ -9,17 +9,29 @@ export const buttonVariants = cva(
     {
         variants: {
             variant: {
+                // THE action. Marigold fill, ink text (8.47:1). Use it for the
+                // single highest-priority control on a screen - start a repair
+                // request, approve the quote, assign a technician - and never
+                // for two controls at once. Everything else is `default` or
+                // quieter, which is what makes it read as the way forward.
+                action: "bg-ds-action text-ds-action-foreground shadow-sm hover:brightness-95 active:translate-y-px",
                 default: "bg-ds-primary text-ds-primary-foreground hover:bg-ds-primary/90",
+                // Petrol fill for a strong-but-not-action control, and for
+                // buttons that sit on a light surface next to an action.
+                ink: "bg-ds-ink text-ds-ink-foreground hover:brightness-110",
                 secondary: "bg-ds-secondary text-ds-secondary-foreground hover:bg-ds-secondary/80",
                 outline: "border border-ds-input bg-ds-background text-ds-foreground hover:bg-ds-accent hover:text-ds-accent-foreground",
+                // For controls placed ON an ink band, where the page palette
+                // would otherwise disappear into the surface.
+                onInk: "border border-ds-ink-foreground/30 text-ds-ink-foreground hover:bg-ds-ink-foreground/10",
                 ghost: "text-ds-foreground hover:bg-ds-accent hover:text-ds-accent-foreground",
                 destructive: "bg-ds-destructive text-ds-destructive-foreground hover:bg-ds-destructive/90",
                 link: "text-ds-primary underline-offset-4 hover:underline",
             },
             size: {
-                sm: "h-8 rounded-ds-sm px-3 text-xs",
+                sm: "h-9 rounded-ds px-3.5 text-[13px]",
                 default: "h-10 px-4 py-2",
-                lg: "h-11 rounded-ds-lg px-6 text-base",
+                lg: "h-12 rounded-ds px-6 text-base",
                 icon: "h-10 w-10",
             },
         },

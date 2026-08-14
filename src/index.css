@@ -18,9 +18,13 @@
 @plugin "daisyui/theme" {
   name: "light";
   default: true;
-  --color-primary: #2478A6;
+  /* Retuned to the service-spine palette (Phase 0) so the handful of pages
+   * still on DaisyUI - auth, payment, notifications - do not clash with the
+   * redesigned surfaces while they wait their turn. They are migrated in
+   * phases 6 and 12, after which this plugin can be dropped entirely. */
+  --color-primary: #1E6F63;
   --color-primary-content: #FFFFFF;
-  --color-secondary: #03373D;
+  --color-secondary: #0F2430;
 }
 
 /*
@@ -32,11 +36,14 @@
  * utilities and are reused as-is rather than duplicated here.
  */
 @theme {
-  --color-brand-accent: #38BDF8;
-  --color-brand-priority: #C2703D;
-  --color-surface-dark: #0B1A24;
-  --color-surface-dark-alt: #111827;
-  --color-on-dark: #E5EDF2;
+  /* Phase 0 retune. Same token names, new values, so every existing dark
+   * section (footer, DarkTechSection, hero panels) moves onto the
+   * service-spine palette without touching a single component. */
+  --color-brand-accent: #5FBFAE;   /* verdigris, legible on ink */
+  --color-brand-priority: #F2B138; /* marigold */
+  --color-surface-dark: #0F2430;   /* petrol ink */
+  --color-surface-dark-alt: #13212A;
+  --color-on-dark: #E8EDE9;
 }
 
 /* ==========================================================================
@@ -57,43 +64,60 @@
  * React components reference the semantic token, never a literal colour.
  * ========================================================================== */
 :root {
-  --radius: 0.625rem;
+  /* The control radius, and the seed for --radius-ds. Controls 6px, cards
+   * 12px, pills full - a fixed, deliberate set rather than a radius on
+   * everything. The full scale is declared in the @theme inline block below. */
+  --radius: 0.375rem;
 
   --ds-background: #ffffff;
-  --ds-foreground: #0f172a;
+  --ds-foreground: #0f2430;
 
   --ds-card: #ffffff;
-  --ds-card-foreground: #0f172a;
+  --ds-card-foreground: #0f2430;
 
   --ds-popover: #ffffff;
-  --ds-popover-foreground: #0f172a;
+  --ds-popover-foreground: #0f2430;
 
-  --ds-primary: #2478a6;
+  /* Verdigris. Links, icon tints, completed states, and ordinary buttons.
+   * 5.99:1 on white, so it is safe for small text as well as surfaces. */
+  --ds-primary: #1e6f63;
   --ds-primary-foreground: #ffffff;
 
-  --ds-secondary: #f1f5f9;
-  --ds-secondary-foreground: #0f172a;
+  /* Marigold - THE action colour, one control per screen. It carries INK
+   * text, never white: #0F2430 on #F2B138 measures 8.47:1, where white on
+   * the same fill would be a failing 2.1:1. */
+  --ds-action: #f2b138;
+  --ds-action-foreground: #0f2430;
 
-  --ds-muted: #f1f5f9;
-  --ds-muted-foreground: #5b6b7a;
+  /* Petrol ink as a surface: full-bleed bands, the dashboard sidebar, the
+   * footer. Paired with --ds-ink-foreground for text sitting on it. */
+  --ds-ink: #0f2430;
+  --ds-ink-foreground: #e8ede9;
+  --ds-ink-muted: #93a5ad;
 
-  --ds-accent: #e7f1f6;
-  --ds-accent-foreground: #0f2a38;
+  --ds-secondary: #eef1ee;
+  --ds-secondary-foreground: #0f2430;
 
-  --ds-border: #e2e8f0;
-  --ds-input: #cbd5e1;
-  --ds-ring: #2478a6;
+  --ds-muted: #f6f7f5;
+  --ds-muted-foreground: #5c6b73;
 
-  --ds-destructive: #dc2626;
+  --ds-accent: #e6f2ef;
+  --ds-accent-foreground: #14544b;
+
+  --ds-border: #e2e5e1;
+  --ds-input: #ccd2cc;
+  --ds-ring: #1e6f63;
+
+  --ds-destructive: #b3261e;
   --ds-destructive-foreground: #ffffff;
 
-  --ds-success: #15803d;
+  --ds-success: #1e6f63;
   --ds-success-foreground: #ffffff;
 
-  --ds-warning: #b45309;
+  --ds-warning: #9a6a10;
   --ds-warning-foreground: #ffffff;
 
-  --ds-info: #0369a1;
+  --ds-info: #1d5b8f;
   --ds-info-foreground: #ffffff;
 }
 
@@ -101,42 +125,56 @@
  * user-facing theme toggle ships with the App Shell in Phase 7.2); existing
  * DaisyUI pages never carry the class, so they are unaffected. */
 .dark {
-  --ds-background: #0b1a24;
-  --ds-foreground: #e5edf2;
+  --ds-background: #0b1519;
+  --ds-foreground: #e8ede9;
 
-  --ds-card: #111827;
-  --ds-card-foreground: #e5edf2;
+  --ds-card: #13212a;
+  --ds-card-foreground: #e8ede9;
 
-  --ds-popover: #111827;
-  --ds-popover-foreground: #e5edf2;
+  --ds-popover: #13212a;
+  --ds-popover-foreground: #e8ede9;
 
-  --ds-primary: #38bdf8;
-  --ds-primary-foreground: #052a38;
+  --ds-primary: #5fbfae;
+  --ds-primary-foreground: #06231f;
 
-  --ds-secondary: #1e293b;
-  --ds-secondary-foreground: #e5edf2;
+  /* Marigold is deliberately unchanged across themes - it is the one fixed
+   * point of the identity, and ink text stays legible on it either way. */
+  --ds-action: #f2b138;
+  --ds-action-foreground: #0f2430;
 
-  --ds-muted: #172231;
-  --ds-muted-foreground: #94a3b8;
+  /* Ink is the darkest surface in the stack, in BOTH themes. In dark it is
+   * the page ground itself (#0B1519) - so an ink band, the sidebar and the
+   * footer read as the floor, and every card (#13212A) sits visibly above
+   * them. Setting this to the card colour would have collapsed the two
+   * surfaces into one and made cards-on-ink invisible. */
+  --ds-ink: #0b1519;
+  --ds-ink-foreground: #e8ede9;
+  --ds-ink-muted: #93a5ad;
 
-  --ds-accent: #17303d;
-  --ds-accent-foreground: #e5edf2;
+  --ds-secondary: #1b2b34;
+  --ds-secondary-foreground: #e8ede9;
 
-  --ds-border: #22303c;
-  --ds-input: #2a3a47;
-  --ds-ring: #38bdf8;
+  --ds-muted: #16242c;
+  --ds-muted-foreground: #93a5ad;
 
-  --ds-destructive: #f87171;
-  --ds-destructive-foreground: #240b0b;
+  --ds-accent: #17332f;
+  --ds-accent-foreground: #cfe9e3;
 
-  --ds-success: #4ade80;
-  --ds-success-foreground: #05210f;
+  --ds-border: #22343d;
+  --ds-input: #2c414b;
+  --ds-ring: #5fbfae;
 
-  --ds-warning: #fbbf24;
+  --ds-destructive: #f27a72;
+  --ds-destructive-foreground: #2a0a08;
+
+  --ds-success: #5fbfae;
+  --ds-success-foreground: #06231f;
+
+  --ds-warning: #e8b559;
   --ds-warning-foreground: #241a00;
 
-  --ds-info: #38bdf8;
-  --ds-info-foreground: #04222e;
+  --ds-info: #7bb6e8;
+  --ds-info-foreground: #06202e;
 }
 
 /* Expose the tokens to Tailwind v4 as a `ds-`-namespaced colour + radius
@@ -152,6 +190,11 @@
   --color-ds-popover-foreground: var(--ds-popover-foreground);
   --color-ds-primary: var(--ds-primary);
   --color-ds-primary-foreground: var(--ds-primary-foreground);
+  --color-ds-action: var(--ds-action);
+  --color-ds-action-foreground: var(--ds-action-foreground);
+  --color-ds-ink: var(--ds-ink);
+  --color-ds-ink-foreground: var(--ds-ink-foreground);
+  --color-ds-ink-muted: var(--ds-ink-muted);
   --color-ds-secondary: var(--ds-secondary);
   --color-ds-secondary-foreground: var(--ds-secondary-foreground);
   --color-ds-muted: var(--ds-muted);
@@ -170,10 +213,20 @@
   --color-ds-info: var(--ds-info);
   --color-ds-info-foreground: var(--ds-info-foreground);
 
-  --radius-ds-sm: calc(var(--radius) - 4px);
+  /* Four explicit steps rather than a +/-4px chain off one seed. The old
+   * derivation forced every step to move together, so no seed could give
+   * 6px controls AND 12px cards at the same time. Each step is now stated,
+   * and the scale stays centralized here - no component overrides a radius
+   * locally.
+   *   sm  chips, skeletons, tight inline blocks
+   *   ds  CONTROLS - buttons, inputs, textareas, selects
+   *   lg  cards, alerts, panels
+   *   xl  large surfaces - sheets, dialogs, hero panels
+   * Pills are not on this scale; they use rounded-full by definition. */
+  --radius-ds-sm: 4px;
   --radius-ds: var(--radius);
-  --radius-ds-lg: calc(var(--radius) + 4px);
-  --radius-ds-xl: calc(var(--radius) + 8px);
+  --radius-ds-lg: 12px;
+  --radius-ds-xl: 16px;
 }
 
 body {
@@ -200,12 +253,40 @@ body {
 @keyframes ds-slide-in-right { from { transform: translateX(100%); } to { transform: translateX(0); } }
 @keyframes ds-slide-out-right { from { transform: translateX(0); } to { transform: translateX(100%); } }
 
-/* Shared keyboard-focus ring for public/shared components - reuses
-   brand-accent so it stays visible on both light and dark surfaces instead
-   of needing two separate focus colours. */
+/* Shared keyboard-focus ring.
+ *
+ * Phase 0: driven by the theme-reactive --ds-ring rather than a fixed accent.
+ * The previous fixed sky-blue measured 2.16:1 against a white surface, which
+ * fails WCAG 2.2 SC 1.4.11 (non-text contrast, >=3:1) on every light page.
+ * The current value clears the bar on all four surface/theme combinations:
+ *   light theme, white surface   #1E6F63 on #FFFFFF -> 5.99:1
+ *   light theme, paper surface   #1E6F63 on #F6F7F5 -> 5.68:1
+ *   dark theme,  page ground     #5FBFAE on #0B1519 -> 8.51:1
+ *   dark theme,  card surface    #5FBFAE on #13212A -> 7.48:1
+ * ds-* inputs and buttons already focus with ring-ds-ring, so the whole app
+ * now shares one focus colour. */
 .focus-ring:focus-visible {
-  outline: 2px solid var(--color-brand-accent);
+  outline: 2px solid var(--ds-ring);
   outline-offset: 2px;
+}
+
+/* Micro-label: the small uppercase monospace tag used for eyebrows, section
+ * kickers, stage counters and table headings. Monospace is used deliberately
+ * and only for machine-ish content - tracking codes, BDT amounts, stage
+ * numbers, labels - so it reads as instrumentation rather than decoration. */
+.ds-label {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+/* Tracking codes, money and any column of digits. */
+.ds-numeric {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-variant-numeric: tabular-nums;
 }
 
 /* CSS-only technical grid for dark sections - no image asset required. */
