@@ -6,6 +6,13 @@
 
 export const REQUEST_REPAIR_ROUTE = '/dashboard/create-request';
 
+// Existing technician-application route (PrivateRoute-guarded; a logged-out
+// visitor is sent through the existing auth flow). No new route is created.
+// Declared here, beside the other route constant, because PUBLIC_NAV_LINKS now
+// references it - a `const` used before its declaration would throw at module
+// evaluation, not at call time.
+export const BECOME_TECHNICIAN_ROUTE = '/become-technician';
+
 // Hero copy - product-specific, not generic startup language. Actions point at
 // real routes; route guards remain the actual access boundary for the request
 // route (a logged-out visitor is sent through the existing auth flow).
@@ -99,13 +106,31 @@ export const FOOTER_GROUPS = [
 
 // Primary public navigation destinations (both desktop bar and mobile sheet
 // use this single source, so the two never drift).
+//
+// Phase 2 folds the technician application into the primary nav rather than
+// leaving it as a separate right-hand CTA. It carries `gate: 'technician'`
+// because the existing rule hides it from accounts that are already a
+// technician or an admin - see getPublicNavLinks below. Labels are unchanged:
+// renaming user-facing copy is not part of this phase.
 export const PUBLIC_NAV_LINKS = [
     { label: 'Home', to: '/', end: true },
     { label: 'Services', to: '/services' },
-    { label: 'Service Areas', to: '/service-areas' },
     { label: 'Track Repair', to: '/track-request' },
+    { label: 'Service Areas', to: '/service-areas' },
     { label: 'About', to: '/about' },
+    { label: 'Become a Technician', to: BECOME_TECHNICIAN_ROUTE, gate: 'technician' },
 ];
+
+// The nav for a given auth state. VISIBILITY ONLY - route guards remain the
+// access boundary, and a gated link is simply not offered to an account for
+// whom it is redundant. Role is never guessed: while it is still resolving,
+// shouldShowBecomeTechnicianLink returns false for a signed-in user, so the
+// link appears once the role is actually known.
+export function getPublicNavLinks({ user, role } = {}) {
+    return PUBLIC_NAV_LINKS.filter((link) => (
+        link.gate !== 'technician' || shouldShowBecomeTechnicianLink({ user, role })
+    ));
+}
 
 // Mirrors the existing navbar rule exactly: the "Create Repair Request" link
 // shows for anonymous visitors (preserving prior behavior) and for signed-in
@@ -120,10 +145,6 @@ export function shouldShowCreateRequestLink({ user, role } = {}) {
 export function getRequestRepairAction() {
     return { label: 'Request a Repair', to: REQUEST_REPAIR_ROUTE };
 }
-
-// Existing technician-application route (PrivateRoute-guarded; a logged-out
-// visitor is sent through the existing auth flow). No new route is created.
-export const BECOME_TECHNICIAN_ROUTE = '/become-technician';
 
 // Show "Become a Technician" to anyone who is not already a technician or an
 // admin - i.e. anonymous visitors and customers. Hidden for rider/admin (for

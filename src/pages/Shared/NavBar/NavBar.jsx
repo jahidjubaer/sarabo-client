@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router';
-import { Menu, LayoutDashboard, LogOut, Wrench } from 'lucide-react';
+import { Menu, LayoutDashboard, LogOut, UserRound } from 'lucide-react';
 import Logo from '../../../components/Logo/Logo';
 import useAuth from '../../../hooks/useAuth';
 import useRole from '../../../hooks/useRole';
@@ -9,32 +9,45 @@ import { ThemeToggle } from '../../../components/layout/ThemeToggle';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../../../components/ui/sheet';
 import { buttonVariants } from '../../../components/ui/button-variants';
 import {
-    PUBLIC_NAV_LINKS, shouldShowCreateRequestLink, shouldShowBecomeTechnicianLink,
-    getRequestRepairAction, isPublicNavLinkActive, BECOME_TECHNICIAN_ROUTE,
+    getPublicNavLinks, shouldShowCreateRequestLink,
+    getRequestRepairAction, isPublicNavLinkActive,
 } from '../../../utils/publicContent';
 import { ROLE_SHORTCUTS } from './roleShortcuts';
 import { cn } from '../../../lib/utils';
 
-// Public site header (Phase 7.10). ds-* only (no DaisyUI): a pill nav group
-// with an active "aura" (shape + weight + tint + ring, never colour alone),
-// a Radix Sheet mobile menu, the shared ThemeToggle (single ThemeProvider -
-// no second store), and a role-safe Become-a-Technician CTA. Auth behavior is
-// unchanged - it reads useAuth/useRole exactly as before; route guards remain
-// the access boundary. Active matching uses the exact/path-aware helper so
-// "Home" (/) never lights up on every route.
-function desktopPill(active) {
+// Public site header (Phase 2, service-spine shell).
+//
+// AUTH BEHAVIOUR IS UNCHANGED. It reads useAuth/useRole exactly as before, the
+// same links appear for the same auth states, logout calls the same function,
+// and the route guards remain the only access boundary - nothing here grants
+// or restricts anything. What changed is the frame: a calmer bar, one primary
+// action, and an active state you can read at a glance.
+//
+// Marigold scarcity: the action colour appears exactly twice - the "Request a
+// Repair" button, and the 2px rail under the current page. Everything else is
+// ink, muted, or verdigris on hover. Register is an outline, Log in a ghost, so
+// the three auth controls rank themselves without shouting.
+
+// Desktop nav item. Active state is carried by THREE signals, never colour
+// alone: heavier weight, the marigold rail, and aria-current="page".
+function desktopLink(active) {
     return cn(
-        'focus-ring rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
+        'focus-ring relative inline-flex h-16 items-center px-3 text-body-sm transition-colors',
+        'after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:content-[""]',
         active
-            ? 'bg-ds-primary/10 text-ds-primary font-semibold ring-1 ring-ds-primary/30'
-            : 'text-ds-muted-foreground hover:bg-ds-muted hover:text-ds-foreground'
+            ? 'font-semibold text-ds-foreground after:bg-ds-action'
+            : 'font-medium text-ds-muted-foreground after:bg-transparent hover:text-ds-foreground hover:after:bg-ds-border'
     );
 }
 
-function mobilePill(active) {
+// Mobile item. Same three signals, expressed for a stacked list: weight, a
+// left rail, and aria-current.
+function mobileLink(active) {
     return cn(
-        'focus-ring flex min-h-11 items-center rounded-ds px-3 text-sm font-medium',
-        active ? 'bg-ds-primary/10 text-ds-primary font-semibold' : 'text-ds-foreground hover:bg-ds-muted'
+        'focus-ring flex min-h-11 items-center rounded-ds border-l-2 px-3 text-body-sm transition-colors',
+        active
+            ? 'border-l-ds-action bg-ds-muted font-semibold text-ds-foreground'
+            : 'border-l-transparent font-medium text-ds-muted-foreground hover:bg-ds-muted hover:text-ds-foreground'
     );
 }
 
@@ -62,58 +75,71 @@ const NavBar = () => {
 
     const roleKnown = !roleLoading && !isError;
     const roleShortcut = roleKnown ? ROLE_SHORTCUTS[role] : null;
+    const navLinks = getPublicNavLinks({ user, role });
     const showRequestCta = shouldShowCreateRequestLink({ user, role });
-    const showTechnicianCta = shouldShowBecomeTechnicianLink({ user, role });
     const requestAction = getRequestRepairAction();
 
     return (
         <header className="sticky top-0 z-50 border-b border-ds-border bg-ds-background/95 backdrop-blur supports-[backdrop-filter]:bg-ds-background/80">
-            <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
-                {/* Brand + mobile trigger */}
+            <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-4 sm:px-6 lg:px-8">
+                {/* Mobile trigger + brand */}
                 <div className="flex items-center gap-1">
                     <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
                         <SheetTrigger
-                            aria-label="Open menu"
+                            aria-label="Open main menu"
                             className="focus-ring inline-flex size-10 items-center justify-center rounded-ds text-ds-foreground hover:bg-ds-muted lg:hidden"
                         >
                             <Menu aria-hidden="true" className="size-5" />
                         </SheetTrigger>
-                        <SheetContent side="left" className="w-4/5 max-w-sm">
+
+                        {/* Radix Dialog under the hood: focus trap, Escape to
+                            close, scroll lock, focus returned to the trigger,
+                            and aria-expanded / aria-controls wired on the
+                            trigger automatically. No new dependency. */}
+                        <SheetContent side="left" className="w-[86%] max-w-xs">
                             <SheetHeader className="border-b border-ds-border">
                                 <SheetTitle>Menu</SheetTitle>
                             </SheetHeader>
-                            <nav className="flex flex-col gap-1 p-4">
-                                {PUBLIC_NAV_LINKS.map((link) => {
+
+                            <nav aria-label="Primary" className="flex flex-col gap-1 overflow-y-auto p-4">
+                                {navLinks.map((link) => {
                                     const active = isPublicNavLinkActive(location.pathname, link);
                                     return (
-                                        <Link key={link.to} to={link.to} aria-current={active ? 'page' : undefined} className={mobilePill(active)} onClick={closeMobile}>
+                                        <Link
+                                            key={link.to}
+                                            to={link.to}
+                                            aria-current={active ? 'page' : undefined}
+                                            className={mobileLink(active)}
+                                            onClick={closeMobile}
+                                        >
                                             {link.label}
                                         </Link>
                                     );
                                 })}
-                                {showRequestCta && (
-                                    <Link to={requestAction.to} className={mobilePill(false)} onClick={closeMobile}>{requestAction.label}</Link>
-                                )}
-                                {showTechnicianCta && (
-                                    <Link to={BECOME_TECHNICIAN_ROUTE} className={mobilePill(false)} onClick={closeMobile}>Become a Technician</Link>
-                                )}
                             </nav>
-                            <div className="mt-auto border-t border-ds-border p-4">
-                                <div className="mb-3 flex items-center justify-between">
-                                    <span className="text-sm text-ds-muted-foreground">Theme</span>
-                                    <ThemeToggle />
-                                </div>
+
+                            <div className="mt-auto flex flex-col gap-2 border-t border-ds-border p-4">
+                                {/* Action first: the primary action leads the
+                                    block, before account controls and theme. */}
+                                {showRequestCta && (
+                                    <Link to={requestAction.to} className={buttonVariants({ variant: 'action' })} onClick={closeMobile}>
+                                        {requestAction.label}
+                                    </Link>
+                                )}
+
                                 {user ? (
-                                    <div className="flex flex-col gap-2">
-                                        <Link to="/dashboard" className={buttonVariants({ variant: 'default' })} onClick={closeMobile}>
-                                            <LayoutDashboard aria-hidden="true" /> Dashboard
-                                        </Link>
+                                    <>
                                         {roleShortcut && (
                                             <Link to={roleShortcut.to} className={buttonVariants({ variant: 'outline' })} onClick={closeMobile}>
                                                 {roleShortcut.label}
                                             </Link>
                                         )}
-                                        <Link to="/dashboard/profile" className={buttonVariants({ variant: 'ghost' })} onClick={closeMobile}>My Profile</Link>
+                                        <Link to="/dashboard" className={buttonVariants({ variant: 'outline' })} onClick={closeMobile}>
+                                            <LayoutDashboard aria-hidden="true" /> Dashboard
+                                        </Link>
+                                        <Link to="/dashboard/profile" className={buttonVariants({ variant: 'ghost' })} onClick={closeMobile}>
+                                            <UserRound aria-hidden="true" /> My Profile
+                                        </Link>
                                         <button
                                             type="button"
                                             onClick={() => { closeMobile(); handleLogOut(); }}
@@ -121,64 +147,89 @@ const NavBar = () => {
                                         >
                                             <LogOut aria-hidden="true" /> Log out
                                         </button>
-                                    </div>
+                                    </>
                                 ) : (
-                                    <div className="flex flex-col gap-2">
-                                        <Link to="/login" className={buttonVariants({ variant: 'outline' })} onClick={closeMobile}>Log in</Link>
-                                        <Link to="/register" className={buttonVariants({ variant: 'default' })} onClick={closeMobile}>Register</Link>
-                                    </div>
+                                    <>
+                                        <Link to="/register" className={buttonVariants({ variant: 'outline' })} onClick={closeMobile}>Register</Link>
+                                        <Link to="/login" className={buttonVariants({ variant: 'ghost' })} onClick={closeMobile}>Log in</Link>
+                                    </>
                                 )}
+
+                                <div className="mt-2 flex items-center justify-between border-t border-ds-border pt-3">
+                                    <span className="ds-label text-ds-muted-foreground">Theme</span>
+                                    <ThemeToggle />
+                                </div>
                             </div>
                         </SheetContent>
                     </Sheet>
-                    <Logo />
+
+                    {/* Below `sm` the wordmark folds away so the primary action
+                        still fits in the bar at 320px - the mark alone is
+                        enough brand, and losing the CTA would cost more. Scoped
+                        to this instance; the footer, auth and dashboard logos
+                        are untouched. */}
+                    <Logo className="[&>span]:hidden sm:[&>span]:inline" />
                 </div>
 
-                {/* Desktop nav pill group */}
-                <nav aria-label="Primary" className="hidden lg:block">
-                    <ul className="flex items-center gap-1 rounded-full border border-ds-border bg-ds-card/60 p-1">
-                        {PUBLIC_NAV_LINKS.map((link) => {
+                {/* Desktop primary navigation */}
+                <nav aria-label="Primary" className="ml-4 hidden lg:block">
+                    <ul className="flex items-center">
+                        {navLinks.map((link) => {
                             const active = isPublicNavLinkActive(location.pathname, link);
                             return (
                                 <li key={link.to}>
-                                    <Link to={link.to} aria-current={active ? 'page' : undefined} className={desktopPill(active)}>{link.label}</Link>
+                                    <Link
+                                        to={link.to}
+                                        aria-current={active ? 'page' : undefined}
+                                        className={desktopLink(active)}
+                                    >
+                                        {link.label}
+                                    </Link>
                                 </li>
                             );
                         })}
                     </ul>
                 </nav>
 
-                {/* Right cluster */}
-                <div className="flex items-center gap-2">
+                {/* Right cluster - one action, everything else quiet */}
+                <div className="ml-auto flex items-center gap-2">
                     {user && <NotificationBell />}
                     <div className="hidden lg:block"><ThemeToggle /></div>
-                    {showTechnicianCta && (
-                        <Link to={BECOME_TECHNICIAN_ROUTE} className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'hidden xl:inline-flex')}>
-                            <Wrench aria-hidden="true" /> Become a Technician
-                        </Link>
+
+                    {user ? (
+                        <div className="hidden items-center gap-2 lg:flex">
+                            <Link to="/dashboard" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+                                <LayoutDashboard aria-hidden="true" /> Dashboard
+                            </Link>
+                            <button
+                                type="button"
+                                onClick={handleLogOut}
+                                aria-label="Log out"
+                                className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }), 'text-ds-muted-foreground hover:text-ds-destructive')}
+                            >
+                                <LogOut aria-hidden="true" />
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="hidden items-center gap-2 lg:flex">
+                            {/* Register is the wider control, so it appears from
+                                xl where there is room; below that it lives in
+                                the mobile sheet and on the Log in page. */}
+                            <Link to="/register" className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'hidden xl:inline-flex')}>
+                                Register
+                            </Link>
+                            <Link to="/login" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>Log in</Link>
+                        </div>
                     )}
+
                     {showRequestCta && (
-                        <Link to={requestAction.to} className={cn(buttonVariants({ variant: 'default', size: 'sm' }), 'hidden sm:inline-flex')}>
+                        <Link
+                            to={requestAction.to}
+                            className={buttonVariants({ variant: 'action', size: 'sm' })}
+                        >
                             {requestAction.label}
                         </Link>
                     )}
-                    <div className="hidden items-center gap-2 lg:flex">
-                        {user ? (
-                            <>
-                                <Link to="/dashboard" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
-                                    <LayoutDashboard aria-hidden="true" /> Dashboard
-                                </Link>
-                                <button type="button" onClick={handleLogOut} aria-label="Log out" className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }), 'text-ds-muted-foreground hover:text-ds-destructive')}>
-                                    <LogOut aria-hidden="true" />
-                                </button>
-                            </>
-                        ) : (
-                            <>
-                                <Link to="/login" className={buttonVariants({ variant: 'outline', size: 'sm' })}>Log in</Link>
-                                <Link to="/register" className={buttonVariants({ variant: 'default', size: 'sm' })}>Register</Link>
-                            </>
-                        )}
-                    </div>
                 </div>
             </div>
         </header>

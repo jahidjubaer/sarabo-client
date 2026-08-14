@@ -26,7 +26,10 @@ const CustomerRoute = ({ children, requireVerified = false }) => {
     }
 
     if (!user) {
-        return <Navigate state={location.pathname} to="/login"></Navigate>;
+        // Phase 2 (approved fix): preserve the query string alongside the path
+        // so a category deep link survives login. See PrivateRoute for the full
+        // rationale. Authorization semantics are untouched.
+        return <Navigate state={`${location.pathname}${location.search}`} to="/login"></Navigate>;
     }
 
     if (isError) {
@@ -38,7 +41,10 @@ const CustomerRoute = ({ children, requireVerified = false }) => {
     }
 
     if (requireVerified && !isUserEmailVerified(user)) {
-        return <Navigate state={location.pathname} to="/verify-email"></Navigate>;
+        // Same rationale: the intended destination keeps its query string
+        // across the verification detour too, otherwise a deep link that
+        // survived login would still be lost here.
+        return <Navigate state={`${location.pathname}${location.search}`} to="/verify-email"></Navigate>;
     }
 
     return children;
