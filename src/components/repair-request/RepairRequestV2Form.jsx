@@ -3,7 +3,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLoaderData, useNavigate, useSearchParams, Link } from 'react-router';
 import { motion as Motion, MotionConfig } from 'motion/react';
-import { CircleCheckBig, TriangleAlert, ArrowRight, ListChecks } from 'lucide-react';
+import { CircleCheckBig, TriangleAlert, ArrowRight } from 'lucide-react';
 import useAxiosSecure from '../../hooks/useAxiosSecure';
 import { useServiceDefinitions } from '../../hooks/useServiceDefinitions';
 import { serviceDefinitionKeys } from '../../hooks/serviceDefinitionKeys';
@@ -16,7 +16,7 @@ import {
     DAMAGE_DESCRIPTION_MIN_LENGTH, DAMAGE_DESCRIPTION_MAX_LENGTH, BRAND_MODEL_MAX_LENGTH,
 } from '../../utils/repairRequestV2Form';
 import {
-    deriveFlowProgress, buildReviewModel, getSuccessActions, WHAT_HAPPENS_NEXT,
+    deriveFlowProgress, buildReviewModel, getSuccessActions,
 } from '../../utils/createRequestFlow';
 import { getCreateRequestErrorMessage } from '../../utils/createRequestErrorMessage';
 import { notify } from '../../lib/notify';
@@ -32,26 +32,36 @@ import ServiceDefinitionSelector from './ServiceDefinitionSelector';
 import RepairRequestSummary from './RepairRequestSummary';
 import PostCreationDamageStep from './PostCreationDamageStep';
 import RequestFlowSteps from './RequestFlowSteps';
+import RequestContextRail from './RequestContextRail';
 
 const SELECT_CLASS = 'flex h-10 w-full rounded-ds border border-ds-input bg-ds-background px-3 py-2 text-sm text-ds-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-ring focus-visible:ring-offset-1 focus-visible:ring-offset-ds-background disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:border-ds-destructive';
 
-function SectionShell({ innerRef, step, title, description, children }) {
+function SectionShell({ innerRef, step, stepId, title, description, onActivate, children }) {
+    const headingId = `request-${stepId}-heading`;
     return (
-        <section ref={innerRef} className="scroll-mt-24 rounded-ds-lg border border-ds-border bg-ds-card p-5 sm:p-6">
-            <div className="mb-4 flex items-start gap-3">
-                <span aria-hidden="true" className="flex size-7 shrink-0 items-center justify-center rounded-full bg-ds-primary/10 text-sm font-semibold text-ds-primary">{step}</span>
-                <div className="min-w-0">
-                    <h2 className="text-base font-semibold text-ds-foreground">{title}</h2>
-                    {description ? <p className="mt-0.5 text-sm text-ds-muted-foreground">{description}</p> : null}
+        <section
+            ref={innerRef}
+            aria-labelledby={headingId}
+            onFocusCapture={onActivate}
+            onPointerDown={onActivate}
+            className="scroll-mt-28 overflow-hidden rounded-ds-lg border border-ds-border bg-ds-card shadow-sm"
+        >
+            <div className="border-b border-ds-border bg-ds-muted/35 px-5 py-4 sm:px-6">
+                <div className="flex items-start gap-4">
+                    <span aria-hidden="true" className="ds-label mt-1 shrink-0 text-ds-primary">{String(step).padStart(2, '0')}</span>
+                    <div className="min-w-0">
+                        <h2 id={headingId} className="text-heading text-ds-foreground">{title}</h2>
+                        {description ? <p className="mt-1 text-body-sm text-ds-muted-foreground">{description}</p> : null}
+                    </div>
                 </div>
             </div>
-            {children}
+            <div className="p-5 sm:p-6">{children}</div>
         </section>
     );
 }
 
-// Customer-facing V2 repair-request creation (Phase 6.4 Unit 3A, redesigned in
-// Phase 7.7 into a guided single-page flow). Rendered at the single existing
+// Customer-facing V2 repair-request creation, presented as a guided single-page
+// flow. Rendered at the single existing
 // `/dashboard/create-request` route (see src/routes/router.jsx), which every
 // marketing/dashboard entry point already links to.
 //
@@ -114,6 +124,11 @@ const RepairRequestV2Form = () => {
     // Live section-completion snapshot for the stepper (presentation only).
     const watchedValues = useWatch({ control });
     const progress = deriveFlowProgress(watchedValues || {});
+    const liveReview = buildReviewModel(watchedValues || {}, definitions, productCategories);
+    const selectedServiceArea = [
+        watchedValues?.serviceLocation?.district,
+        watchedValues?.serviceLocation?.region,
+    ].filter((value) => typeof value === 'string' && value.trim().length > 0).join(', ');
 
     // Phase H #4: on product-category change, clear a now-stale service
     // selection rather than silently submitting a mismatched pair.
@@ -289,176 +304,231 @@ const RepairRequestV2Form = () => {
     // ---- Form --------------------------------------------------------------
     return (
         <MotionConfig reducedMotion="user">
-            <div className="space-y-6">
+            <div className="mx-auto w-full max-w-[1280px] space-y-6">
                 <PageHeader
+                    eyebrow="New repair request"
                     title="Request a Repair"
-                    description="Tell us about your device and the problem. It only takes a minute, and no payment is needed to submit."
+                    description="Share your device, repair need, and service location. No payment is required to submit."
                 />
 
-                <div className="flex items-start gap-3 rounded-ds-lg border border-ds-border bg-ds-muted/40 p-4">
-                    <ListChecks aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-ds-muted-foreground" />
-                    <div className="min-w-0 text-sm">
-                        <p className="font-medium text-ds-foreground">What happens after you submit</p>
-                        <ol className="mt-1 list-decimal space-y-0.5 pl-5 text-ds-muted-foreground">
-                            {WHAT_HAPPENS_NEXT.map((line) => <li key={line}>{line}</li>)}
-                        </ol>
-                    </div>
-                </div>
-
-                <div className="sticky top-2 z-10">
-                    <RequestFlowSteps progress={progress} activeStep={activeStep} onSelect={scrollToStep} />
-                </div>
-
-                <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-6">
-                    <SectionShell innerRef={sectionRefs.device} step={1} title="Your device" description="Pick the type of device and add any details you have.">
-                        <div className="space-y-6">
-                            <ServiceDefinitionSelector
-                                part="category"
-                                register={register}
-                                errors={errors}
-                                isLoading={catalogueLoading}
-                                isError={catalogueUnavailable}
-                                onRetry={retryCatalogue}
-                                productCategories={productCategories}
-                            />
-
-                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                <FormField id="productBrand" label="Brand" hint="Optional" error={errors.productBrand?.message}>
-                                    <Input
-                                        id="productBrand"
-                                        placeholder="e.g. Samsung"
-                                        aria-invalid={errors.productBrand ? 'true' : 'false'}
-                                        {...register('productBrand', {
-                                            validate: (value) => !value || value.trim().length <= BRAND_MODEL_MAX_LENGTH || `Brand must be ${BRAND_MODEL_MAX_LENGTH} characters or fewer.`,
-                                        })}
-                                    />
-                                </FormField>
-                                <FormField id="productModel" label="Model" hint="Optional" error={errors.productModel?.message}>
-                                    <Input
-                                        id="productModel"
-                                        placeholder="e.g. Galaxy S21"
-                                        aria-invalid={errors.productModel ? 'true' : 'false'}
-                                        {...register('productModel', {
-                                            validate: (value) => !value || value.trim().length <= BRAND_MODEL_MAX_LENGTH || `Model must be ${BRAND_MODEL_MAX_LENGTH} characters or fewer.`,
-                                        })}
-                                    />
-                                </FormField>
-                                <FormField id="productSerialNumber" label="Serial number" hint="Optional" className="sm:col-span-2">
-                                    <Input id="productSerialNumber" placeholder="Serial number" {...register('productSerialNumber')} />
-                                </FormField>
-                            </div>
+                <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
+                    <div className="min-w-0 space-y-5">
+                        <div className="z-20 lg:sticky lg:top-20">
+                            <RequestFlowSteps progress={progress} activeStep={activeStep} onSelect={scrollToStep} />
                         </div>
-                    </SectionShell>
 
-                    <SectionShell innerRef={sectionRefs.service} step={2} title="Repair needed" description="Choose a service and describe the problem.">
-                        <div className="space-y-6">
-                            {staleServiceNotice && (
-                                <div className="flex items-start gap-2 rounded-ds border border-ds-warning/30 bg-ds-warning/10 p-3 text-sm text-ds-foreground" role="alert">
-                                    <TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-ds-warning" />
-                                    <span>The repair service you selected is no longer available. Please choose another.</span>
-                                </div>
-                            )}
-
-                            <ServiceDefinitionSelector
-                                part="service"
-                                register={register}
-                                errors={errors}
-                                isLoading={catalogueLoading}
-                                isError={catalogueUnavailable}
-                                servicesForSelectedProduct={servicesForSelectedProduct}
-                                selectedProductCategorySlug={selectedProductCategorySlug}
-                                selectedDefinition={selectedDefinition}
-                            />
-
-                            <FormField
-                                id="damageDescription"
-                                label="Describe the issue"
-                                required
-                                error={errors.damageDescription?.message}
-                                hint={`Please describe the problem in ${DAMAGE_DESCRIPTION_MIN_LENGTH}-${DAMAGE_DESCRIPTION_MAX_LENGTH} characters.`}
+                        <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
+                            <SectionShell
+                                innerRef={sectionRefs.device}
+                                step={1}
+                                stepId="device"
+                                title="Device details"
+                                description="Choose the device category, then add any identifiers you know."
+                                onActivate={() => setActiveStep('device')}
                             >
-                                <Textarea
-                                    id="damageDescription"
-                                    rows={4}
-                                    placeholder="What is wrong with your device? When did it start?"
-                                    aria-invalid={errors.damageDescription ? 'true' : 'false'}
-                                    {...register('damageDescription', {
-                                        required: 'Please describe the issue.',
-                                        validate: (value) => {
-                                            const trimmed = (value || '').trim();
-                                            if (trimmed.length < DAMAGE_DESCRIPTION_MIN_LENGTH || trimmed.length > DAMAGE_DESCRIPTION_MAX_LENGTH) {
-                                                return `Please describe the issue in ${DAMAGE_DESCRIPTION_MIN_LENGTH}-${DAMAGE_DESCRIPTION_MAX_LENGTH} characters.`;
-                                            }
-                                            return true;
-                                        },
-                                    })}
-                                />
-                            </FormField>
-                        </div>
-                    </SectionShell>
+                                <div className="space-y-6">
+                                    <ServiceDefinitionSelector
+                                        part="category"
+                                        register={register}
+                                        errors={errors}
+                                        isLoading={catalogueLoading}
+                                        isError={catalogueUnavailable}
+                                        onRetry={retryCatalogue}
+                                        productCategories={productCategories}
+                                    />
 
-                    <SectionShell innerRef={sectionRefs.location} step={3} title="Service location" description="Where should the technician collect the device?">
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <FormField id="region" label="Region" required error={errors.serviceLocation?.region?.message}>
-                                <select
-                                    id="region"
-                                    defaultValue=""
-                                    className={SELECT_CLASS}
-                                    aria-invalid={errors.serviceLocation?.region ? 'true' : 'false'}
-                                    {...register('serviceLocation.region', { validate: (v) => !!v || 'Please select a region.' })}
-                                >
-                                    <option value="" disabled>Pick a region</option>
-                                    {regions.map((r, i) => <option key={i} value={r}>{r}</option>)}
-                                </select>
-                            </FormField>
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                        <FormField id="productBrand" label="Brand" hint="Optional" error={errors.productBrand?.message}>
+                                            <Input
+                                                id="productBrand"
+                                                placeholder="e.g. Samsung"
+                                                aria-invalid={errors.productBrand ? 'true' : 'false'}
+                                                aria-describedby={errors.productBrand ? 'productBrand-error' : 'productBrand-hint'}
+                                                {...register('productBrand', {
+                                                    validate: (value) => !value || value.trim().length <= BRAND_MODEL_MAX_LENGTH || `Brand must be ${BRAND_MODEL_MAX_LENGTH} characters or fewer.`,
+                                                })}
+                                            />
+                                        </FormField>
+                                        <FormField id="productModel" label="Model" hint="Optional" error={errors.productModel?.message}>
+                                            <Input
+                                                id="productModel"
+                                                placeholder="e.g. Galaxy S21"
+                                                aria-invalid={errors.productModel ? 'true' : 'false'}
+                                                aria-describedby={errors.productModel ? 'productModel-error' : 'productModel-hint'}
+                                                {...register('productModel', {
+                                                    validate: (value) => !value || value.trim().length <= BRAND_MODEL_MAX_LENGTH || `Model must be ${BRAND_MODEL_MAX_LENGTH} characters or fewer.`,
+                                                })}
+                                            />
+                                        </FormField>
+                                        <FormField id="productSerialNumber" label="Serial number" hint="Optional" className="sm:col-span-2">
+                                            <Input
+                                                id="productSerialNumber"
+                                                placeholder="Serial number"
+                                                aria-describedby="productSerialNumber-hint"
+                                                {...register('productSerialNumber')}
+                                            />
+                                        </FormField>
+                                    </div>
+                                </div>
+                            </SectionShell>
 
-                            <FormField id="district" label="District" required error={errors.serviceLocation?.district?.message}>
-                                <select
-                                    id="district"
-                                    defaultValue=""
-                                    className={SELECT_CLASS}
-                                    aria-invalid={errors.serviceLocation?.district ? 'true' : 'false'}
-                                    {...register('serviceLocation.district', { validate: (v) => !!v || 'Please select a district.' })}
-                                >
-                                    <option value="" disabled>Pick a district</option>
-                                    {districtsByRegion(selectedRegion).map((d, i) => <option key={i} value={d}>{d}</option>)}
-                                </select>
-                            </FormField>
+                            <SectionShell
+                                innerRef={sectionRefs.service}
+                                step={2}
+                                stepId="service"
+                                title="Repair details"
+                                description="Select the repair service and describe what is happening."
+                                onActivate={() => setActiveStep('service')}
+                            >
+                                <div className="space-y-6">
+                                    {staleServiceNotice && (
+                                        <div className="flex items-start gap-2 rounded-ds border border-ds-warning/30 bg-ds-warning/10 p-3 text-sm text-ds-foreground" role="alert">
+                                            <TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-ds-warning" />
+                                            <span>The repair service you selected is no longer available. Please choose another.</span>
+                                        </div>
+                                    )}
 
-                            <FormField id="address" label="Service address" required error={errors.serviceLocation?.address?.message} className="sm:col-span-2">
-                                <Input
-                                    id="address"
-                                    placeholder="Where should the technician visit?"
-                                    aria-invalid={errors.serviceLocation?.address ? 'true' : 'false'}
-                                    {...register('serviceLocation.address', {
-                                        required: 'Service address is required.',
-                                        validate: (value) => (value && value.trim().length > 0) || 'Service address cannot be blank.',
-                                    })}
-                                />
-                            </FormField>
-                        </div>
-                    </SectionShell>
+                                    <ServiceDefinitionSelector
+                                        part="service"
+                                        register={register}
+                                        errors={errors}
+                                        isLoading={catalogueLoading}
+                                        isError={catalogueUnavailable}
+                                        servicesForSelectedProduct={servicesForSelectedProduct}
+                                        selectedProductCategorySlug={selectedProductCategorySlug}
+                                    />
 
-                    <SectionShell innerRef={sectionRefs.review} step={4} title="Review & submit" description="Check the details, then submit your request.">
-                        <div className="space-y-5">
-                            {progress.review ? (
-                                <RepairRequestSummary review={buildReviewModel(watchedValues || {}, definitions, productCategories)} />
-                            ) : (
-                                <p className="rounded-ds-lg border border-dashed border-ds-border px-4 py-6 text-center text-sm text-ds-muted-foreground">
-                                    Complete the sections above to see your request summary here.
-                                </p>
-                            )}
+                                    <FormField
+                                        id="damageDescription"
+                                        label="Describe the issue"
+                                        required
+                                        error={errors.damageDescription?.message}
+                                        hint={`Please describe the problem in ${DAMAGE_DESCRIPTION_MIN_LENGTH}-${DAMAGE_DESCRIPTION_MAX_LENGTH} characters.`}
+                                    >
+                                        <Textarea
+                                            id="damageDescription"
+                                            rows={5}
+                                            required
+                                            aria-required="true"
+                                            placeholder="What is wrong with your device? When did it start?"
+                                            aria-invalid={errors.damageDescription ? 'true' : 'false'}
+                                            aria-describedby={errors.damageDescription ? 'damageDescription-error' : 'damageDescription-hint'}
+                                            {...register('damageDescription', {
+                                                required: 'Please describe the issue.',
+                                                validate: (value) => {
+                                                    const trimmed = (value || '').trim();
+                                                    if (trimmed.length < DAMAGE_DESCRIPTION_MIN_LENGTH || trimmed.length > DAMAGE_DESCRIPTION_MAX_LENGTH) {
+                                                        return `Please describe the issue in ${DAMAGE_DESCRIPTION_MIN_LENGTH}-${DAMAGE_DESCRIPTION_MAX_LENGTH} characters.`;
+                                                    }
+                                                    return true;
+                                                },
+                                            })}
+                                        />
+                                    </FormField>
+                                </div>
+                            </SectionShell>
 
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                                <LoadingButton type="submit" loading={mutation.isPending} loadingText="Creating request..." className="w-full sm:w-auto">
-                                    Create repair request
-                                </LoadingButton>
-                                <Link to="/dashboard/my-requests" className={`${buttonVariants({ variant: 'ghost' })} w-full sm:w-auto`}>Cancel</Link>
-                            </div>
-                            <p className="text-xs text-ds-muted-foreground">No payment is required to submit a repair request.</p>
-                        </div>
-                    </SectionShell>
-                </form>
+                            <SectionShell
+                                innerRef={sectionRefs.location}
+                                step={3}
+                                stepId="location"
+                                title="Service location"
+                                description="Provide the existing region, district, and service address for this request."
+                                onActivate={() => setActiveStep('location')}
+                            >
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <FormField id="region" label="Region" required error={errors.serviceLocation?.region?.message}>
+                                        <select
+                                            id="region"
+                                            defaultValue=""
+                                            className={SELECT_CLASS}
+                                            aria-invalid={errors.serviceLocation?.region ? 'true' : 'false'}
+                                            aria-required="true"
+                                            aria-describedby={errors.serviceLocation?.region ? 'region-error' : undefined}
+                                            {...register('serviceLocation.region', { validate: (v) => !!v || 'Please select a region.' })}
+                                        >
+                                            <option value="" disabled>Pick a region</option>
+                                            {regions.map((r, i) => <option key={i} value={r}>{r}</option>)}
+                                        </select>
+                                    </FormField>
+
+                                    <FormField id="district" label="District" required error={errors.serviceLocation?.district?.message}>
+                                        <select
+                                            id="district"
+                                            defaultValue=""
+                                            className={SELECT_CLASS}
+                                            aria-invalid={errors.serviceLocation?.district ? 'true' : 'false'}
+                                            aria-required="true"
+                                            aria-describedby={errors.serviceLocation?.district ? 'district-error' : undefined}
+                                            {...register('serviceLocation.district', { validate: (v) => !!v || 'Please select a district.' })}
+                                        >
+                                            <option value="" disabled>Pick a district</option>
+                                            {districtsByRegion(selectedRegion).map((d, i) => <option key={i} value={d}>{d}</option>)}
+                                        </select>
+                                    </FormField>
+
+                                    <FormField id="address" label="Service address" required error={errors.serviceLocation?.address?.message} className="sm:col-span-2">
+                                        <Input
+                                            id="address"
+                                            required
+                                            aria-required="true"
+                                            placeholder="Where should the technician visit?"
+                                            aria-invalid={errors.serviceLocation?.address ? 'true' : 'false'}
+                                            aria-describedby={errors.serviceLocation?.address ? 'address-error' : undefined}
+                                            {...register('serviceLocation.address', {
+                                                required: 'Service address is required.',
+                                                validate: (value) => (value && value.trim().length > 0) || 'Service address cannot be blank.',
+                                            })}
+                                        />
+                                    </FormField>
+                                </div>
+                            </SectionShell>
+
+                            <SectionShell
+                                innerRef={sectionRefs.review}
+                                step={4}
+                                stepId="review"
+                                title="Review & create"
+                                description="Check the request details before creating one repair request."
+                                onActivate={() => setActiveStep('review')}
+                            >
+                                <div className="space-y-5">
+                                    {progress.review ? (
+                                        <RepairRequestSummary review={liveReview} />
+                                    ) : (
+                                        <p className="rounded-ds-lg border border-dashed border-ds-border bg-ds-muted/20 px-4 py-8 text-center text-body-sm text-ds-muted-foreground">
+                                            Complete the three detail sections to see the full request summary.
+                                        </p>
+                                    )}
+
+                                    <div className="border-t border-ds-border pt-5">
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                                            <LoadingButton
+                                                type="submit"
+                                                variant="action"
+                                                size="lg"
+                                                loading={mutation.isPending}
+                                                loadingText="Creating request..."
+                                                className="w-full sm:w-auto"
+                                            >
+                                                Create repair request
+                                            </LoadingButton>
+                                            <Link to="/dashboard/my-requests" className={`${buttonVariants({ variant: 'ghost', size: 'lg' })} w-full sm:w-auto`}>Cancel</Link>
+                                        </div>
+                                        <p className="mt-3 text-micro text-ds-muted-foreground">No payment is required to submit a repair request.</p>
+                                    </div>
+                                </div>
+                            </SectionShell>
+                        </form>
+                    </div>
+
+                    <RequestContextRail
+                        categoryLabel={liveReview.productCategoryLabel}
+                        serviceLabel={liveReview.serviceLabel}
+                        serviceAreaLabel={selectedServiceArea}
+                        selectedDefinition={selectedDefinition}
+                    />
+                </div>
             </div>
         </MotionConfig>
     );
