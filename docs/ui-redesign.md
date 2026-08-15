@@ -99,4 +99,10 @@ are worth keeping. They are scheduled, not lost:
 
 | # | Phase | Commit | Date | Notes |
 |---|---|---|---|---|
-| — | *not started* | — | — | — |
+| 0 | Design foundation | `e8954cd` | 2026-08-14 | Retuned the shared palette, control variants, badges and focus treatment. |
+| 0b | Type scale | `336cd37` | 2026-08-14 | Added the shared role-based type scale. |
+| 1 | Spine primitives | `42bfc1b` | 2026-08-14 | Added the canonical status-to-stage model and horizontal and vertical spine variants. |
+| 2 | Public shell | `fea478e` | 2026-08-14 | Redesigned the public shell and preserved query strings through login redirects. |
+| 3 | Home | `1b2fb28` | 2026-08-14 | Rebuilt Home around the service spine, live catalogue and quote explanation. |
+| 4 | Track a repair | `434d02a` | 2026-08-14 | Added the sanitized public tracking model, vertical spine and timeline presentation. |
+| 5A | Services + Service Areas + About | `a5312bd` | 2026-08-15 | Redesigned the three remaining unauthenticated content pages. |

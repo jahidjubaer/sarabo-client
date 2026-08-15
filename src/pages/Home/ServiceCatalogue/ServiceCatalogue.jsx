@@ -1,8 +1,10 @@
 import { Link } from 'react-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, ChevronRight, RotateCcw, Wrench } from 'lucide-react';
 import useAuth from '../../../hooks/useAuth';
 import useRole from '../../../hooks/useRole';
 import { useServiceDefinitions } from '../../../hooks/useServiceDefinitions';
+import { serviceDefinitionKeys } from '../../../hooks/serviceDefinitionKeys';
 import { normalizeServiceDefinitions, deriveProductCategories } from '../../../utils/serviceDefinitionCatalog';
 import { getProductCategoryIcon } from '../../../utils/productCategoryIcons';
 import { shouldShowCreateRequestLink, REQUEST_REPAIR_ROUTE } from '../../../utils/publicContent';
@@ -34,7 +36,8 @@ const MAX_ROWS = 8;
 const ServiceCatalogue = () => {
     const { user } = useAuth();
     const { role } = useRole();
-    const { data, isLoading, isError, refetch } = useServiceDefinitions();
+    const { data, isPending, isPaused, isError } = useServiceDefinitions();
+    const queryClient = useQueryClient();
 
     // Technicians and admins are not offered a customer-only action.
     const showRequestLinks = shouldShowCreateRequestLink({ user, role });
@@ -42,7 +45,10 @@ const ServiceCatalogue = () => {
     const definitions = normalizeServiceDefinitions(data);
     const categories = deriveProductCategories(definitions).slice(0, MAX_ROWS);
     const ranges = getCategoryEstimateRanges(definitions);
-    const unavailable = !isLoading && (isError || categories.length === 0);
+    const loading = isPending && !isPaused;
+    const unreachable = isError || isPaused;
+    const unavailable = !loading && (unreachable || categories.length === 0);
+    const handleRetry = () => queryClient.resetQueries({ queryKey: serviceDefinitionKeys.list() });
 
     return (
         <section className="px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
@@ -61,7 +67,7 @@ const ServiceCatalogue = () => {
                     </Link>
                 </div>
 
-                {isLoading && (
+                {loading && (
                     <div className="mt-10 flex flex-col" aria-busy="true" aria-label="Loading repair services">
                         {Array.from({ length: 6 }).map((_, index) => (
                             <Skeleton key={index} className="mt-px h-[73px] rounded-none first:rounded-t-ds" />
@@ -69,7 +75,7 @@ const ServiceCatalogue = () => {
                     </div>
                 )}
 
-                {!isLoading && !unavailable && (
+                {!loading && !unavailable && (
                     <ul className="mt-10 border-t border-ds-border">
                         {categories.map((category) => {
                             const Icon = getProductCategoryIcon(category.slug);
@@ -117,8 +123,9 @@ const ServiceCatalogue = () => {
                 {unavailable && (
                     <div className="mt-10 rounded-ds-lg border border-ds-border bg-ds-card p-6">
                         <p className="text-body-sm text-ds-muted-foreground">
-                            The service list could not be loaded right now. You can still describe your device in
-                            the request form.
+                            {unreachable
+                                ? 'The service list could not be loaded right now. You can still describe your device in the request form.'
+                                : 'There are no repair services to show right now. You can still describe your device in the request form.'}
                         </p>
                         <div className="mt-4 flex flex-wrap gap-2">
                             {showRequestLinks && (
@@ -126,8 +133,8 @@ const ServiceCatalogue = () => {
                                     Request a Repair <ArrowRight aria-hidden="true" />
                                 </Link>
                             )}
-                            {isError && (
-                                <button type="button" onClick={() => refetch()} className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}>
+                            {unreachable && (
+                                <button type="button" onClick={handleRetry} className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}>
                                     <RotateCcw aria-hidden="true" /> Try again
                                 </button>
                             )}

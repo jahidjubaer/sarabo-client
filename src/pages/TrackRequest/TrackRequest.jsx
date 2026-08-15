@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { Search, EyeOff, Clock } from 'lucide-react';
@@ -44,10 +44,11 @@ const TrackRequest = () => {
     const { requestId } = useParams();
     const navigate = useNavigate();
     const axiosInstance = useAxios();
+    const queryClient = useQueryClient();
     const [codeInput, setCodeInput] = useState('');
     const [formError, setFormError] = useState('');
 
-    const { data, isLoading, error } = useQuery({
+    const { data, isPending, isPaused, isError, error } = useQuery({
         queryKey: ['public-tracking', requestId],
         queryFn: async () => {
             const res = await axiosInstance.get(`/public/trackings/${encodeURIComponent(requestId)}`);
@@ -56,6 +57,12 @@ const TrackRequest = () => {
         enabled: !!requestId,
         retry: false,
     });
+
+    const loading = isPending && !isPaused;
+    const unavailable = isError || (isPaused && !data);
+    const errorStatus = error?.response?.status;
+    const retryUnavailable = isPaused || !errorStatus || errorStatus === 429 || errorStatus >= 500;
+    const handleRetry = () => queryClient.resetQueries({ queryKey: ['public-tracking', requestId] });
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -119,7 +126,7 @@ const TrackRequest = () => {
     }
 
     // ---- 2. Loading: reserve the result layout ---------------------------
-    if (isLoading) {
+    if (loading) {
         return (
             <TrackShell header={header}>
                 <div className="mt-8 grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]" aria-busy="true" aria-label="Loading repair tracking">
@@ -131,7 +138,7 @@ const TrackRequest = () => {
     }
 
     // ---- 3. Error --------------------------------------------------------
-    if (error) {
+    if (unavailable) {
         const { title, message } = getTrackingErrorCopy(error);
         return (
             <TrackShell header={header}>
@@ -139,8 +146,8 @@ const TrackRequest = () => {
                     <ErrorState
                         title={title}
                         description={message}
-                        onRetry={() => navigate('/track-request')}
-                        retryLabel="Try another code"
+                        onRetry={retryUnavailable ? handleRetry : () => navigate('/track-request')}
+                        retryLabel={retryUnavailable ? 'Try again' : 'Try another code'}
                     />
                 </div>
             </TrackShell>
