@@ -1,7 +1,8 @@
 import { Eye, ClipboardCheck, ShieldCheck, Settings } from 'lucide-react';
-import SectionHeader from '../../components/public/SectionHeader';
 import PublicFeatureCard from '../../components/public/PublicFeatureCard';
 
+// Content unchanged from the reviewed version - all four principles preserved
+// verbatim. No statistics, no certifications. (Phase 5A: restyled only.)
 const principles = [
     { icon: Eye, title: 'Clarity', description: 'Repair information and status should be understandable to the relevant user.' },
     { icon: ClipboardCheck, title: 'Accountability', description: 'Important actions remain associated with the repair request and authorized role.' },
@@ -9,16 +10,15 @@ const principles = [
     { icon: Settings, title: 'Practical service management', description: 'The platform prioritizes a usable workflow over unsupported automation claims.' },
 ];
 
-// Muted section, no statistics, no certifications. (Phase 7.9: ds-*/Lucide.)
 const CorePrinciples = () => (
-    <section className="bg-ds-muted/40 px-4 py-16 sm:px-6 lg:px-8">
+    <section className="border-t border-ds-border bg-ds-muted/50 px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
         <div className="mx-auto max-w-6xl">
-            <SectionHeader
-                eyebrow="How we operate"
-                title="Core principles"
-                description="The principles that guide how Sarabo's workflow is structured."
-            />
-            <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <p className="ds-label text-ds-primary">How we operate</p>
+            <h2 className="mt-3 max-w-[20ch] text-title text-ds-foreground">Core principles</h2>
+            <p className="mt-3 max-w-2xl text-body-sm text-ds-muted-foreground">
+                The principles that guide how Sarabo&rsquo;s workflow is structured.
+            </p>
+            <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
                 {principles.map((principle) => (
                     <PublicFeatureCard key={principle.title} icon={principle.icon} title={principle.title} description={principle.description} />
                 ))}

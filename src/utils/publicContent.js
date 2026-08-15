@@ -50,20 +50,6 @@ export const SPINE_STEP_COPY = {
     repaired: 'Follow the repair through to completion, then confirm you have the device back.',
 };
 
-// Service categories shown on the homepage and Services page. Customer-facing
-// labels + blurbs only - no serviceDefinitionId, slug, pricingVersion, or raw
-// taxonomy fields. `iconKey` is resolved to a Lucide glyph in the component.
-export const SERVICE_CATEGORIES = [
-    { key: 'ac', iconKey: 'ac', label: 'AC Repair', blurb: 'Installation, gas refilling, cooling issues, and general maintenance.' },
-    { key: 'refrigerator', iconKey: 'refrigerator', label: 'Refrigerator Repair', blurb: 'Cooling problems, compressor issues, gas leakage, and servicing.' },
-    { key: 'washing-machine', iconKey: 'washing-machine', label: 'Washing Machine Repair', blurb: 'Drum, motor, drainage, and control-panel repairs.' },
-    { key: 'tv', iconKey: 'tv', label: 'TV / Electronics Repair', blurb: 'Display, sound, and connectivity issues for TVs and electronics.' },
-    { key: 'mobile', iconKey: 'mobile', label: 'Mobile Phone Repair', blurb: 'Screen, battery, charging port, and software troubleshooting.' },
-    { key: 'laptop', iconKey: 'laptop', label: 'Laptop / Computer Repair', blurb: 'Hardware diagnostics, performance issues, and general repair.' },
-    { key: 'microwave', iconKey: 'microwave', label: 'Microwave Repair', blurb: 'Heating, turntable, and control issues for microwave ovens.' },
-    { key: 'other', iconKey: 'other', label: 'Other Repairs', blurb: 'Another appliance or device? Choose “Other” and describe the issue.' },
-];
-
 // FAQ (Phase 3). Every answer describes how the platform actually behaves -
 // assignment is administrative, the quote gates the repair, payment follows
 // approval, tracking is by code, and the customer confirms handover. No

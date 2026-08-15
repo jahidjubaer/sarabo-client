@@ -1,11 +1,11 @@
 import { User, Wrench, ShieldCheck } from 'lucide-react';
-import SectionHeader from '../../components/public/SectionHeader';
 import PublicFeatureCard from '../../components/public/PublicFeatureCard';
 
-// User-facing role name "Technician" only - the internal role value ("rider")
-// is never exposed here. Cards are intentionally non-clickable (no `action`
-// prop) - no single destination is correct for every visitor regardless of
-// whether they're signed in or which role they hold. (Phase 7.9: ds-*/Lucide.)
+// Content unchanged from the reviewed version - all three role descriptions
+// preserved verbatim. User-facing role name "Technician" only; the internal
+// role value ("rider") is never exposed. Cards remain non-clickable: no single
+// destination is correct for every visitor regardless of auth state or role.
+// (Phase 5A: restyled only.)
 const roles = [
     {
         icon: User,
@@ -25,14 +25,15 @@ const roles = [
 ];
 
 const RoleEcosystem = () => (
-    <section className="px-4 py-16 sm:px-6 lg:px-8">
+    <section className="px-4 pb-16 sm:px-6 lg:px-8 lg:pb-20">
         <div className="mx-auto max-w-6xl">
-            <SectionHeader
-                eyebrow="Who uses Sarabo"
-                title="Role ecosystem"
-                description="Sarabo separates responsibilities across three roles, each with access limited to its own part of the workflow."
-            />
-            <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-3">
+            <p className="ds-label text-ds-primary">Who uses Sarabo</p>
+            <h2 className="mt-3 max-w-[20ch] text-title text-ds-foreground">Role ecosystem</h2>
+            <p className="mt-3 max-w-2xl text-body-sm text-ds-muted-foreground">
+                Sarabo separates responsibilities across three roles, each with access limited to its own part
+                of the workflow.
+            </p>
+            <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-3">
                 {roles.map((role) => (
                     <PublicFeatureCard key={role.title} icon={role.icon} title={role.title} description={role.description} />
                 ))}
