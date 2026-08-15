@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { motion as Motion, MotionConfig } from 'motion/react';
 import { Plus, Package, ClipboardList, CircleAlert, CheckCheck } from 'lucide-react';
@@ -35,14 +35,21 @@ function buildDescription({ total, active, needsAction }) {
 function CustomerOverview() {
     const { user } = useAuth();
     const axiosSecure = useAxiosSecure();
+    const queryClient = useQueryClient();
+    const requestsQueryKey = ['my-requests', user?.email];
 
-    const { data: requests = [], isLoading, isError, refetch } = useQuery({
-        queryKey: ['my-requests', user?.email],
+    const { data: requestsData, isPending, isPaused, isError } = useQuery({
+        queryKey: requestsQueryKey,
         queryFn: async () => {
             const res = await axiosSecure.get('/repair-requests');
             return res.data;
         },
     });
+    const hasUsableRequests = Array.isArray(requestsData);
+    const requests = hasUsableRequests ? requestsData : [];
+    const isInitialLoading = isPending && !isPaused;
+    const isUnavailableBeforeData = isPaused && !hasUsableRequests;
+    const retryRequests = () => queryClient.resetQueries({ queryKey: requestsQueryKey });
 
     const newRequestAction = (
         <Link to="/dashboard/create-request" className={buttonVariants({ size: 'sm' })}>
@@ -51,7 +58,7 @@ function CustomerOverview() {
         </Link>
     );
 
-    if (isLoading) {
+    if (isInitialLoading) {
         return (
             <div className="space-y-6">
                 <PageHeader eyebrow="Customer" title="Repair Dashboard" description="Loading your repair activity..." actions={newRequestAction} />
@@ -63,14 +70,14 @@ function CustomerOverview() {
         );
     }
 
-    if (isError) {
+    if (isError || isUnavailableBeforeData) {
         return (
             <div className="space-y-6">
                 <PageHeader eyebrow="Customer" title="Repair Dashboard" actions={newRequestAction} />
                 <ErrorState
                     title="Couldn't load your dashboard"
                     description="We couldn't load your repair activity right now. Please try again."
-                    onRetry={() => refetch()}
+                    onRetry={retryRequests}
                 />
             </div>
         );

@@ -55,9 +55,10 @@ const MyRequests = () => {
     const [payingId, setPayingId] = useState(null);
     const [cancellingId, setCancellingId] = useState(null);
     const [deletingId, setDeletingId] = useState(null);
+    const requestsQueryKey = ['my-requests', user?.email];
 
-    const { data: requests = [], refetch, isLoading, isError } = useQuery({
-        queryKey: ['my-requests', user?.email],
+    const { data: requestsData, refetch, isPending, isPaused, isError } = useQuery({
+        queryKey: requestsQueryKey,
         queryFn: async () => {
             // No email in the URL - the server scopes a non-admin caller to
             // their own token-derived identity.
@@ -65,6 +66,11 @@ const MyRequests = () => {
             return res.data;
         },
     });
+    const hasUsableRequests = Array.isArray(requestsData);
+    const requests = useMemo(() => (Array.isArray(requestsData) ? requestsData : []), [requestsData]);
+    const isInitialLoading = isPending && !isPaused;
+    const isUnavailableBeforeData = isPaused && !hasUsableRequests;
+    const retryRequests = () => queryClient.resetQueries({ queryKey: requestsQueryKey });
 
     const visibleRequests = useMemo(
         () => applyRequestView(requests, { search, group, sort }),
@@ -158,7 +164,7 @@ const MyRequests = () => {
         </Link>
     );
 
-    if (isLoading) {
+    if (isInitialLoading) {
         return (
             <div className="space-y-6">
                 <PageHeader eyebrow="Customer" title="My Requests" actions={newRequestAction} />
@@ -169,14 +175,14 @@ const MyRequests = () => {
         );
     }
 
-    if (isError) {
+    if (isError || isUnavailableBeforeData) {
         return (
             <div className="space-y-6">
                 <PageHeader eyebrow="Customer" title="My Requests" actions={newRequestAction} />
                 <ErrorState
                     title="Couldn't load your requests"
                     description="We couldn't load your repair requests right now. Please try again."
-                    onRetry={() => refetch()}
+                    onRetry={retryRequests}
                 />
             </div>
         );

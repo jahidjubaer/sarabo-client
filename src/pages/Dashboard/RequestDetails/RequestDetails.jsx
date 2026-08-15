@@ -67,15 +67,33 @@ const RequestDetails = () => {
     const isTechnicianContext = location.pathname.startsWith('/dashboard/assigned-jobs');
     const backTo = isAdminContext ? '/dashboard/manage-repair-requests' : (isTechnicianContext ? '/dashboard/assigned-jobs' : '/dashboard/my-requests');
     const backLabel = isAdminContext ? 'Back to Repair Requests' : (isTechnicianContext ? 'Back to Assigned Jobs' : 'Back to My Requests');
+    const requestQueryKey = ['repair-requests', id];
 
-    const { data: request, isLoading, isError, refetch } = useQuery({
-        queryKey: ['repair-requests', id],
+    const { data: request, isPending, isPaused, isError, refetch } = useQuery({
+        queryKey: requestQueryKey,
         queryFn: async () => (await axiosSecure.get(`/repair-requests/${id}`)).data,
         retry: false,
     });
+    const hasUsableRequest = request !== undefined && request !== null;
+    const isInitialLoading = isPending && !isPaused;
+    const isUnavailableBeforeData = isPaused && !hasUsableRequest;
+    const retryRequest = () => queryClient.resetQueries({ queryKey: requestQueryKey });
 
-    if (isLoading) {
+    if (isInitialLoading) {
         return <div className="space-y-6"><DetailSkeleton /></div>;
+    }
+
+    if (isUnavailableBeforeData) {
+        return (
+            <div className="space-y-6">
+                <ErrorState
+                    title="Couldn't load this repair request"
+                    description="We couldn't load this request right now. Please try again."
+                    onRetry={retryRequest}
+                    secondaryAction={<Link to={backTo} className={buttonVariants({ variant: 'outline', size: 'sm' })}>{backLabel}</Link>}
+                />
+            </div>
+        );
     }
 
     if (isError || !request) {
