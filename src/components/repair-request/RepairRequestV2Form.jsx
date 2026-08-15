@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useLoaderData, useNavigate, Link } from 'react-router';
+import { useLoaderData, useNavigate, useSearchParams, Link } from 'react-router';
 import { motion as Motion, MotionConfig } from 'motion/react';
 import { CircleCheckBig, TriangleAlert, ArrowRight, ListChecks } from 'lucide-react';
 import useAxiosSecure from '../../hooks/useAxiosSecure';
@@ -71,6 +71,9 @@ const RepairRequestV2Form = () => {
     const axiosSecure = useAxiosSecure();
     const queryClient = useQueryClient();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const requestedCategorySlugRef = useRef(searchParams.get('category'));
+    const categoryDeepLinkHandledRef = useRef(false);
 
     const serviceAreas = useLoaderData();
     const regions = [...new Set(serviceAreas.map((c) => c.region))];
@@ -84,6 +87,20 @@ const RepairRequestV2Form = () => {
     const selectedServiceDefinitionId = useWatch({ control, name: 'serviceDefinitionId' });
     const servicesForSelectedProduct = getServicesForProduct(definitions, selectedProductCategorySlug);
     const selectedDefinition = findDefinitionById(definitions, selectedServiceDefinitionId);
+
+    // Apply the initial public-service deep link once the canonical catalogue
+    // is available. Exact slug matching rejects missing/stale values without
+    // inventing a fallback, while the one-shot guard leaves later manual
+    // category changes entirely under the customer's control.
+    useEffect(() => {
+        if (categoryDeepLinkHandledRef.current || productCategories.length === 0) return;
+
+        categoryDeepLinkHandledRef.current = true;
+        const requestedCategorySlug = requestedCategorySlugRef.current;
+        if (requestedCategorySlug && productCategories.some((category) => category.slug === requestedCategorySlug)) {
+            setValue('productCategorySlug', requestedCategorySlug);
+        }
+    }, [productCategories, setValue]);
 
     // Live section-completion snapshot for the stepper (presentation only).
     const watchedValues = useWatch({ control });
