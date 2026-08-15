@@ -87,20 +87,20 @@ const VerifyEmail = () => {
                 <span className="mx-auto flex size-14 items-center justify-center rounded-full bg-ds-primary/10 text-ds-primary">
                     <MailCheck aria-hidden="true" className="size-7" />
                 </span>
-                <h1 className="mt-4 text-xl font-bold tracking-tight text-ds-foreground sm:text-2xl">Verify your email</h1>
-                <p className="mt-2 text-sm text-ds-muted-foreground">
+                <h1 className="mt-4 text-title text-ds-foreground">Verify your email</h1>
+                <p className="mt-3 text-body-sm text-ds-muted-foreground">
                     We sent a verification link to
                 </p>
-                <p className="mt-1 break-all font-medium text-ds-foreground">{user.email}</p>
-                <p className="mt-3 text-sm text-ds-muted-foreground">
+                <p className="ds-numeric mt-1 break-all text-body-sm font-semibold text-ds-foreground">{user.email}</p>
+                <p className="mt-3 text-body-sm text-ds-muted-foreground">
                     Open that link to confirm your address, then come back and choose “I’ve verified”. Verification is required before you can submit repair requests or make payments.
                 </p>
 
                 <div className="mt-6 flex flex-col gap-2">
-                    <LoadingButton onClick={handleCheckAgain} loading={checking} loadingText="Checking…" className="w-full">
+                    <LoadingButton variant="action" size="lg" onClick={handleCheckAgain} loading={checking} loadingText="Checking…" className="w-full">
                         <RefreshCw aria-hidden="true" /> I’ve verified — check again
                     </LoadingButton>
-                    <Button variant="outline" onClick={handleResend} disabled={resending || cooldown > 0} className="w-full">
+                    <Button variant="outline" size="lg" onClick={handleResend} disabled={resending || cooldown > 0} className="w-full">
                         {resending ? 'Sending…' : cooldown > 0 ? `Resend available in ${cooldown}s` : 'Resend verification email'}
                     </Button>
                 </div>

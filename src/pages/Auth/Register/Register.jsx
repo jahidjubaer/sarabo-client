@@ -1,13 +1,29 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import useAuth from '../../../hooks/useAuth';
 import { Link, useLocation, useNavigate } from 'react-router';
-import SocialLogin from '../SocialLogin/SocialLogin';
 import axios from 'axios';
 import Swal from 'sweetalert2';
+import useAuth from '../../../hooks/useAuth';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
+import SocialLogin from '../SocialLogin/SocialLogin';
 import { getAuthErrorMessage, getSyncErrorMessage } from '../../../utils/authErrorMessage';
+import { Input } from '../../../components/ui/input';
+import { FormField } from '../../../components/common/FormField';
+import { LoadingButton } from '../../../components/common/LoadingButton';
+import { cn } from '../../../lib/utils';
 
+// Register (Phase 6 - presentation migration only).
+//
+// The four existing fields (name, photo, email, password) and every existing
+// react-hook-form rule are unchanged, including the password pattern. The
+// four-step submit - imgbb upload, Firebase account, profile update, backend
+// /users sync - is untouched, as is the sync-failure retry path and the
+// routing to /verify-email with `location.state` preserved.
+//
+// Removed with the DaisyUI markup: a `tooltip` reading "Password reset is not
+// available yet". It was a non-interactive decoration and the statement is no
+// longer true - Login has a working reset - so it is not carried over. No
+// behaviour is attached to it.
 const Register = () => {
     const { register, handleSubmit, formState: { errors } } = useForm();
     const { registerUser, updateUserProfile, sendVerificationEmail } = useAuth();
@@ -118,74 +134,117 @@ const Register = () => {
         }
     }
 
+    const nameError = errors.name?.type === 'required' ? 'Name is required.' : undefined;
+    const photoError = errors.photo?.type === 'required' ? 'Photo is required.' : undefined;
+    const emailError = errors.email?.type === 'required' ? 'Email is required.' : undefined;
+    const passwordError = errors.password?.type === 'required'
+        ? 'Password is required.'
+        : errors.password?.type === 'minLength'
+            ? 'Password must be 6 characters or longer.'
+            : errors.password?.type === 'pattern'
+                ? 'Password must have at least one uppercase, at least one lowercase, at least one number, and at least one special character.'
+                : undefined;
+
     return (
-        <div className="card bg-base-100 w-full mx-auto max-w-sm shrink-0 shadow-2xl">
-            <h3 className="text-3xl font-bold text-center">Welcome to Sarabo</h3>
-            <p className='text-center'>Please Register</p>
+        <div>
+            <h1 className="text-title text-ds-foreground">Welcome to Sarabo</h1>
+            <p className="mt-2 text-body-sm text-ds-muted-foreground">
+                Create an account to request a repair and track it through every stage.
+            </p>
+
             {syncFailed && (
-                <div className="alert alert-warning mx-6 mb-2 text-sm">
-                    <span>
-                        Your account was created, but we couldn't finish setting up your profile.{' '}
-                        <button type="button" onClick={handleRetrySync} disabled={submitting} className="underline font-semibold">
-                            {submitting ? 'Retrying...' : 'Retry'}
-                        </button>
-                    </span>
+                <div role="alert" className="mt-6 rounded-ds border border-ds-border bg-ds-accent/50 px-4 py-3 text-body-sm text-ds-accent-foreground">
+                    Your account was created, but we couldn't finish setting up your profile.{' '}
+                    <button
+                        type="button"
+                        onClick={handleRetrySync}
+                        disabled={submitting}
+                        className="focus-ring rounded-ds font-semibold underline underline-offset-4 disabled:opacity-60"
+                    >
+                        {submitting ? 'Retrying...' : 'Retry'}
+                    </button>
                 </div>
             )}
-            <form className="card-body" onSubmit={handleSubmit(handleRegistration)}>
-                <fieldset className="fieldset">
-                    {/* name field */}
-                    <label className="label">Name</label>
-                    <input type="text"
+
+            <form onSubmit={handleSubmit(handleRegistration)} className="mt-8 flex flex-col gap-5">
+                <FormField id="register-name" label="Name" required error={nameError}>
+                    <Input
+                        id="register-name"
+                        type="text"
+                        autoComplete="name"
+                        placeholder="Your name"
+                        aria-invalid={nameError ? 'true' : undefined}
+                        aria-describedby={nameError ? 'register-name-error' : undefined}
                         {...register('name', { required: true })}
-                        className="input"
-                        placeholder="Your Name" />
-                    {errors.name?.type === 'required' && <p className='text-red-500'>Name is required.</p>}
+                    />
+                </FormField>
 
-                    {/* photo image field */}
-                    <label className="label">Photo</label>
+                <FormField id="register-photo" label="Photo" required error={photoError}>
+                    <Input
+                        id="register-photo"
+                        type="file"
+                        aria-invalid={photoError ? 'true' : undefined}
+                        aria-describedby={photoError ? 'register-photo-error' : undefined}
+                        className={cn(
+                            'h-auto py-2 file:mr-3 file:rounded-ds file:border-0 file:bg-ds-muted',
+                            'file:px-3 file:py-1.5 file:text-body-sm file:font-semibold file:text-ds-foreground'
+                        )}
+                        {...register('photo', { required: true })}
+                    />
+                </FormField>
 
-                    <input type="file" {...register('photo', { required: true })} className="file-input" placeholder="Your Photo" />
+                <FormField id="register-email" label="Email" required error={emailError}>
+                    <Input
+                        id="register-email"
+                        type="email"
+                        autoComplete="email"
+                        placeholder="you@example.com"
+                        aria-invalid={emailError ? 'true' : undefined}
+                        aria-describedby={emailError ? 'register-email-error' : undefined}
+                        {...register('email', { required: true })}
+                    />
+                </FormField>
 
-                    {errors.photo?.type === 'required' && <p className='text-red-500'>Photo is required.</p>}
+                <FormField id="register-password" label="Password" required error={passwordError}>
+                    <Input
+                        id="register-password"
+                        type="password"
+                        autoComplete="new-password"
+                        placeholder="Create a password"
+                        aria-invalid={passwordError ? 'true' : undefined}
+                        aria-describedby={passwordError ? 'register-password-error' : undefined}
+                        {...register('password', {
+                            required: true,
+                            minLength: 6,
+                            pattern: /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/
+                        })}
+                    />
+                </FormField>
 
-                    {/* email field */}
-                    <label className="label">Email</label>
-                    <input type="email" {...register('email', { required: true })} className="input" placeholder="Email" />
-                    {errors.email?.type === 'required' && <p className='text-red-500'>Email is required.</p>}
-
-                    {/* password */}
-                    <label className="label">Password</label>
-                    <input type="password" {...register('password', {
-                        required: true,
-                        minLength: 6,
-                        pattern: /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/
-                    })} className="input" placeholder="Password" />
-                    {
-                        errors.password?.type === 'required' && <p className='text-red-500'>Password is required.</p>
-                    }
-                    {
-                        errors.password?.type === 'minLength' && <p className='text-red-500'>
-                            Password must be 6 characters or longer.
-                        </p>
-                    }
-                    {
-                        errors.password?.type === 'pattern' && <p className='text-red-500'>Password must have at least one uppercase, at least one lowercase, at least one number, and at least one special character.</p>
-                    }
-
-                    <div className="tooltip" data-tip="Password reset is not available yet">
-                        <span className="text-sm opacity-60">Forgot password?</span>
-                    </div>
-                    <button disabled={submitting} className="btn btn-primary mt-4">
-                        {submitting ? 'Creating account...' : 'Register'}
-                    </button>
-                </fieldset>
-                <p>Already have an account <Link
-                    state={location.state}
-                    className='text-blue-400 underline'
-                    to="/login">Login</Link></p>
+                <LoadingButton
+                    type="submit"
+                    variant="action"
+                    size="lg"
+                    loading={submitting}
+                    loadingText="Creating account..."
+                    className="w-full"
+                >
+                    Register
+                </LoadingButton>
             </form>
-            <SocialLogin></SocialLogin>
+
+            <SocialLogin />
+
+            <p className="mt-8 border-t border-ds-border pt-6 text-body-sm text-ds-muted-foreground">
+                Already have an account{' '}
+                <Link
+                    state={location.state}
+                    to="/login"
+                    className="focus-ring rounded-ds font-semibold text-ds-primary underline-offset-4 hover:underline"
+                >
+                    Login
+                </Link>
+            </p>
         </div>
     );
 };
