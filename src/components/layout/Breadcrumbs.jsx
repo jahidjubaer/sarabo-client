@@ -27,7 +27,7 @@ function Breadcrumbs({ className }) {
 
     return (
         <nav aria-label="Breadcrumb" className={cn("min-w-0", className)}>
-            <ol className="flex items-center gap-1 text-sm">
+            <ol className="flex items-center gap-1 text-body-sm">
                 {crumbs.map((crumb, index) => (
                     <li
                         key={crumb.to}
@@ -37,9 +37,9 @@ function Breadcrumbs({ className }) {
                     >
                         {index > 0 && <ChevronRight aria-hidden="true" className="size-3.5 shrink-0 text-ds-muted-foreground" />}
                         {crumb.isLast ? (
-                            <span aria-current="page" className="truncate font-medium text-ds-foreground">{crumb.label}</span>
+                            <span aria-current="page" className="truncate font-semibold text-ds-foreground">{crumb.label}</span>
                         ) : (
-                            <Link to={crumb.to} className="truncate text-ds-muted-foreground hover:text-ds-foreground">{crumb.label}</Link>
+                            <Link to={crumb.to} className="focus-ring truncate rounded-ds-sm text-ds-muted-foreground hover:text-ds-foreground">{crumb.label}</Link>
                         )}
                     </li>
                 ))}

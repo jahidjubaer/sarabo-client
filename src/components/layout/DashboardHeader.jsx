@@ -10,6 +10,10 @@ import useAuth from '../../hooks/useAuth';
 // where the sidebar is present) + route breadcrumb context. Right: a command
 // trigger (labelled on >=sm, icon-only below), the existing NotificationBell
 // (integrated as-is - no invented counts), the theme toggle, and the user menu.
+//
+// Phase 7 restyles only: no control was added or removed, and nothing here
+// reports a metric. NotificationBell is left exactly as it is - it belongs to
+// Phase 12 (notifications), so restyling it now would reach outside this phase.
 function DashboardHeader({ role, onOpenMobileNav, onOpenCommand }) {
     const { user } = useAuth();
     return (
@@ -31,8 +35,8 @@ function DashboardHeader({ role, onOpenMobileNav, onOpenCommand }) {
                     aria-label="Open command menu"
                 >
                     <Search className="size-4" aria-hidden="true" />
-                    <span>Search</span>
-                    <kbd className="ml-1 rounded border border-ds-border px-1 text-[10px] leading-4">⌘K</kbd>
+                    <span className="text-body-sm">Search</span>
+                    <kbd className="ds-numeric ml-1 rounded-ds-sm border border-ds-border px-1 text-micro leading-4">⌘K</kbd>
                 </Button>
                 <Button variant="ghost" size="icon" onClick={onOpenCommand} className="sm:hidden" aria-label="Open command menu">
                     <Search className="size-5" aria-hidden="true" />

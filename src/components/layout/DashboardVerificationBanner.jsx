@@ -16,15 +16,15 @@ const DashboardVerificationBanner = () => {
     return (
         <div
             role="status"
-            className="mb-6 flex flex-col gap-2 rounded-ds-lg border border-ds-warning/30 bg-ds-warning/10 p-4 text-sm sm:flex-row sm:items-center sm:justify-between"
+            className="mb-6 flex flex-col gap-2 rounded-ds-lg border border-ds-warning/30 bg-ds-warning/10 p-4 text-body-sm sm:flex-row sm:items-center sm:justify-between"
         >
-            <div className="flex items-start gap-2">
+            <div className="flex items-start gap-2.5">
                 <ShieldAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-ds-warning" />
                 <p className="text-ds-foreground">
                     <span className="font-semibold">Verify your email</span> to submit repair requests and make payments.
                 </p>
             </div>
-            <Link to="/verify-email" className="focus-ring shrink-0 font-medium text-ds-primary underline underline-offset-2">
+            <Link to="/verify-email" className="focus-ring shrink-0 rounded-ds font-semibold text-ds-primary underline underline-offset-4">
                 Verify now
             </Link>
         </div>

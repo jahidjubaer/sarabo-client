@@ -49,9 +49,9 @@ function UserMenu({ role }) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-60">
                 <DropdownMenuLabel className="font-normal">
-                    <p className="truncate text-sm font-semibold" title={displayName}>{displayName}</p>
-                    {user.email && <p className="truncate text-xs text-ds-muted-foreground" title={user.email}>{user.email}</p>}
-                    {roleLabel && <p className="mt-1 text-xs font-medium text-ds-primary">{roleLabel}</p>}
+                    <p className="truncate text-body-sm font-semibold text-ds-foreground" title={displayName}>{displayName}</p>
+                    {user.email && <p className="truncate text-micro text-ds-muted-foreground" title={user.email}>{user.email}</p>}
+                    {roleLabel && <p className="ds-label mt-1.5 text-ds-primary">{roleLabel}</p>}
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>

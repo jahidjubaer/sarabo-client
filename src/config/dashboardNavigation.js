@@ -58,10 +58,15 @@ const SECTIONS_BY_ROLE = { user: CUSTOMER_SECTIONS, rider: TECHNICIAN_SECTIONS, 
 
 // Available to every authenticated role (not role-gated) - matches the existing
 // dashboard behaviour: notifications and profile are open to user/rider/admin.
+// `badge: 'notifications'` marks the ONE nav item allowed to show a count. It
+// is a presentation flag only - the destination, icon and label are unchanged -
+// and it resolves against the unread-count query the header already runs, so it
+// adds no request, no query key and no endpoint. No other item carries a badge,
+// because no other count exists without new fetching.
 export const ACCOUNT_SECTION = {
     heading: 'Account',
     items: [
-        { label: 'Notifications', to: '/dashboard/notifications', icon: Bell },
+        { label: 'Notifications', to: '/dashboard/notifications', icon: Bell, badge: 'notifications' },
         { label: 'Profile', to: '/dashboard/profile', icon: User },
     ],
 };
