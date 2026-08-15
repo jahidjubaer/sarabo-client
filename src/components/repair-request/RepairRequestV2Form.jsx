@@ -6,6 +6,7 @@ import { motion as Motion, MotionConfig } from 'motion/react';
 import { CircleCheckBig, TriangleAlert, ArrowRight, ListChecks } from 'lucide-react';
 import useAxiosSecure from '../../hooks/useAxiosSecure';
 import { useServiceDefinitions } from '../../hooks/useServiceDefinitions';
+import { serviceDefinitionKeys } from '../../hooks/serviceDefinitionKeys';
 import { createRepairRequestV2 } from '../../api/repairRequests';
 import {
     normalizeServiceDefinitions, deriveProductCategories, getServicesForProduct, findDefinitionById,
@@ -80,9 +81,17 @@ const RepairRequestV2Form = () => {
     const selectedRegion = useWatch({ control, name: 'serviceLocation.region' });
     const districtsByRegion = (region) => serviceAreas.filter((c) => c.region === region).map((d) => d.district);
 
-    const { data: rawCatalogue, isLoading: catalogueLoading, isError: catalogueError, refetch: refetchCatalogue } = useServiceDefinitions();
+    const {
+        data: rawCatalogue,
+        isPending: cataloguePending,
+        isPaused: cataloguePaused,
+        isError: catalogueError,
+    } = useServiceDefinitions();
     const definitions = normalizeServiceDefinitions(rawCatalogue);
     const productCategories = deriveProductCategories(definitions);
+    const catalogueLoading = cataloguePending && !cataloguePaused;
+    const catalogueUnavailable = catalogueError || cataloguePaused;
+    const retryCatalogue = () => queryClient.resetQueries({ queryKey: serviceDefinitionKeys.list() });
     const selectedProductCategorySlug = useWatch({ control, name: 'productCategorySlug' });
     const selectedServiceDefinitionId = useWatch({ control, name: 'serviceDefinitionId' });
     const servicesForSelectedProduct = getServicesForProduct(definitions, selectedProductCategorySlug);
@@ -308,8 +317,8 @@ const RepairRequestV2Form = () => {
                                 register={register}
                                 errors={errors}
                                 isLoading={catalogueLoading}
-                                isError={catalogueError}
-                                onRetry={refetchCatalogue}
+                                isError={catalogueUnavailable}
+                                onRetry={retryCatalogue}
                                 productCategories={productCategories}
                             />
 
@@ -355,7 +364,7 @@ const RepairRequestV2Form = () => {
                                 register={register}
                                 errors={errors}
                                 isLoading={catalogueLoading}
-                                isError={catalogueError}
+                                isError={catalogueUnavailable}
                                 servicesForSelectedProduct={servicesForSelectedProduct}
                                 selectedProductCategorySlug={selectedProductCategorySlug}
                                 selectedDefinition={selectedDefinition}
