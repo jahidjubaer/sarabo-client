@@ -102,6 +102,7 @@ function TechnicianJobItem({ job, onAdvance, pendingAction }) {
                     {primaryAction}
                     <Link
                         to={detailsTo}
+                        aria-label={`View details — ${[device, job.trackingId].filter(Boolean).join(' · ')}`}
                         className={buttonVariants({ variant: primaryAction ? 'outline' : 'default', size: 'sm' })}
                     >
                         View details

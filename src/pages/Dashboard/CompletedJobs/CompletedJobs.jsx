@@ -96,6 +96,7 @@ function CompletedJobItem({ request }) {
 
                 <Link
                     to={`/dashboard/assigned-jobs/${request._id}`}
+                    aria-label={`View completed job — ${[device, request.trackingId].filter(Boolean).join(' · ')}`}
                     className="focus-ring flex items-center justify-between gap-3 border-t border-ds-border bg-ds-muted/20 px-4 py-3 text-sm font-medium text-ds-primary hover:bg-ds-muted/50 sm:px-5"
                 >
                     View completed job

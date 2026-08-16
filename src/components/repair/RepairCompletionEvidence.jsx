@@ -1,9 +1,8 @@
-import { useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { X, Plus } from 'lucide-react';
 import useAxiosSecure from '../../hooks/useAxiosSecure';
 import { uploadRepairEvidence } from '../../api/repairs';
 import { MAX_EVIDENCE_IMAGES } from '../../utils/repairForm';
-import { Label } from '../ui/label';
 
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_SIZE_BYTES = 5 * 1024 * 1024;
@@ -15,6 +14,9 @@ const MAX_SIZE_BYTES = 5 * 1024 * 1024;
 // previews are memory-only. Upload architecture is unchanged - only presentation.
 const RepairCompletionEvidence = ({ requestId, items, onChange, disabled }) => {
     const axiosSecure = useAxiosSecure();
+    const groupId = useId();
+    const labelId = `${groupId}-evidence-label`;
+    const hintId = `${groupId}-evidence-hint`;
     const inputRef = useRef(null);
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState('');
@@ -47,9 +49,9 @@ const RepairCompletionEvidence = ({ requestId, items, onChange, disabled }) => {
 
     return (
         <div className="space-y-2">
-            <Label>Completion photos (optional) · {items.length}/{MAX_EVIDENCE_IMAGES}</Label>
-            <p className="text-xs text-ds-muted-foreground">Add up to {MAX_EVIDENCE_IMAGES} photos showing the completed repair. JPG, PNG, or WebP.</p>
-            <div className="flex flex-wrap gap-3">
+            <span id={labelId} className="text-sm font-medium text-ds-foreground leading-none">Completion photos (optional) · {items.length}/{MAX_EVIDENCE_IMAGES}</span>
+            <p id={hintId} className="text-xs text-ds-muted-foreground">Add up to {MAX_EVIDENCE_IMAGES} photos showing the completed repair. JPG, PNG, or WebP.</p>
+            <div role="group" aria-labelledby={labelId} aria-describedby={hintId} className="flex flex-wrap gap-3">
                 {items.map((item) => (
                     <div key={item.imageId} className="relative">
                         <img src={item.previewUrl} alt={item.name || 'Completion evidence'} className="size-24 rounded-ds object-cover border border-ds-border" />
@@ -70,6 +72,8 @@ const RepairCompletionEvidence = ({ requestId, items, onChange, disabled }) => {
                         type="button"
                         onClick={() => inputRef.current?.click()}
                         disabled={uploading}
+                        aria-label={uploading ? undefined : 'Add completion photo'}
+                        aria-describedby={hintId}
                         className="focus-ring flex size-24 flex-col items-center justify-center gap-1 rounded-ds border border-dashed border-ds-border text-xs text-ds-muted-foreground hover:bg-ds-muted/40 disabled:opacity-50"
                     >
                         {uploading ? 'Uploading…' : <><Plus aria-hidden="true" className="size-5" /> Add</>}
