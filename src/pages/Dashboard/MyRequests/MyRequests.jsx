@@ -202,8 +202,9 @@ const MyRequests = () => {
                     <EmptyState
                         title="No repair requests yet"
                         description="When you request a repair, it will appear here so you can track its progress."
+                        className="py-16"
                         action={
-                            <Link to="/dashboard/create-request" className={buttonVariants({ size: 'sm' })}>
+                            <Link to="/dashboard/create-request" className={buttonVariants({ variant: 'action', size: 'sm' })}>
                                 <Plus aria-hidden="true" />
                                 Create repair request
                             </Link>

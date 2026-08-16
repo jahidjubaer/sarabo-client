@@ -1,5 +1,6 @@
 import { humanizeSlug } from './serviceDefinitionCatalog';
 import { formatMoney } from './currency';
+import { getHandoverState } from './repairStage';
 
 // Customer-facing, PRESENTATION-ONLY helpers for the redesigned dashboard +
 // My Requests (Phase 7.3). Everything here is derived from data the list API
@@ -7,11 +8,11 @@ import { formatMoney } from './currency';
 // fetches, no changes to any record. Backend statuses are grouped for a
 // friendlier customer view; the underlying values are never modified.
 
-// Maps each backend deliveryStatus to a customer-friendly group. "needs-action"
-// is derivable from the status alone: a submitted quote must be reviewed, and an
-// approved (but not yet paid) quote must be paid. All other in-flight states are
-// "active"; terminal completions are "completed"; declined/cancelled are
-// "closed".
+// Maps each backend deliveryStatus to a customer-friendly group. A pending
+// post-repair handover is layered on through the shared handover utility below;
+// it remains separate from the four-stage repair spine. All other in-flight
+// states are "active"; terminal completions are "completed";
+// declined/cancelled are "closed".
 const STATUS_GROUP = {
     'pending-pickup': 'active',
     'driver_assigned': 'active',
@@ -41,6 +42,8 @@ export function getRequestStatus(request) {
 }
 
 export function getRequestGroup(request) {
+    const handover = getHandoverState(request);
+    if (handover && !handover.confirmed) return 'needs-action';
     return STATUS_GROUP[getRequestStatus(request)] || 'active';
 }
 
@@ -51,14 +54,17 @@ export function isActiveRequest(request) {
     return group === 'active' || group === 'needs-action';
 }
 
-// Customer next-action, derived ONLY from the status (never a per-request
-// payment-eligibility fetch). Returns { label, to } or null. Both destinations
-// are the request's own detail page, where the real quote/payment UI lives.
+// Customer next-action derived only from existing request presentation state
+// (never a per-request payment-eligibility fetch). Every destination is the
+// request detail page, where the authoritative quote/payment/handover UI lives.
 export function getRequestAction(request) {
     const status = getRequestStatus(request);
     if (!request?._id) return null;
-    if (status === 'quote_submitted') return { label: 'Review quote', to: `/dashboard/my-requests/${request._id}` };
-    if (status === 'quote_approved') return { label: 'Complete payment', to: `/dashboard/my-requests/${request._id}` };
+    const to = `/dashboard/my-requests/${request._id}`;
+    const handover = getHandoverState(request);
+    if (handover && !handover.confirmed) return { kind: 'handover', label: 'Confirm device received', to };
+    if (status === 'quote_submitted') return { kind: 'quote-review', label: 'Review quote', to };
+    if (status === 'quote_approved') return { kind: 'payment', label: 'Complete payment', to };
     return null;
 }
 

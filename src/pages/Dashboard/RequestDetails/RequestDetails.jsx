@@ -15,6 +15,7 @@ import { RepairWorkspaceHeader } from '../../../components/workspace/RepairWorks
 import { RepairLifecycleTimeline } from '../../../components/workspace/RepairLifecycleTimeline';
 import { CurrentStageActionPanel } from '../../../components/workspace/CurrentStageActionPanel';
 import { WorkspaceContextPanels } from '../../../components/workspace/WorkspaceContextPanels';
+import { CustomerRequestDetailsView } from '../../../components/customer/CustomerRequestDetailsView';
 import DamageImageManager from '../../../components/damage-images/DamageImageManager';
 import InspectionSection from '../../../components/inspection/InspectionSection';
 import QuoteSection from '../../../components/quote/QuoteSection';
@@ -244,6 +245,14 @@ const RequestDetails = () => {
             <div className="space-y-6">
                 <RepairWorkspaceHeader request={request} backTo={backTo} backLabel={backLabel} action={headerAction} />
 
+                {viewerRole === 'customer' ? (
+                    <CustomerRequestDetailsView
+                        request={request}
+                        sections={sections}
+                        isV2Request={isV2Request}
+                        damageImagesEditable={damageImagesEditable}
+                    />
+                ) : (
                 <Motion.div variants={staggerContainer} initial="hidden" animate="show" className="grid gap-6 lg:grid-cols-3">
                     <Motion.div variants={staggerItem} className="space-y-6 lg:col-span-2">
                         <CurrentStageActionPanel
@@ -303,6 +312,7 @@ const RequestDetails = () => {
                         <WorkspaceContextPanels request={request} showCustomer={isAdminContext || isAssignedTechnicianView} />
                     </Motion.div>
                 </Motion.div>
+                )}
             </div>
 
             <ConfirmDialog

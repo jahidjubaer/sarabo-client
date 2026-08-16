@@ -1,13 +1,12 @@
 import { Link } from 'react-router';
-import { ArrowRight, ChevronRight } from 'lucide-react';
+import { ArrowRight, ChevronRight, Hash } from 'lucide-react';
 import { Card, CardContent } from '../ui/card';
 import { StatusBadge } from '../common/StatusBadge';
 import { getProductSummary } from '../../utils/customerRequestPresentation';
 import { formatRelativeTime, formatAbsoluteDateTime } from '../../utils/relativeTime';
 
-// Short, glanceable list of the customer's latest requests (not a full table).
-// Each row links to the request's detail page; a "View all" link leads to the
-// full My Requests page.
+// Secondary history on the Customer dashboard. Rows remain fully linked, but
+// their quieter treatment keeps them below the focused next-action surface.
 function RecentRequests({ requests }) {
     if (!requests || requests.length === 0) return null;
 
@@ -28,17 +27,25 @@ function RecentRequests({ requests }) {
                             <li key={request._id}>
                                 <Link
                                     to={`/dashboard/my-requests/${request._id}`}
-                                    className="focus-ring flex items-center gap-3 px-5 py-3 hover:bg-ds-muted/50"
+                                    className="focus-ring flex items-start gap-3 px-5 py-4 hover:bg-ds-muted/50"
                                 >
-                                    <div className="min-w-0 flex-1">
-                                        <p className="truncate text-sm font-medium text-ds-foreground">{device}</p>
-                                        <p className="truncate text-xs text-ds-muted-foreground">
-                                            {category && `${category} · `}
+                                    <div className="min-w-0 flex-1 space-y-1.5">
+                                        <div className="flex flex-col items-start gap-1.5 sm:flex-row sm:items-center">
+                                            <p className="break-words text-sm font-semibold text-ds-foreground">{device}</p>
+                                            <StatusBadge status={request.deliveryStatus} showIcon={false} />
+                                        </div>
+                                        <p className="text-xs text-ds-muted-foreground">
+                                            {category && <span>{category} · </span>}
                                             <span title={formatAbsoluteDateTime(request.createdAt)}>{formatRelativeTime(request.createdAt)}</span>
                                         </p>
+                                        {request.trackingId && (
+                                            <p className="flex min-w-0 items-start gap-1 font-mono text-[11px] text-ds-muted-foreground">
+                                                <Hash aria-hidden="true" className="mt-px size-3 shrink-0" />
+                                                <span className="break-all">{request.trackingId}</span>
+                                            </p>
+                                        )}
                                     </div>
-                                    <StatusBadge status={request.deliveryStatus} showIcon={false} className="shrink-0" />
-                                    <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-ds-muted-foreground" />
+                                    <ChevronRight aria-hidden="true" className="mt-1 size-4 shrink-0 text-ds-muted-foreground" />
                                 </Link>
                             </li>
                         );

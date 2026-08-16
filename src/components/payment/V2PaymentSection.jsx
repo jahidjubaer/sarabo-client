@@ -87,7 +87,7 @@ const V2PaymentSection = ({ requestId }) => {
                 <span className="text-sm text-ds-muted-foreground">Amount due</span>
                 <span className="text-2xl font-bold text-ds-primary tabular-nums">{formatMoney(eligibility.amount, eligibility.currency)}</span>
             </div>
-            <Button onClick={handlePay} disabled={redirecting} className="w-full">
+            <Button variant="action" onClick={handlePay} disabled={redirecting} className="w-full">
                 <CreditCard aria-hidden="true" />
                 {redirecting ? 'Starting payment…' : 'Pay now'}
             </Button>

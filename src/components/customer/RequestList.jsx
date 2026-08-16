@@ -21,7 +21,7 @@ function RequestList({ requests, onClearFilters, onCancel, onDelete, onPay, canc
     }
 
     return (
-        <Motion.ul layout className="space-y-3">
+        <Motion.ul layout aria-label="Repair requests" className="space-y-3">
             <AnimatePresence initial={false}>
                 {requests.map((request) => (
                     <Motion.li

@@ -1,16 +1,17 @@
 import { Link } from 'react-router';
-import { ArrowRight, CalendarDays, Package } from 'lucide-react';
+import { ArrowRight, CalendarDays, CircleAlert, Clock3, Hash, Package } from 'lucide-react';
 import { Card, CardContent } from '../ui/card';
 import { buttonVariants } from '../ui/button-variants';
 import { StatusBadge } from '../common/StatusBadge';
+import ServiceSpine from '../spine/ServiceSpine';
 import { getStatusPresentation } from '../../config/statusPresentation';
 import { getProductSummary, getAgreedPrice, getRequestAction } from '../../utils/customerRequestPresentation';
 import { formatAbsoluteDateTime } from '../../utils/relativeTime';
 import { cn } from '../../lib/utils';
 
-// Prominent-but-restrained snapshot of the customer's most relevant in-flight
-// repair. All copy comes from the canonical status presentation - no raw
-// statuses, ids, technician data, or storage metadata are shown.
+// Focused Customer dashboard repair. The existing presentation-only action
+// helper chooses the request; this component only establishes visual priority.
+// Service progress continues to come from the shared canonical ServiceSpine.
 function ActiveRepairCard({ request, className }) {
     if (!request) return null;
 
@@ -19,52 +20,78 @@ function ActiveRepairCard({ request, className }) {
     const action = getRequestAction(request);
     const price = getAgreedPrice(request);
     const detailsTo = `/dashboard/my-requests/${request._id}`;
+    const ActionIcon = action ? CircleAlert : Clock3;
+    const actionDescription = action?.kind === 'handover'
+        ? 'Your repair is complete. Confirm once you have received your device.'
+        : (presentation.customerNextStep || presentation.customerDescription);
 
     return (
-        <Card className={cn("border-ds-primary/25", className)}>
-            <CardContent className="space-y-4 p-5">
-                <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                        <p className="text-xs font-medium uppercase tracking-wide text-ds-muted-foreground">Current repair</p>
-                        <h3 className="mt-0.5 flex items-center gap-2 text-lg font-semibold text-ds-foreground">
-                            <Package aria-hidden="true" className="size-5 shrink-0 text-ds-primary" />
-                            <span className="truncate">{device}</span>
-                        </h3>
-                        {(category || brandModel) && (
-                            <p className="mt-0.5 truncate text-sm text-ds-muted-foreground">
-                                {[category, brandModel].filter(Boolean).join(' · ')}
-                            </p>
+        <Card className={cn('overflow-hidden', action ? 'border-ds-warning/40' : 'border-ds-primary/25', className)}>
+            <CardContent className="p-0">
+                <div className={cn('border-b border-ds-border px-5 py-5 sm:px-6', action ? 'bg-ds-warning/5' : 'bg-ds-muted/30')}>
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="flex min-w-0 items-start gap-3">
+                            <span className={cn('mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full', action ? 'bg-ds-warning/15 text-ds-warning' : 'bg-ds-primary/10 text-ds-primary')}>
+                                <ActionIcon aria-hidden="true" className="size-4" />
+                            </span>
+                            <div className="min-w-0">
+                                <p className={cn('ds-label', action ? 'text-ds-warning' : 'text-ds-primary')}>{action ? 'Action required' : 'No action required'}</p>
+                                <h3 className="mt-1 text-xl font-semibold tracking-tight text-ds-foreground">{action?.label || presentation.label}</h3>
+                                {actionDescription && <p className="mt-1 max-w-2xl text-sm text-ds-muted-foreground">{actionDescription}</p>}
+                            </div>
+                        </div>
+                        <StatusBadge status={request.deliveryStatus} className="self-start" />
+                    </div>
+
+                    <div className="mt-4 flex flex-col gap-2 min-[390px]:flex-row min-[390px]:items-center">
+                        {action ? (
+                            <Link to={action.to} className={buttonVariants({ variant: 'action', size: 'sm' })}>
+                                {action.label}
+                                <ArrowRight aria-hidden="true" />
+                            </Link>
+                        ) : null}
+                        <Link to={detailsTo} className={buttonVariants({ variant: action ? 'outline' : 'default', size: 'sm' })}>
+                            View repair details
+                            {!action && <ArrowRight aria-hidden="true" />}
+                        </Link>
+                    </div>
+                </div>
+
+                <div className="space-y-5 px-5 py-5 sm:px-6">
+                    <div className="flex items-start gap-3">
+                        <Package aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-ds-primary" />
+                        <div className="min-w-0">
+                            <p className="break-words font-semibold text-ds-foreground">{device}</p>
+                            {(category || brandModel) && (
+                                <p className="mt-0.5 break-words text-sm text-ds-muted-foreground">
+                                    {[category, brandModel].filter(Boolean).join(' · ')}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
+                    <div>
+                        <p className="mb-3 ds-label text-ds-muted-foreground">Repair lifecycle</p>
+                        <ServiceSpine request={request} />
+                    </div>
+
+                    <div className="grid gap-2 border-t border-ds-border pt-4 text-sm text-ds-muted-foreground sm:grid-cols-2 lg:grid-cols-3">
+                        {request.trackingId && (
+                            <span className="inline-flex min-w-0 items-start gap-1.5">
+                                <Hash aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                                <span className="min-w-0 break-all font-mono text-xs text-ds-foreground">{request.trackingId}</span>
+                            </span>
+                        )}
+                        <span className="inline-flex items-start gap-1.5">
+                            <CalendarDays aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                            <span>Requested {formatAbsoluteDateTime(request.createdAt)}</span>
+                        </span>
+                        {price && (
+                            <span className="text-ds-foreground">
+                                Agreed price: <span className="font-medium">{price}</span>
+                            </span>
                         )}
                     </div>
-                    <StatusBadge status={request.deliveryStatus} className="shrink-0" />
-                </div>
-
-                {presentation.customerDescription && (
-                    <p className="text-sm text-ds-foreground">{presentation.customerDescription}</p>
-                )}
-
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ds-muted-foreground">
-                    <span className="inline-flex items-center gap-1.5">
-                        <CalendarDays aria-hidden="true" className="size-4" />
-                        Requested {formatAbsoluteDateTime(request.createdAt)}
-                    </span>
-                    {price && (
-                        <span className="text-ds-foreground">
-                            Agreed price: <span className="font-medium">{price}</span>
-                        </span>
-                    )}
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 pt-1">
-                    {action ? (
-                        <Link to={action.to} className={buttonVariants({ size: 'sm' })}>
-                            {action.label}
-                            <ArrowRight aria-hidden="true" />
-                        </Link>
-                    ) : null}
-                    <Link to={detailsTo} className={buttonVariants({ variant: action ? 'outline' : 'default', size: 'sm' })}>
-                        View details
-                    </Link>
                 </div>
             </CardContent>
         </Card>

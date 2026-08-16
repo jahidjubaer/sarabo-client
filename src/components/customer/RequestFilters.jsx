@@ -9,7 +9,11 @@ import { REQUEST_GROUPS, GROUP_LABELS, SORT_OPTIONS } from '../../utils/customer
 // the active group is not conveyed by colour alone.
 function RequestFilters({ search, onSearchChange, group, onGroupChange, sort, onSortChange }) {
     return (
-        <div className="space-y-3">
+        <section aria-labelledby="request-tools-heading" className="space-y-4 rounded-ds-lg border border-ds-border bg-ds-card p-4 sm:p-5">
+            <div>
+                <p className="ds-label text-ds-primary">Request history</p>
+                <h2 id="request-tools-heading" className="mt-1 text-base font-semibold text-ds-foreground">Find a repair request</h2>
+            </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <div className="relative flex-1">
                     <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ds-muted-foreground" />
@@ -19,7 +23,7 @@ function RequestFilters({ search, onSearchChange, group, onGroupChange, sort, on
                         type="search"
                         value={search}
                         onChange={(event) => onSearchChange(event.target.value)}
-                        placeholder="Search by device, category, or request ID"
+                        placeholder="Search by device, category, or tracking code"
                         className="pl-9"
                     />
                 </div>
@@ -56,7 +60,7 @@ function RequestFilters({ search, onSearchChange, group, onGroupChange, sort, on
                     </button>
                 ))}
             </div>
-        </div>
+        </section>
     );
 }
 

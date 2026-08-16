@@ -1,11 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { motion as Motion, MotionConfig } from 'motion/react';
-import { Plus, Package, ClipboardList, CircleAlert, CheckCheck } from 'lucide-react';
+import { Plus, Package, CircleCheckBig } from 'lucide-react';
 import useAuth from '../../hooks/useAuth';
 import useAxiosSecure from '../../hooks/useAxiosSecure';
 import { PageHeader } from '../common/PageHeader';
-import { StatCard } from '../common/StatCard';
 import { EmptyState } from '../common/EmptyState';
 import { ErrorState } from '../common/ErrorState';
 import { CardSkeleton } from '../common/Skeletons';
@@ -61,10 +60,8 @@ function CustomerOverview() {
     if (isInitialLoading) {
         return (
             <div className="space-y-6">
-                <PageHeader eyebrow="Customer" title="Repair Dashboard" description="Loading your repair activity..." actions={newRequestAction} />
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    {[0, 1, 2, 3].map((key) => <CardSkeleton key={key} />)}
-                </div>
+                <PageHeader eyebrow="Customer" title="Your repairs" description="Loading your repair activity..." actions={newRequestAction} />
+                <CardSkeleton className="h-64" />
                 <CardSkeleton className="h-40" />
             </div>
         );
@@ -73,7 +70,7 @@ function CustomerOverview() {
     if (isError || isUnavailableBeforeData) {
         return (
             <div className="space-y-6">
-                <PageHeader eyebrow="Customer" title="Repair Dashboard" actions={newRequestAction} />
+                <PageHeader eyebrow="Customer" title="Your repairs" actions={newRequestAction} />
                 <ErrorState
                     title="Couldn't load your dashboard"
                     description="We couldn't load your repair activity right now. Please try again."
@@ -92,7 +89,7 @@ function CustomerOverview() {
             <div className="space-y-6">
                 <PageHeader
                     eyebrow="Customer"
-                    title="Repair Dashboard"
+                    title="Your repairs"
                     description={buildDescription(summary)}
                     actions={newRequestAction}
                 />
@@ -102,8 +99,9 @@ function CustomerOverview() {
                         icon={Package}
                         title="No repair requests yet"
                         description="When you request a repair, you'll be able to track its progress here."
+                        className="py-16"
                         action={
-                            <Link to="/dashboard/create-request" className={buttonVariants({ size: 'sm' })}>
+                            <Link to="/dashboard/create-request" className={buttonVariants({ variant: 'action', size: 'sm' })}>
                                 <Plus aria-hidden="true" />
                                 Create repair request
                             </Link>
@@ -111,24 +109,28 @@ function CustomerOverview() {
                     />
                 ) : (
                     <Motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-6">
-                        <Motion.div variants={staggerItem} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                            <StatCard label="Total requests" value={summary.total} icon={Package} />
-                            <StatCard label="Active repairs" value={summary.active} icon={ClipboardList} />
-                            <StatCard
-                                label="Needs your action"
-                                value={summary.needsAction}
-                                icon={CircleAlert}
-                                helper={summary.needsAction > 0 ? 'Action needed' : undefined}
-                                trend={summary.needsAction > 0 ? 'down' : undefined}
-                            />
-                            <StatCard label="Completed" value={summary.completed} icon={CheckCheck} />
-                        </Motion.div>
-
-                        {snapshot && (
-                            <Motion.div variants={staggerItem}>
+                        <Motion.section variants={staggerItem} aria-labelledby="customer-attention-heading" className="space-y-3">
+                            <div>
+                                <p className="ds-label text-ds-primary">Next action</p>
+                                <h2 id="customer-attention-heading" className="mt-1 text-xl font-semibold tracking-tight text-ds-foreground">What needs your attention?</h2>
+                            </div>
+                            {snapshot ? (
                                 <ActiveRepairCard request={snapshot} />
-                            </Motion.div>
-                        )}
+                            ) : (
+                                <EmptyState
+                                    icon={CircleCheckBig}
+                                    title="No active repairs"
+                                    description="You have no repair requests that need your attention right now."
+                                    className="py-8"
+                                    action={
+                                        <Link to="/dashboard/create-request" className={buttonVariants({ variant: 'action', size: 'sm' })}>
+                                            <Plus aria-hidden="true" />
+                                            Create repair request
+                                        </Link>
+                                    }
+                                />
+                            )}
+                        </Motion.section>
 
                         <Motion.div variants={staggerItem} className="grid gap-6 lg:grid-cols-3">
                             <div className="lg:col-span-2">

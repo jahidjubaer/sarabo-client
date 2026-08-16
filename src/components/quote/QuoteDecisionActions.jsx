@@ -43,7 +43,7 @@ const QuoteDecisionActions = ({ requestId }) => {
 
     return (
         <div className="mt-3 flex flex-wrap gap-3">
-            <Button onClick={() => setApproveOpen(true)} disabled={busy}>
+            <Button variant="action" onClick={() => setApproveOpen(true)} disabled={busy}>
                 <Check aria-hidden="true" /> Approve quote
             </Button>
             <Button variant="outline" className="text-ds-destructive hover:text-ds-destructive" onClick={() => setDeclineOpen(true)} disabled={busy}>

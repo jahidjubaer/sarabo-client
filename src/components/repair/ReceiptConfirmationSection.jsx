@@ -70,7 +70,7 @@ const ReceiptConfirmationSection = ({ requestId, request, isOwner }) => {
                     <p className="text-sm font-semibold text-ds-foreground">Have you received your repaired device?</p>
                     <p className="text-xs text-ds-muted-foreground">Confirm once you have received your repaired device.</p>
                 </div>
-                <Button size="sm" onClick={() => setOpen(true)} disabled={busy}>
+                <Button variant="action" size="sm" onClick={() => setOpen(true)} disabled={busy}>
                     <PackageCheck aria-hidden="true" /> Confirm Device Received
                 </Button>
             </div>
