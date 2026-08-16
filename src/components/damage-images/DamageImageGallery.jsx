@@ -9,7 +9,7 @@ import DamageImageCard from './DamageImageCard';
 // in 7.6A with a Dialog-based preview. The preview URL is the same authorized
 // readUrl already in the query response, held only transiently in local state -
 // never persisted to the cache or rendered as text.
-const DamageImageGallery = ({ images, isLoading, isError, canDelete, deletingImageId, onDelete, onRequestRefresh }) => {
+const DamageImageGallery = ({ images, isLoading, isUnavailable, isError, canDelete, deletingImageId, onDelete, onRetry, onRequestRefresh }) => {
     const [preview, setPreview] = useState(null);
 
     if (isLoading) {
@@ -19,11 +19,19 @@ const DamageImageGallery = ({ images, isLoading, isError, canDelete, deletingIma
             </div>
         );
     }
+    if (isUnavailable) {
+        return (
+            <div className="flex flex-wrap items-center gap-2 text-sm text-ds-muted-foreground">
+                <span>Photos are unavailable right now.</span>
+                <Button variant="ghost" size="sm" onClick={onRetry}><RefreshCw aria-hidden="true" /> Try again</Button>
+            </div>
+        );
+    }
     if (isError) {
         return (
             <div className="flex items-center gap-2 text-sm text-ds-muted-foreground">
                 <span>Photos could not be loaded.</span>
-                <Button variant="ghost" size="sm" onClick={onRequestRefresh}><RefreshCw aria-hidden="true" /> Retry</Button>
+                <Button variant="ghost" size="sm" onClick={onRetry}><RefreshCw aria-hidden="true" /> Retry</Button>
             </div>
         );
     }

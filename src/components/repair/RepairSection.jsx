@@ -1,6 +1,8 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { CircleCheckBig } from 'lucide-react';
 import { useRepair } from '../../hooks/useRepair';
 import { useStartRepair } from '../../hooks/useRepairMutations';
+import { repairKeys } from '../../hooks/repairKeys';
 import { notify } from '../../lib/notify';
 import { Button } from '../ui/button';
 import { Separator } from '../ui/separator';
@@ -23,13 +25,27 @@ function startErrorMessage(error) {
 // redesigned to ds-* in 7.6A. Server truth decides technician controls vs
 // read-only; the server re-authorizes every action. Feedback via Toastify.
 const RepairSection = ({ requestId, canManage, deliveryStatus }) => {
-    const { data: repair, isLoading, isError } = useRepair(requestId);
+    const queryClient = useQueryClient();
+    const { data: repair, isLoading, isPaused, isError } = useRepair(requestId);
     const startMutation = useStartRepair(requestId);
+    const hasUsableRepair = repair !== undefined && repair !== null;
+    const isInitialLoading = isLoading && !hasUsableRepair;
+    const isUnavailableBeforeData = isPaused && !hasUsableRepair;
+    const isReadErrorBeforeData = isError && !hasUsableRepair;
+    const retryRepair = () => queryClient.resetQueries({ queryKey: repairKeys.request(requestId) });
 
-    if (isLoading) {
+    if (isInitialLoading) {
         return <p className="text-sm text-ds-muted-foreground" aria-busy="true">Loading repair status…</p>;
     }
-    if (isError || !repair) {
+    if (isUnavailableBeforeData || isReadErrorBeforeData) {
+        return (
+            <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm text-ds-muted-foreground">Repair details are unavailable right now.</p>
+                <Button variant="ghost" size="sm" onClick={retryRepair}>Try again</Button>
+            </div>
+        );
+    }
+    if (!repair) {
         return <p className="text-sm text-ds-muted-foreground">Repair details are unavailable right now.</p>;
     }
 

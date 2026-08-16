@@ -1,6 +1,8 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { useDamageImages } from '../../hooks/useDamageImages';
 import { useDamageImageUploadQueue, useRemoveDamageImage } from '../../hooks/useDamageImageMutations';
+import { damageImageKeys } from '../../hooks/damageImageKeys';
 import { normalizeDamageImageError } from '../../utils/damageImageErrors';
 import { MAX_DAMAGE_IMAGES } from '../../utils/damageImageValidation';
 import { notify } from '../../lib/notify';
@@ -21,9 +23,10 @@ const COMPLETE_ITEM_DISPLAY_MS = 1500;
 // gate - upload/delete controls render only when the server itself
 // confirms this caller is the request's owner, regardless of `canEdit`.
 const DamageImageManager = ({ requestId, canEdit = false, maxImages = MAX_DAMAGE_IMAGES, onBusyChange }) => {
+    const queryClient = useQueryClient();
     const [serverLocked, setServerLocked] = useState(false);
     const [deleteTargetId, setDeleteTargetId] = useState(null);
-    const { data, isLoading, isError, refetch } = useDamageImages(requestId, { enabled: !!requestId });
+    const { data, isLoading, isPaused, isError, refetch } = useDamageImages(requestId, { enabled: !!requestId });
     const { items, addFiles, retryItem, cancelItem, removeItem, isProcessing } = useDamageImageUploadQueue({ requestId });
     const removeMutation = useRemoveDamageImage(requestId);
     const removalErrorNoticeRef = useRef(null);
@@ -37,6 +40,10 @@ const DamageImageManager = ({ requestId, canEdit = false, maxImages = MAX_DAMAGE
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isProcessing]);
 
+    const hasUsableData = data !== undefined && data !== null;
+    const isInitialLoading = isLoading && !hasUsableData;
+    const isUnavailableBeforeData = isPaused && !hasUsableData;
+    const isReadErrorBeforeData = isError && !hasUsableData;
     const images = data?.images || [];
     const totalImages = data?.totalImages ?? images.length;
     const isOwnerConfirmedByServer = data?.accessRole === 'owner';
@@ -64,6 +71,7 @@ const DamageImageManager = ({ requestId, canEdit = false, maxImages = MAX_DAMAGE
     }, [items]);
 
     const handleFilesSelected = (files) => addFiles(files);
+    const retryImages = () => queryClient.resetQueries({ queryKey: damageImageKeys.request(requestId) });
 
     // Opens the design-system confirm dialog; the mutation only fires on
     // confirm. Behaviour/endpoints are unchanged - only the confirm/feedback UI.
@@ -130,11 +138,13 @@ const DamageImageManager = ({ requestId, canEdit = false, maxImages = MAX_DAMAGE
 
             <DamageImageGallery
                 images={images}
-                isLoading={isLoading}
-                isError={isError}
+                isLoading={isInitialLoading}
+                isUnavailable={isUnavailableBeforeData}
+                isError={isReadErrorBeforeData}
                 canDelete={effectiveCanEdit}
                 deletingImageId={removeMutation.isPending ? removeMutation.variables : null}
                 onDelete={handleDelete}
+                onRetry={retryImages}
                 onRequestRefresh={refetch}
             />
 

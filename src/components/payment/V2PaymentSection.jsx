@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { CreditCard, Lock, CircleCheckBig } from 'lucide-react';
 import useAxiosSecure from '../../hooks/useAxiosSecure';
 import { usePaymentEligibility } from '../../hooks/usePaymentEligibility';
+import { paymentKeys } from '../../hooks/paymentKeys';
 import { createV2Checkout } from '../../api/payments';
 import { formatMoney } from '../../utils/currency';
 import { getPaymentErrorMessage } from '../../utils/paymentErrorMessage';
@@ -29,11 +31,28 @@ function PaymentCard({ children }) {
 
 const V2PaymentSection = ({ requestId }) => {
     const axiosSecure = useAxiosSecure();
+    const queryClient = useQueryClient();
     const [redirecting, setRedirecting] = useState(false);
-    const { data: eligibility, isLoading, isError } = usePaymentEligibility(requestId);
+    const { data: eligibility, isLoading, isPaused, isError } = usePaymentEligibility(requestId);
+    const hasUsableEligibility = eligibility !== undefined;
+    const isInitialLoading = isLoading && !hasUsableEligibility;
+    const isUnavailableBeforeData = isPaused && !hasUsableEligibility;
+    const isReadErrorBeforeData = isError && !hasUsableEligibility;
+    const retryEligibility = () => queryClient.resetQueries({ queryKey: paymentKeys.eligibility(requestId) });
 
-    // While checking or on a non-fatal error, add nothing to the page.
-    if (isLoading || isError || !eligibility) return null;
+    // Preserve the existing quiet loading/error treatment. A paused initial
+    // read is different: eligibility is still unknown, so expose recovery
+    // instead of making a potentially required customer action disappear.
+    if (isInitialLoading || isReadErrorBeforeData) return null;
+    if (isUnavailableBeforeData) {
+        return (
+            <PaymentCard>
+                <p className="text-sm text-ds-muted-foreground">Payment availability cannot be checked right now.</p>
+                <Button variant="outline" size="sm" onClick={retryEligibility}>Try again</Button>
+            </PaymentCard>
+        );
+    }
+    if (!eligibility) return null;
 
     if (!eligibility.eligible && eligibility.code === 'ALREADY_PAID') {
         return (
