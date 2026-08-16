@@ -139,7 +139,22 @@ const NotificationsPage = () => {
         headerRef.current?.scrollIntoView({ block: 'start' });
     };
 
-    const handlePageChange = (nextPage) => {
+    // Phase 13A-2b: measured with a real keyboard - activating Previous/Next
+    // dropped focus to <body>. Both controls carry `disabled={... ||
+    // listQuery.isFetching}`, and a focused element that becomes disabled loses
+    // focus; by the time the fetch settles and it re-enables, focus is gone. A
+    // keyboard user then had to re-tab the entire shell to reach the control
+    // again for every single page. This restores focus to the control that was
+    // actually activated, and only then: `pendingPageFocusRef` is set solely by
+    // handlePageChange, so nothing fires on mount, on filter change, or on the
+    // URL-normalisation effect. `preventScroll` keeps the existing
+    // scrollIntoView the single source of scrolling.
+    const pendingPageFocusRef = useRef(null);
+    const previousPageButtonRef = useRef(null);
+    const nextPageButtonRef = useRef(null);
+
+    const handlePageChange = (nextPage, source) => {
+        pendingPageFocusRef.current = source;
         setSearchParams((params) => {
             params.set('page', String(nextPage));
             params.set('filter', filter);
@@ -147,6 +162,19 @@ const NotificationsPage = () => {
         });
         headerRef.current?.scrollIntoView({ block: 'start' });
     };
+
+    useEffect(() => {
+        if (!pendingPageFocusRef.current || listQuery.isFetching) return;
+        const requested = pendingPageFocusRef.current === 'next' ? nextPageButtonRef.current : previousPageButtonRef.current;
+        pendingPageFocusRef.current = null;
+        // On the first/last page the control just used becomes disabled, so fall
+        // back to the sibling rather than focusing something unfocusable.
+        const fallback = previousPageButtonRef.current && !previousPageButtonRef.current.disabled
+            ? previousPageButtonRef.current
+            : nextPageButtonRef.current;
+        const target = requested && !requested.disabled ? requested : fallback;
+        if (target && !target.disabled) target.focus({ preventScroll: true });
+    }, [page, listQuery.isFetching]);
 
     const handleActivate = (notification) => {
         if (!notification.isRead) {
@@ -291,7 +319,8 @@ const NotificationsPage = () => {
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => handlePageChange(Math.max(page - 1, 1))}
+                        ref={previousPageButtonRef}
+                        onClick={() => handlePageChange(Math.max(page - 1, 1), 'previous')}
                         disabled={!pagination.hasPreviousPage || listQuery.isFetching}
                         aria-label="Previous page"
                     >
@@ -304,7 +333,8 @@ const NotificationsPage = () => {
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => handlePageChange(page + 1)}
+                        ref={nextPageButtonRef}
+                        onClick={() => handlePageChange(page + 1, 'next')}
                         disabled={!pagination.hasNextPage || listQuery.isFetching}
                         aria-label="Next page"
                     >
