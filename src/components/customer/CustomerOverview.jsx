@@ -122,6 +122,7 @@ function CustomerOverview() {
                                     title="No active repairs"
                                     description="You have no repair requests that need your attention right now."
                                     className="py-8"
+                                    headingLevel={3}
                                     action={
                                         <Link to="/dashboard/create-request" className={buttonVariants({ variant: 'action', size: 'sm' })}>
                                             <Plus aria-hidden="true" />

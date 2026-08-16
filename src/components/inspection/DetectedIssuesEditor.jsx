@@ -39,13 +39,14 @@ const DetectedIssuesEditor = ({ fields, register, errors, append, remove }) => {
                                 type="text"
                                 placeholder="e.g. Cracked display panel"
                                 aria-invalid={issueErrors[index]?.label ? 'true' : 'false'}
+                                aria-describedby={issueErrors[index]?.label ? `issue-label-${index}-error` : undefined}
                                 {...register(`detectedIssues.${index}.label`, {
                                     required: 'Issue label is required.',
                                     minLength: { value: ISSUE_LABEL_MIN, message: `At least ${ISSUE_LABEL_MIN} characters.` },
                                     maxLength: { value: ISSUE_LABEL_MAX, message: `At most ${ISSUE_LABEL_MAX} characters.` },
                                 })}
                             />
-                            {issueErrors[index]?.label && <p role="alert" className="text-xs font-medium text-ds-destructive">{issueErrors[index].label.message}</p>}
+                            {issueErrors[index]?.label && <p id={`issue-label-${index}-error`} role="alert" className="text-xs font-medium text-ds-destructive">{issueErrors[index].label.message}</p>}
                         </div>
 
                         <div className="space-y-1.5">
@@ -55,12 +56,13 @@ const DetectedIssuesEditor = ({ fields, register, errors, append, remove }) => {
                                 defaultValue=""
                                 className={selectClass}
                                 aria-invalid={issueErrors[index]?.severity ? 'true' : 'false'}
+                                aria-describedby={issueErrors[index]?.severity ? `issue-severity-${index}-error` : undefined}
                                 {...register(`detectedIssues.${index}.severity`, { required: 'Select a severity.' })}
                             >
                                 <option value="" disabled>Select severity</option>
                                 {SEVERITY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                             </select>
-                            {issueErrors[index]?.severity && <p role="alert" className="text-xs font-medium text-ds-destructive">{issueErrors[index].severity.message}</p>}
+                            {issueErrors[index]?.severity && <p id={`issue-severity-${index}-error`} role="alert" className="text-xs font-medium text-ds-destructive">{issueErrors[index].severity.message}</p>}
                         </div>
 
                         <div className="space-y-1.5">
@@ -73,7 +75,7 @@ const DetectedIssuesEditor = ({ fields, register, errors, append, remove }) => {
                                     maxLength: { value: ISSUE_NOTES_MAX, message: `At most ${ISSUE_NOTES_MAX} characters.` },
                                 })}
                             />
-                            {issueErrors[index]?.notes && <p role="alert" className="text-xs font-medium text-ds-destructive">{issueErrors[index].notes.message}</p>}
+                            {issueErrors[index]?.notes && <p id={`issue-notes-${index}-error`} role="alert" className="text-xs font-medium text-ds-destructive">{issueErrors[index].notes.message}</p>}
                         </div>
                     </div>
                 ))}

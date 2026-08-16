@@ -219,6 +219,7 @@ const CompletedJobs = () => {
                         title="No completed repairs yet"
                         description="Completed repair work will appear here."
                         className="py-12"
+                        headingLevel={3}
                     />
                 ) : (
                     <ul className="grid gap-3 xl:grid-cols-2">

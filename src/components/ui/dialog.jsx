@@ -42,6 +42,13 @@ function DialogContent({ className, children, showCloseButton = true, ...props }
             <DialogOverlay />
             <DialogPrimitive.Content
                 data-slot="dialog-content"
+                // Phase 13A: this rendered role="dialog" with no aria-modal, even
+                // though every Dialog here is modal (Radix's default - nothing in
+                // this app passes modal={false}, and the overlay makes the
+                // background inert). Screen readers use aria-modal to confine
+                // reading to the dialog; without it some pairs happily read the
+                // page behind. A caller can still override it via props.
+                aria-modal="true"
                 className={cn(
                     "fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-ds-lg border border-ds-border bg-ds-popover p-6 text-ds-popover-foreground shadow-lg data-[state=open]:animate-[ds-pop-in_150ms_ease-out] data-[state=closed]:animate-[ds-pop-out_120ms_ease-in]",
                     className

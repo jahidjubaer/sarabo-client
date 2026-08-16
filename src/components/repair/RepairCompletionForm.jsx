@@ -64,8 +64,9 @@ const RepairCompletionForm = ({ requestId }) => {
                         placeholder="Describe the work performed and the outcome."
                         value={summary} onChange={(event) => setSummary(event.target.value)}
                         aria-invalid={errors.summary ? 'true' : 'false'}
+                        aria-describedby={errors.summary ? 'repairSummary-error' : undefined}
                     />
-                    {errors.summary && <p role="alert" className="text-xs font-medium text-ds-destructive">{errors.summary}</p>}
+                    {errors.summary && <p id="repairSummary-error" role="alert" className="text-xs font-medium text-ds-destructive">{errors.summary}</p>}
                 </div>
 
                 <RepairCompletionEvidence requestId={requestId} items={evidence} onChange={setEvidence} disabled={busy} />

@@ -72,6 +72,7 @@ const ServiceDefinitionSelector = ({
                     title="Service catalogue unavailable"
                     description="We could not load the list of repair services. Please try again."
                     onRetry={onRetry}
+                    headingLevel={3}
                 />
             );
         }
@@ -81,6 +82,7 @@ const ServiceDefinitionSelector = ({
                     icon={Wrench}
                     title="No repair services available"
                     description="There are no repair services to request right now. Please check back later."
+                    headingLevel={3}
                 />
             );
         }

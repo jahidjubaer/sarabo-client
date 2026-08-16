@@ -113,7 +113,7 @@ function AdminBlockedWork({ requests, technicians, requestsState, techniciansSta
                         {requestsState.isInitialLoading ? (
                             <PanelLoading />
                         ) : requestsState.isUnavailableBeforeData ? (
-                            <ErrorState title="Assignment queue unavailable" description="We couldn't load requests awaiting assignment right now." onRetry={onRetryRequests} className="px-4 py-8" />
+                            <ErrorState title="Assignment queue unavailable" description="We couldn't load requests awaiting assignment right now." onRetry={onRetryRequests} className="px-4 py-8" headingLevel={4} />
                         ) : awaitingAssignments.length === 0 ? (
                             <p className="text-sm text-ds-muted-foreground">No repair requests are waiting for assignment.</p>
                         ) : (
@@ -127,7 +127,7 @@ function AdminBlockedWork({ requests, technicians, requestsState, techniciansSta
                         {techniciansState.isInitialLoading ? (
                             <PanelLoading />
                         ) : techniciansState.isUnavailableBeforeData ? (
-                            <ErrorState title="Application queue unavailable" description="We couldn't load pending Technician applications right now." onRetry={onRetryTechnicians} className="px-4 py-8" />
+                            <ErrorState title="Application queue unavailable" description="We couldn't load pending Technician applications right now." onRetry={onRetryTechnicians} className="px-4 py-8" headingLevel={4} />
                         ) : pendingApplications.length === 0 ? (
                             <p className="text-sm text-ds-muted-foreground">No Technician applications are waiting for review.</p>
                         ) : (

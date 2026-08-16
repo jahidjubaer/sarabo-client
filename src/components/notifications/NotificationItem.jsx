@@ -9,12 +9,17 @@ import { cn } from '../../lib/utils';
 // sarabo-server's NotificationController.js SAFE_FIELDS), so this component
 // never expects them.
 //
-// `variant`:
-// - 'dropdown' (default) - the bell preview list, `role="menuitem"` (it's a
-//   genuine ARIA menu widget there - see NotificationBell.jsx).
-// - 'page' - the full Notification Center list (Phase 5.3 Unit 2), a plain
-//   semantic list rather than a menu, so no menuitem role; more generous
-//   spacing and a taller message clamp than the compact dropdown row.
+// `variant` is PRESENTATION ONLY:
+// - 'dropdown' (default) - the compact bell preview row.
+// - 'page' - the full Notification Center row (Phase 5.3 Unit 2): more generous
+//   spacing and a taller message clamp.
+//
+// Phase 13A dropped the `role="menuitem"` the dropdown variant used to carry.
+// The bell panel was never an ARIA menu (see NotificationBell.jsx), and a
+// menuitem outside a menu is invalid - it also suppressed the native link/button
+// role that actually tells a user what activating the row will do. Both variants
+// are now plain links (or buttons, when there is no safe actionUrl) inside a
+// list, which is what they have always behaved like.
 //
 // UNREAD IS NEVER COLOUR-ONLY (Phase 12). Three independent signals carry it:
 // a readable "Unread" tag, a heavier title, and a tinted row/icon. The tag
@@ -25,7 +30,6 @@ const NotificationItem = ({ notification, onActivate, variant = 'dropdown' }) =>
     const hasValidLink = isSafeInternalPath(notification.actionUrl);
     const unread = !notification.isRead;
     const isPageVariant = variant === 'page';
-    const role = isPageVariant ? undefined : 'menuitem';
 
     const sharedClass = cn(
         'focus-ring flex w-full items-start gap-3 rounded-ds text-left transition-colors',
@@ -81,7 +85,6 @@ const NotificationItem = ({ notification, onActivate, variant = 'dropdown' }) =>
                 to={notification.actionUrl}
                 onClick={() => onActivate(notification)}
                 className={sharedClass}
-                role={role}
             >
                 {content}
             </Link>
@@ -91,7 +94,7 @@ const NotificationItem = ({ notification, onActivate, variant = 'dropdown' }) =>
     // Missing/invalid actionUrl: the item stays interactive (so an unread
     // notification can still be marked read) but never navigates.
     return (
-        <button type="button" onClick={() => onActivate(notification)} className={sharedClass} role={role}>
+        <button type="button" onClick={() => onActivate(notification)} className={sharedClass}>
             {content}
         </button>
     );

@@ -74,14 +74,14 @@ const InspectionForm = ({ requestId }) => {
                     <Label htmlFor="diagnosisSummary">Diagnosis summary</Label>
                     <Textarea
                         id="diagnosisSummary" rows={4} placeholder="Describe what you found on inspection"
-                        aria-invalid={errors.diagnosisSummary ? 'true' : 'false'}
+                        aria-invalid={errors.diagnosisSummary ? 'true' : 'false'} aria-describedby={errors.diagnosisSummary ? 'diagnosisSummary-error' : undefined}
                         {...register('diagnosisSummary', {
                             required: 'A diagnosis summary is required.',
                             minLength: { value: DIAGNOSIS_SUMMARY_MIN, message: `At least ${DIAGNOSIS_SUMMARY_MIN} characters.` },
                             maxLength: { value: DIAGNOSIS_SUMMARY_MAX, message: `At most ${DIAGNOSIS_SUMMARY_MAX} characters.` },
                         })}
                     />
-                    {errors.diagnosisSummary && <p role="alert" className="text-xs font-medium text-ds-destructive">{errors.diagnosisSummary.message}</p>}
+                    {errors.diagnosisSummary && <p id="diagnosisSummary-error" role="alert" className="text-xs font-medium text-ds-destructive">{errors.diagnosisSummary.message}</p>}
                 </div>
 
                 <DetectedIssuesEditor fields={fields} register={register} errors={errors} append={append} remove={remove} />
@@ -91,26 +91,26 @@ const InspectionForm = ({ requestId }) => {
                         <Label htmlFor="repairabilityDecision">Repairability</Label>
                         <select
                             id="repairabilityDecision" defaultValue="" className={selectClass}
-                            aria-invalid={errors.repairabilityDecision ? 'true' : 'false'}
+                            aria-invalid={errors.repairabilityDecision ? 'true' : 'false'} aria-describedby={errors.repairabilityDecision ? 'repairabilityDecision-error' : undefined}
                             {...register('repairabilityDecision', { required: 'Select a repairability decision.' })}
                         >
                             <option value="" disabled>Select a decision</option>
                             {REPAIRABILITY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                         </select>
-                        {errors.repairabilityDecision && <p role="alert" className="text-xs font-medium text-ds-destructive">{errors.repairabilityDecision.message}</p>}
+                        {errors.repairabilityDecision && <p id="repairabilityDecision-error" role="alert" className="text-xs font-medium text-ds-destructive">{errors.repairabilityDecision.message}</p>}
                     </div>
                     <div className="space-y-1.5">
                         <Label htmlFor="repairabilityReason">Reason</Label>
                         <Textarea
                             id="repairabilityReason" rows={3} placeholder="Explain the repairability decision"
-                            aria-invalid={errors.repairabilityReason ? 'true' : 'false'}
+                            aria-invalid={errors.repairabilityReason ? 'true' : 'false'} aria-describedby={errors.repairabilityReason ? 'repairabilityReason-error' : undefined}
                             {...register('repairabilityReason', {
                                 required: 'A reason is required.',
                                 minLength: { value: REASON_MIN, message: `At least ${REASON_MIN} characters.` },
                                 maxLength: { value: REASON_MAX, message: `At most ${REASON_MAX} characters.` },
                             })}
                         />
-                        {errors.repairabilityReason && <p role="alert" className="text-xs font-medium text-ds-destructive">{errors.repairabilityReason.message}</p>}
+                        {errors.repairabilityReason && <p id="repairabilityReason-error" role="alert" className="text-xs font-medium text-ds-destructive">{errors.repairabilityReason.message}</p>}
                     </div>
                 </div>
 
@@ -120,14 +120,14 @@ const InspectionForm = ({ requestId }) => {
                         <div className="space-y-1.5">
                             <Label htmlFor="laborEstimate">Labor</Label>
                             <Input id="laborEstimate" type="number" min="0" step="1" inputMode="numeric" placeholder="Optional"
-                                aria-invalid={errors.laborEstimate ? 'true' : 'false'} {...register('laborEstimate', estimateRule)} />
-                            {errors.laborEstimate && <p role="alert" className="text-xs font-medium text-ds-destructive">{errors.laborEstimate.message}</p>}
+                                aria-invalid={errors.laborEstimate ? 'true' : 'false'} aria-describedby={errors.laborEstimate ? 'laborEstimate-error' : undefined} {...register('laborEstimate', estimateRule)} />
+                            {errors.laborEstimate && <p id="laborEstimate-error" role="alert" className="text-xs font-medium text-ds-destructive">{errors.laborEstimate.message}</p>}
                         </div>
                         <div className="space-y-1.5">
                             <Label htmlFor="partsEstimate">Parts</Label>
                             <Input id="partsEstimate" type="number" min="0" step="1" inputMode="numeric" placeholder="Optional"
-                                aria-invalid={errors.partsEstimate ? 'true' : 'false'} {...register('partsEstimate', estimateRule)} />
-                            {errors.partsEstimate && <p role="alert" className="text-xs font-medium text-ds-destructive">{errors.partsEstimate.message}</p>}
+                                aria-invalid={errors.partsEstimate ? 'true' : 'false'} aria-describedby={errors.partsEstimate ? 'partsEstimate-error' : undefined} {...register('partsEstimate', estimateRule)} />
+                            {errors.partsEstimate && <p id="partsEstimate-error" role="alert" className="text-xs font-medium text-ds-destructive">{errors.partsEstimate.message}</p>}
                         </div>
                     </div>
                     <p className="mt-2 text-xs text-ds-muted-foreground">This is a preliminary technician estimate, not a final quote or an amount to be paid now.</p>
@@ -137,11 +137,13 @@ const InspectionForm = ({ requestId }) => {
                     <Label htmlFor="internalNotes">Internal technician notes (optional)</Label>
                     <Textarea
                         id="internalNotes" rows={3} placeholder="Notes for you and the admin team"
-                        aria-describedby="internalNotes-help"
+                        aria-invalid={errors.internalNotes ? 'true' : 'false'}
+                        // Help text stays first so it is read before the error.
+                        aria-describedby={errors.internalNotes ? 'internalNotes-help internalNotes-error' : 'internalNotes-help'}
                         {...register('internalNotes', { maxLength: { value: INTERNAL_NOTES_MAX, message: `At most ${INTERNAL_NOTES_MAX} characters.` } })}
                     />
                     <p id="internalNotes-help" className="text-xs text-ds-muted-foreground">Private to you and admins — the customer never sees them.</p>
-                    {errors.internalNotes && <p role="alert" className="text-xs font-medium text-ds-destructive">{errors.internalNotes.message}</p>}
+                    {errors.internalNotes && <p id="internalNotes-error" role="alert" className="text-xs font-medium text-ds-destructive">{errors.internalNotes.message}</p>}
                 </div>
 
                 <LoadingButton type="submit" loading={busy} loadingText="Submitting…">Submit inspection</LoadingButton>

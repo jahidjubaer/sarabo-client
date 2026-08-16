@@ -46,8 +46,9 @@ const RepairProgressForm = ({ requestId }) => {
                 placeholder="What did you just do on this repair?"
                 value={message} onChange={(event) => { setMessage(event.target.value); if (error) setError(''); }}
                 aria-invalid={error ? 'true' : 'false'}
+                aria-describedby={error ? 'repairProgressMessage-error' : undefined}
             />
-            {error && <p role="alert" className="text-xs font-medium text-ds-destructive">{error}</p>}
+            {error && <p id="repairProgressMessage-error" role="alert" className="text-xs font-medium text-ds-destructive">{error}</p>}
             <LoadingButton type="submit" size="sm" loading={busy} loadingText="Adding…">Add update</LoadingButton>
         </form>
     );

@@ -94,6 +94,9 @@ const RequestDetails = () => {
                     description="We couldn't load this request right now. Please try again."
                     onRetry={retryRequest}
                     secondaryAction={<Link to={backTo} className={buttonVariants({ variant: 'outline', size: 'sm' })}>{backLabel}</Link>}
+                    // This branch replaces the whole route, so no other heading
+                    // is rendered - the state title IS the page heading here.
+                    headingLevel={1}
                 />
             </div>
         );
@@ -106,6 +109,7 @@ const RequestDetails = () => {
                     title="Repair request not found"
                     description="This request may have been removed, or you may not have access to it."
                     secondaryAction={<Link to={backTo} className={buttonVariants({ variant: 'outline', size: 'sm' })}>{backLabel}</Link>}
+                    headingLevel={1}
                 />
             </div>
         );

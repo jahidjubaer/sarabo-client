@@ -62,7 +62,11 @@ const ServiceCatalogue = () => {
                             quote, confirmed after inspection — and you approve it first.
                         </p>
                     </div>
-                    <Link to="/services" className="focus-ring inline-flex shrink-0 items-center gap-1.5 rounded-ds text-body-sm font-semibold text-ds-primary hover:underline">
+                    {/* Phase 13A: min-h-6 only. Measured at 89x21, this standalone
+                        link sat under WCAG 2.2 SC 2.5.8's 24px minimum target and
+                        is not an inline-in-a-sentence exception. The text box grows
+                        by 3px and nothing reflows. */}
+                    <Link to="/services" className="focus-ring inline-flex min-h-6 shrink-0 items-center gap-1.5 rounded-ds text-body-sm font-semibold text-ds-primary hover:underline">
                         All services <ArrowRight aria-hidden="true" className="size-4" />
                     </Link>
                 </div>

@@ -232,9 +232,10 @@ const AssignTechnicians = () => {
                                 title="Couldn't match technicians"
                                 description={eligibleQuery.isError ? getAssignmentErrorMessage(eligibleQuery.error) : "We couldn't load eligible technicians right now. Please try again."}
                                 onRetry={retryEligibleTechnicians}
+                                headingLevel={3}
                             />
                         ) : eligibleTechnicians.length === 0 ? (
-                            <EmptyState title="No eligible technicians" description="No approved, available technician currently matches this request's expertise and service area." />
+                            <EmptyState title="No eligible technicians" description="No approved, available technician currently matches this request's expertise and service area." headingLevel={3} />
                         ) : (
                             <ul className="space-y-3">
                                 {eligibleTechnicians.map((tech, index) => (

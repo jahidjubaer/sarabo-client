@@ -18,6 +18,7 @@ const RoleError = () => {
                 description="Please refresh the page or try again shortly."
                 onRetry={() => window.location.reload()}
                 retryLabel="Refresh"
+                headingLevel={1}
                 secondaryAction={
                     <Link to="/" className={buttonVariants({ variant: "ghost", size: "sm" })}>
                         Go to Home

@@ -47,6 +47,10 @@ function SheetContent({ className, children, side = "right", showCloseButton = t
             <SheetOverlay />
             <SheetPrimitive.Content
                 data-slot="sheet-content"
+                // Phase 13A: see dialog.jsx - every Sheet here is modal (Radix
+                // default, overlay present), but role="dialog" was rendered
+                // without aria-modal.
+                aria-modal="true"
                 className={cn(
                     "fixed z-50 flex w-4/5 max-w-xs flex-col gap-0 border-ds-border bg-ds-background text-ds-foreground shadow-xl",
                     SHEET_SIDES[side],

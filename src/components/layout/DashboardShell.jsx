@@ -60,6 +60,19 @@ function DashboardShell() {
     return (
         <TooltipProvider>
             <div className="flex min-h-svh bg-ds-background text-ds-foreground">
+                {/* Phase 13A: the public shell has had a skip link since Phase 2;
+                    the dashboard did not, so a keyboard user tabbed the entire
+                    sidebar - up to fifteen nav items plus the collapse toggle -
+                    then the whole header, on every single route change. Same
+                    pattern, same styling, invisible until focused. It is the
+                    first element in the shell so it is the first tab stop, and
+                    it changes no layout. */}
+                <a
+                    href="#dashboard-main"
+                    className="focus-ring sr-only z-[60] focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:inline-flex focus:h-10 focus:items-center focus:rounded-ds focus:bg-ds-action focus:px-4 focus:text-body-sm focus:font-semibold focus:text-ds-action-foreground"
+                >
+                    Skip to content
+                </a>
                 <DashboardSidebar role={role} collapsed={collapsed} onToggleCollapse={toggleCollapse} />
 
                 <div className="flex min-w-0 flex-1 flex-col">
@@ -68,7 +81,7 @@ function DashboardShell() {
                         onOpenMobileNav={() => setMobileNavOpen(true)}
                         onOpenCommand={() => setCommandOpen(true)}
                     />
-                    <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
+                    <main id="dashboard-main" tabIndex={-1} className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
                         <DashboardVerificationBanner />
                         <Outlet />
                     </main>

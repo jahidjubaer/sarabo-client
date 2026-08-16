@@ -69,6 +69,9 @@ const Payment = () => {
                     description="The repair request needed for this payment is unavailable right now. Please try again."
                     onRetry={retryRequest}
                     className="w-full max-w-md"
+                    // Replaces the whole route - the CTA branch's h1 never
+                    // renders here, so this title is the page heading.
+                    headingLevel={1}
                 />
             </div>
         );

@@ -59,20 +59,20 @@ const QuoteForm = ({ requestId }) => {
                     <div className="space-y-1.5">
                         <Label htmlFor="laborAmount">Labor (BDT)</Label>
                         <Input id="laborAmount" type="number" min="0" step="1" inputMode="numeric"
-                            aria-invalid={errors.laborAmount ? 'true' : 'false'} {...register('laborAmount', amountRule)} />
-                        {errors.laborAmount && <p role="alert" className="text-xs font-medium text-ds-destructive">{errors.laborAmount.message}</p>}
+                            aria-invalid={errors.laborAmount ? 'true' : 'false'} aria-describedby={errors.laborAmount ? 'laborAmount-error' : undefined} {...register('laborAmount', amountRule)} />
+                        {errors.laborAmount && <p id="laborAmount-error" role="alert" className="text-xs font-medium text-ds-destructive">{errors.laborAmount.message}</p>}
                     </div>
                     <div className="space-y-1.5">
                         <Label htmlFor="partsAmount">Parts (BDT)</Label>
                         <Input id="partsAmount" type="number" min="0" step="1" inputMode="numeric"
-                            aria-invalid={errors.partsAmount ? 'true' : 'false'} {...register('partsAmount', amountRule)} />
-                        {errors.partsAmount && <p role="alert" className="text-xs font-medium text-ds-destructive">{errors.partsAmount.message}</p>}
+                            aria-invalid={errors.partsAmount ? 'true' : 'false'} aria-describedby={errors.partsAmount ? 'partsAmount-error' : undefined} {...register('partsAmount', amountRule)} />
+                        {errors.partsAmount && <p id="partsAmount-error" role="alert" className="text-xs font-medium text-ds-destructive">{errors.partsAmount.message}</p>}
                     </div>
                     <div className="space-y-1.5">
                         <Label htmlFor="additionalCharges">Additional (BDT)</Label>
                         <Input id="additionalCharges" type="number" min="0" step="1" inputMode="numeric" placeholder="Optional"
-                            aria-invalid={errors.additionalCharges ? 'true' : 'false'} {...register('additionalCharges', optionalAmountRule)} />
-                        {errors.additionalCharges && <p role="alert" className="text-xs font-medium text-ds-destructive">{errors.additionalCharges.message}</p>}
+                            aria-invalid={errors.additionalCharges ? 'true' : 'false'} aria-describedby={errors.additionalCharges ? 'additionalCharges-error' : undefined} {...register('additionalCharges', optionalAmountRule)} />
+                        {errors.additionalCharges && <p id="additionalCharges-error" role="alert" className="text-xs font-medium text-ds-destructive">{errors.additionalCharges.message}</p>}
                     </div>
                 </div>
 
@@ -87,8 +87,10 @@ const QuoteForm = ({ requestId }) => {
                 <div className="space-y-1.5">
                     <Label htmlFor="quoteNotes">Notes (optional)</Label>
                     <Textarea id="quoteNotes" rows={3} placeholder="Anything the customer should know about this quote"
+                        aria-invalid={errors.notes ? 'true' : 'false'}
+                        aria-describedby={errors.notes ? 'notes-error' : undefined}
                         {...register('notes', { maxLength: { value: NOTES_MAX, message: `At most ${NOTES_MAX} characters.` } })} />
-                    {errors.notes && <p role="alert" className="text-xs font-medium text-ds-destructive">{errors.notes.message}</p>}
+                    {errors.notes && <p id="notes-error" role="alert" className="text-xs font-medium text-ds-destructive">{errors.notes.message}</p>}
                 </div>
 
                 <LoadingButton type="submit" loading={busy} loadingText="Submitting…">Submit quote</LoadingButton>

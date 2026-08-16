@@ -126,7 +126,9 @@ const NotificationBell = () => {
                 ref={triggerRef}
                 type="button"
                 onClick={() => setOpen((prev) => !prev)}
-                aria-haspopup="menu"
+                // Phase 13A: `aria-haspopup="menu"` was removed with the panel's
+                // menu role - see the panel below. This is a disclosure, and
+                // aria-expanded + aria-controls is the whole contract for one.
                 aria-expanded={open}
                 aria-controls="notification-panel"
                 aria-label={showBadge ? `Notifications, ${formatBadgeCount(unreadCount)} unread` : 'Notifications'}
@@ -144,15 +146,23 @@ const NotificationBell = () => {
             </button>
 
             {open && (
+                // Phase 13A: this was role="menu" with role="menuitem" rows, but
+                // it was never an ARIA menu - it holds a heading, an unread
+                // count, a mark-all button, a scrolling list and a footer link,
+                // and it implements none of the arrow-key/typeahead contract a
+                // menu promises. Forcing menu semantics onto that told assistive
+                // tech to expect navigation that does not exist. It is a
+                // disclosure region: a named group whose name comes from its own
+                // visible heading. Nothing about the interaction changed.
                 <div
                     id="notification-panel"
-                    role="menu"
-                    aria-label="Notifications"
+                    role="group"
+                    aria-labelledby="notification-panel-title"
                     className="absolute right-0 z-50 mt-2 w-[92vw] max-w-[380px] rounded-ds-lg border border-ds-border bg-ds-popover text-ds-popover-foreground shadow-lg sm:w-[380px]"
                 >
                     <div className="flex items-start justify-between gap-2 border-b border-ds-border px-4 py-3">
                         <div className="min-w-0">
-                            <p className="text-subhead text-ds-foreground">Notifications</p>
+                            <h2 id="notification-panel-title" className="text-subhead text-ds-foreground">Notifications</h2>
                             {typeof unreadCount === 'number' && unreadCount > 0 && (
                                 <p className="text-micro text-ds-muted-foreground">
                                     <span className="ds-numeric font-semibold">{unreadCount}</span> unread
