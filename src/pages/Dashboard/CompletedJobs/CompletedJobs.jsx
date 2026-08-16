@@ -1,7 +1,8 @@
 import useAuth from '../../../hooks/useAuth';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Loading from '../../../components/Loading/Loading';
+import { ErrorState } from '../../../components/common/ErrorState';
 import { formatMoney } from '../../../utils/currency';
 import { formatAbsoluteDateTime } from '../../../utils/relativeTime';
 import { humanizeSlug } from '../../../utils/serviceDefinitionCatalog';
@@ -26,9 +27,12 @@ function SummaryTile({ label, value }) {
 const CompletedJobs = () => {
     const { user } = useAuth();
     const axiosSecure = useAxiosSecure();
+    const queryClient = useQueryClient();
+    const completedRepairsQueryKey = ['completedRepairs', user?.email];
+    const earningsSummaryQueryKey = ['technicianEarningsSummary', user?.email];
 
-    const { data: requests = [], isLoading } = useQuery({
-        queryKey: ['completedRepairs', user?.email],
+    const completedRepairsQuery = useQuery({
+        queryKey: completedRepairsQueryKey,
         queryFn: async () => {
             const res = await axiosSecure.get(`/repair-requests/technician?deliveryStatus=repair_completed`);
             return res.data;
@@ -36,13 +40,40 @@ const CompletedJobs = () => {
     });
 
     // Server-authoritative earnings totals (never summed on the client).
-    const { data: summary } = useQuery({
-        queryKey: ['technicianEarningsSummary', user?.email],
+    const earningsSummaryQuery = useQuery({
+        queryKey: earningsSummaryQueryKey,
         queryFn: async () => (await axiosSecure.get('/repair-requests/technician/earnings-summary')).data,
     });
 
-    if (isLoading) {
+    const hasUsableRequests = Array.isArray(completedRepairsQuery.data);
+    const requests = hasUsableRequests ? completedRepairsQuery.data : [];
+    const isCompletedInitialLoading = completedRepairsQuery.isPending && !completedRepairsQuery.isPaused;
+    const isCompletedUnavailableBeforeData = completedRepairsQuery.isPaused && !hasUsableRequests;
+    const isCompletedErrorBeforeData = completedRepairsQuery.isError && !hasUsableRequests;
+    const retryCompletedRepairs = () => queryClient.resetQueries({ queryKey: completedRepairsQueryKey });
+
+    const hasUsableSummary = earningsSummaryQuery.data !== undefined;
+    const summary = earningsSummaryQuery.data;
+    const isSummaryInitialLoading = earningsSummaryQuery.isPending && !earningsSummaryQuery.isPaused;
+    const isSummaryUnavailableBeforeData = earningsSummaryQuery.isPaused && !hasUsableSummary;
+    const isSummaryErrorBeforeData = earningsSummaryQuery.isError && !hasUsableSummary;
+    const retryEarningsSummary = () => queryClient.resetQueries({ queryKey: earningsSummaryQueryKey });
+
+    if (isCompletedInitialLoading) {
         return <Loading></Loading>;
+    }
+
+    if (isCompletedErrorBeforeData || isCompletedUnavailableBeforeData) {
+        return (
+            <div className="space-y-6">
+                <h2 className='text-4xl font-bold'>Completed Repairs</h2>
+                <ErrorState
+                    title="Couldn't load completed repairs"
+                    description="We couldn't load your completed repairs right now. Please try again."
+                    onRetry={retryCompletedRepairs}
+                />
+            </div>
+        );
     }
 
     const currency = summary?.currency || 'bdt';
@@ -51,7 +82,22 @@ const CompletedJobs = () => {
         <div className="space-y-6">
             <h2 className='text-4xl font-bold'>Completed Repairs: {requests.length}</h2>
 
-            {summary && (
+            {isSummaryInitialLoading && (
+                <div className="rounded-lg border border-base-300 p-4">
+                    <p className="text-sm opacity-60">Loading earnings summary...</p>
+                </div>
+            )}
+
+            {(isSummaryErrorBeforeData || isSummaryUnavailableBeforeData) && (
+                <ErrorState
+                    title="Couldn't load earnings summary"
+                    description="Your earnings summary is unavailable right now. Please try again."
+                    onRetry={retryEarningsSummary}
+                    className="py-6"
+                />
+            )}
+
+            {hasUsableSummary && summary && (
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <SummaryTile label="Total earned" value={formatMoney(summary.totalEarned, currency) || '—'} />
                     <SummaryTile label="Pending" value={formatMoney(summary.pendingAmount, currency) || '—'} />

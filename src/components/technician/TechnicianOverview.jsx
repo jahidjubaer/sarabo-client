@@ -36,13 +36,20 @@ function TechnicianOverview() {
     const queryClient = useQueryClient();
     const [pendingAction, setPendingAction] = useState(null);
 
-    const { data: jobs = [], isLoading, isError, refetch } = useQuery({
-        queryKey: ['tech-active-jobs', user?.email],
+    const jobsQueryKey = ['tech-active-jobs', user?.email];
+    const { data: jobsData, isPending, isPaused, isError, refetch } = useQuery({
+        queryKey: jobsQueryKey,
         queryFn: async () => {
             const res = await axiosSecure.get(`/repair-requests/technician?technicianEmail=${user.email}`);
             return res.data;
         },
     });
+    const hasUsableJobs = Array.isArray(jobsData);
+    const jobs = hasUsableJobs ? jobsData : [];
+    const isInitialLoading = isPending && !isPaused;
+    const isUnavailableBeforeData = isPaused && !hasUsableJobs;
+    const isReadErrorBeforeData = isError && !hasUsableJobs;
+    const retryJobs = () => queryClient.resetQueries({ queryKey: jobsQueryKey });
 
     // Preserved status-advance mutation (same endpoint/behaviour as the legacy
     // Assigned Jobs page). Only feedback moved to a toast.
@@ -65,7 +72,7 @@ function TechnicianOverview() {
             .finally(() => setPendingAction(null));
     };
 
-    if (isLoading) {
+    if (isInitialLoading) {
         return (
             <div className="space-y-6">
                 <PageHeader eyebrow="Technician" title="Work Dashboard" description="Loading your assigned work..." />
@@ -77,14 +84,14 @@ function TechnicianOverview() {
         );
     }
 
-    if (isError) {
+    if (isReadErrorBeforeData || isUnavailableBeforeData) {
         return (
             <div className="space-y-6">
                 <PageHeader eyebrow="Technician" title="Work Dashboard" />
                 <ErrorState
                     title="Couldn't load your jobs"
                     description="We couldn't load your assigned work right now. Please try again."
-                    onRetry={() => refetch()}
+                    onRetry={retryJobs}
                 />
             </div>
         );

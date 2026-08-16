@@ -35,13 +35,20 @@ const AssignedJobs = () => {
     // disables/relabels - not the whole list.
     const [pendingAction, setPendingAction] = useState(null);
 
-    const { data: jobs = [], refetch, isLoading, isError } = useQuery({
-        queryKey: ['tech-active-jobs', user?.email],
+    const jobsQueryKey = ['tech-active-jobs', user?.email];
+    const { data: jobsData, refetch, isPending, isPaused, isError } = useQuery({
+        queryKey: jobsQueryKey,
         queryFn: async () => {
             const res = await axiosSecure.get(`/repair-requests/technician?technicianEmail=${user.email}`);
             return res.data;
         },
     });
+    const hasUsableJobs = Array.isArray(jobsData);
+    const jobs = useMemo(() => (Array.isArray(jobsData) ? jobsData : []), [jobsData]);
+    const isInitialLoading = isPending && !isPaused;
+    const isUnavailableBeforeData = isPaused && !hasUsableJobs;
+    const isReadErrorBeforeData = isError && !hasUsableJobs;
+    const retryJobs = () => queryClient.resetQueries({ queryKey: jobsQueryKey });
 
     const visibleJobs = useMemo(() => applyJobView(jobs, { search, group, sort }), [jobs, search, group, sort]);
 
@@ -76,7 +83,7 @@ const AssignedJobs = () => {
             .finally(() => setPendingAction(null));
     };
 
-    if (isLoading) {
+    if (isInitialLoading) {
         return (
             <div className="space-y-6">
                 <PageHeader eyebrow="Technician" title="Assigned Jobs" />
@@ -87,14 +94,14 @@ const AssignedJobs = () => {
         );
     }
 
-    if (isError) {
+    if (isReadErrorBeforeData || isUnavailableBeforeData) {
         return (
             <div className="space-y-6">
                 <PageHeader eyebrow="Technician" title="Assigned Jobs" />
                 <ErrorState
                     title="Couldn't load your jobs"
                     description="We couldn't load your assigned jobs right now. Please try again."
-                    onRetry={() => refetch()}
+                    onRetry={retryJobs}
                 />
             </div>
         );
