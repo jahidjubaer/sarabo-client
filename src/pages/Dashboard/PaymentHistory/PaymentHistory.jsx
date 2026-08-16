@@ -1,16 +1,19 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React from 'react';
 import useAuth from '../../../hooks/useAuth';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import Loading from '../../../components/Loading/Loading';
+import { ErrorState } from '../../../components/common/ErrorState';
 import { formatMoney } from '../../../utils/currency';
 
 const PaymentHistory = () => {
     const { user } = useAuth();
     const axiosSecure = useAxiosSecure();
+    const queryClient = useQueryClient();
+    const paymentsQueryKey = ['payments', user.email];
 
-    const { data: payments = [], isLoading } = useQuery({
-        queryKey: ['payments', user.email],
+    const paymentsQuery = useQuery({
+        queryKey: paymentsQueryKey,
         queryFn: async () => {
             // No email in the request URL - the server already scopes a
             // non-admin caller to their own token-derived identity.
@@ -19,8 +22,25 @@ const PaymentHistory = () => {
         }
     })
 
-    if (isLoading) {
+    const hasUsablePayments = Array.isArray(paymentsQuery.data);
+    const payments = hasUsablePayments ? paymentsQuery.data : [];
+    const isInitialLoading = paymentsQuery.isPending && !paymentsQuery.isPaused && !hasUsablePayments;
+    const isUnavailableBeforeData = paymentsQuery.isPaused && !hasUsablePayments;
+    const isErrorBeforeData = paymentsQuery.isError && !hasUsablePayments;
+    const retryPayments = () => queryClient.resetQueries({ queryKey: paymentsQueryKey });
+
+    if (isInitialLoading) {
         return <Loading></Loading>
+    }
+
+    if (isUnavailableBeforeData || isErrorBeforeData) {
+        return (
+            <ErrorState
+                title="Couldn't load payment history"
+                description="Your payment history is unavailable right now. Please try again."
+                onRetry={retryPayments}
+            />
+        );
     }
 
     return (

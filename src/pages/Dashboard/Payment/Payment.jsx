@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useState } from 'react';
 import { useParams } from 'react-router';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
@@ -8,19 +8,29 @@ import { FaLock } from 'react-icons/fa';
 import Swal from 'sweetalert2';
 import { getPaymentErrorMessage } from '../../../utils/paymentErrorMessage';
 import { formatCurrency } from '../../../utils/formatCurrency';
+import { ErrorState } from '../../../components/common/ErrorState';
 
 const Payment = () => {
     const { requestId } = useParams();
     const axiosSecure = useAxiosSecure();
+    const queryClient = useQueryClient();
     const [submitting, setSubmitting] = useState(false);
+    const requestQueryKey = ['repair-requests', requestId];
 
-    const { isLoading, data: request } = useQuery({
-        queryKey: ['repair-requests', requestId],
+    const requestQuery = useQuery({
+        queryKey: requestQueryKey,
         queryFn: async () => {
             const res = await axiosSecure.get(`/repair-requests/${requestId}`);
             return res.data;
         }
     })
+
+    const request = requestQuery.data;
+    const hasUsableRequest = request !== null && typeof request === 'object' && !Array.isArray(request);
+    const isInitialLoading = requestQuery.isPending && !requestQuery.isPaused && !hasUsableRequest;
+    const isUnavailableBeforeData = requestQuery.isPaused && !hasUsableRequest;
+    const isErrorBeforeData = requestQuery.isError && !hasUsableRequest;
+    const retryRequest = () => queryClient.resetQueries({ queryKey: requestQueryKey });
 
     // Only the request's own id is sent - the amount and customer identity
     // are always resolved server-side from trusted, stored data.
@@ -37,8 +47,21 @@ const Payment = () => {
         }
     }
 
-    if (isLoading) {
+    if (isInitialLoading) {
         return <Loading></Loading>
+    }
+
+    if (isUnavailableBeforeData || isErrorBeforeData) {
+        return (
+            <div className="flex min-h-[70vh] items-center justify-center p-4">
+                <ErrorState
+                    title="Couldn't load payment details"
+                    description="The repair request needed for this payment is unavailable right now. Please try again."
+                    onRetry={retryRequest}
+                    className="w-full max-w-md"
+                />
+            </div>
+        );
     }
 
     return (

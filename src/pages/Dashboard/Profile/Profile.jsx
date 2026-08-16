@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
+import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { Pencil, User as UserIcon, ShieldCheck, ShieldAlert } from 'lucide-react';
 import useAuth from '../../../hooks/useAuth';
 import useRole from '../../../hooks/useRole';
+import { roleKeys } from '../../../hooks/roleKeys';
 import { notify } from '../../../lib/notify';
 import { Avatar, AvatarImage, AvatarFallback } from '../../../components/ui/avatar';
 import { Badge } from '../../../components/ui/badge';
@@ -34,16 +36,19 @@ function getInitials(name) {
 const Profile = () => {
     const { user, updateUserProfile } = useAuth();
     const { role, roleLoading, isError } = useRole();
+    const queryClient = useQueryClient();
     const [isEditing, setIsEditing] = useState(false);
     const [name, setName] = useState(user?.displayName || '');
     const [photoFile, setPhotoFile] = useState(null);
     const [nameError, setNameError] = useState('');
     const [saving, setSaving] = useState(false);
 
-    const roleKnown = !roleLoading && !isError;
+    const roleKnown = typeof role === 'string';
     const roleDisplayText = roleKnown
         ? (PROFILE_ROLE_LABELS[role] || 'Role unavailable')
         : (roleLoading ? 'Loading role…' : 'Unable to load role');
+
+    const retryRole = () => queryClient.resetQueries({ queryKey: roleKeys.current() });
 
     // Real, already-available Firebase provider data - not invented.
     const providerId = user?.providerData?.[0]?.providerId;
@@ -201,7 +206,12 @@ const Profile = () => {
                 </div>
 
                 <div className="flex flex-col gap-6 lg:col-span-1">
-                    <RoleContextCard role={role} roleLoading={roleLoading} isError={isError} />
+                    <RoleContextCard
+                        role={role}
+                        roleLoading={roleLoading && !roleKnown}
+                        isError={isError && !roleKnown}
+                        onRetry={retryRole}
+                    />
                     <AccountSecurityCard />
                 </div>
             </div>

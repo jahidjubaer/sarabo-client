@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { FaBell } from 'react-icons/fa';
 import useAuth from '../../hooks/useAuth';
 import useClickOutside from '../../hooks/useClickOutside';
@@ -10,6 +11,7 @@ import {
     useMarkAllNotificationsRead,
 } from '../../hooks/useNotifications';
 import NotificationItem from './NotificationItem';
+import { notificationKeys } from '../../hooks/notificationKeys';
 
 // Bell-preview list only ever needs a small, recent slice - never the full
 // notification center's pagination range (Phase 5.3 Unit 1 explicitly
@@ -23,6 +25,7 @@ function formatBadgeCount(count) {
 const NotificationBell = () => {
     const { user } = useAuth();
     const location = useLocation();
+    const queryClient = useQueryClient();
 
     const [open, setOpen] = useState(false);
     const containerRef = useRef(null);
@@ -71,11 +74,27 @@ const NotificationBell = () => {
 
     if (!user) return null;
 
-    const unreadCount = unreadCountQuery.data?.count;
-    // Absent while loading/errored (never a false "0" badge) and absent at
-    // exactly zero - the badge only ever renders for a genuine positive count.
+    const hasUsableUnreadCount = typeof unreadCountQuery.data?.count === 'number';
+    const unreadCount = hasUsableUnreadCount ? unreadCountQuery.data.count : undefined;
+    // Absent before usable data (never a false "0" badge) and absent at exactly
+    // zero. Cached successful counts remain usable through a failed refetch.
     const showBadge = typeof unreadCount === 'number' && unreadCount > 0;
-    const items = listQuery.data?.data ?? [];
+    const hasUsablePreview = Array.isArray(listQuery.data?.data)
+        && listQuery.data?.pagination !== null
+        && typeof listQuery.data?.pagination === 'object';
+    const items = hasUsablePreview ? listQuery.data.data : [];
+    const isPreviewInitialLoading = listQuery.isPending && !listQuery.isPaused && !hasUsablePreview;
+    const isPreviewUnavailableBeforeData = listQuery.isPaused && !hasUsablePreview;
+    const isPreviewErrorBeforeData = listQuery.isError && !hasUsablePreview;
+    const isUnreadCountInitialLoading = unreadCountQuery.isPending
+        && !unreadCountQuery.isPaused
+        && !hasUsableUnreadCount;
+    const isUnreadCountUnavailableBeforeData = !hasUsableUnreadCount
+        && (unreadCountQuery.isPaused || unreadCountQuery.isError);
+    const previewQueryKey = notificationKeys.list(PREVIEW_PARAMS);
+    const unreadCountQueryKey = notificationKeys.unreadCount();
+    const retryPreview = () => queryClient.resetQueries({ queryKey: previewQueryKey });
+    const retryUnreadCount = () => queryClient.resetQueries({ queryKey: unreadCountQueryKey });
 
     const handleActivate = (notification) => {
         if (!notification.isRead) {
@@ -125,6 +144,17 @@ const NotificationBell = () => {
                             {typeof unreadCount === 'number' && unreadCount > 0 && (
                                 <p className="text-xs text-base-content/60">{unreadCount} unread</p>
                             )}
+                            {isUnreadCountInitialLoading && (
+                                <p className="text-xs text-base-content/60">Checking unread count...</p>
+                            )}
+                            {isUnreadCountUnavailableBeforeData && (
+                                <p className="text-xs text-base-content/60">
+                                    Unread count unavailable.{' '}
+                                    <button type="button" onClick={retryUnreadCount} className="focus-ring underline underline-offset-2">
+                                        Try again
+                                    </button>
+                                </p>
+                            )}
                         </div>
                         <button
                             type="button"
@@ -144,7 +174,7 @@ const NotificationBell = () => {
                     )}
 
                     <div className="max-h-[60vh] overflow-y-auto p-2">
-                        {listQuery.isLoading && (
+                        {isPreviewInitialLoading && (
                             <div className="flex flex-col gap-1 p-1" aria-hidden="true">
                                 {[0, 1, 2].map((key) => (
                                     <div key={key} className="flex items-start gap-3 px-2 py-2.5">
@@ -158,26 +188,26 @@ const NotificationBell = () => {
                             </div>
                         )}
 
-                        {!listQuery.isLoading && listQuery.isError && (
+                        {(isPreviewUnavailableBeforeData || isPreviewErrorBeforeData) && (
                             <div className="flex flex-col items-center gap-2 py-8 text-center">
                                 <p className="text-sm text-base-content/70">Could not load notifications.</p>
                                 <button
                                     type="button"
-                                    onClick={() => listQuery.refetch()}
+                                    onClick={retryPreview}
                                     className="focus-ring btn btn-ghost btn-xs"
                                 >
-                                    Retry
+                                    Try again
                                 </button>
                             </div>
                         )}
 
-                        {!listQuery.isLoading && !listQuery.isError && items.length === 0 && (
+                        {hasUsablePreview && items.length === 0 && (
                             <div className="py-8 text-center text-sm text-base-content/60">
                                 You&apos;re all caught up.
                             </div>
                         )}
 
-                        {!listQuery.isLoading && !listQuery.isError && items.length > 0 && (
+                        {hasUsablePreview && items.length > 0 && (
                             <ul className="flex flex-col gap-1">
                                 {items.map((item) => (
                                     <li key={item._id}>

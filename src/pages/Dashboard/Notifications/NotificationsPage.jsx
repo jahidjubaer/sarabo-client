@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router';
+import { useQueryClient } from '@tanstack/react-query';
 import NotificationItem from '../../../components/notifications/NotificationItem';
 import {
     useNotifications,
@@ -7,6 +8,7 @@ import {
     useMarkNotificationRead,
     useMarkAllNotificationsRead,
 } from '../../../hooks/useNotifications';
+import { notificationKeys } from '../../../hooks/notificationKeys';
 
 const PAGE_LIMIT = 10;
 
@@ -23,6 +25,7 @@ function normalizeFilter(rawFilter) {
 const NotificationsPage = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const headerRef = useRef(null);
+    const queryClient = useQueryClient();
 
     // URL search params are the single source of truth for page/filter -
     // normalized values (never the raw string) are what's actually used to
@@ -34,17 +37,35 @@ const NotificationsPage = () => {
     const page = normalizePage(rawPage);
     const filter = normalizeFilter(rawFilter);
     const unreadOnly = filter === 'unread';
+    const listQueryKey = notificationKeys.list({ page, limit: PAGE_LIMIT, unreadOnly });
+    const unreadCountQueryKey = notificationKeys.unreadCount();
 
     const listQuery = useNotifications({ page, limit: PAGE_LIMIT, unreadOnly }, { keepPreviousPage: true });
     const unreadCountQuery = useUnreadNotificationCount();
     const markRead = useMarkNotificationRead();
     const markAllRead = useMarkAllNotificationsRead();
 
-    const items = listQuery.data?.data ?? [];
-    const pagination = listQuery.data?.pagination ?? {
+    const hasUsableList = Array.isArray(listQuery.data?.data)
+        && listQuery.data?.pagination !== null
+        && typeof listQuery.data?.pagination === 'object';
+    const hasAuthoritativeList = hasUsableList && !listQuery.isPlaceholderData;
+    const items = hasUsableList ? listQuery.data.data : [];
+    const pagination = hasUsableList ? listQuery.data.pagination : {
         page, limit: PAGE_LIMIT, totalItems: 0, totalPages: 1, hasNextPage: false, hasPreviousPage: false,
     };
-    const unreadCount = unreadCountQuery.data?.count;
+    const hasUsableUnreadCount = typeof unreadCountQuery.data?.count === 'number';
+    const unreadCount = hasUsableUnreadCount ? unreadCountQuery.data.count : undefined;
+    const isListInitialLoading = (listQuery.isPending && !listQuery.isPaused && !hasUsableList)
+        || (listQuery.isPlaceholderData && items.length === 0);
+    const isListUnavailableBeforeData = listQuery.isPaused && !hasUsableList;
+    const isListErrorBeforeData = listQuery.isError && !hasUsableList;
+    const isUnreadCountInitialLoading = unreadCountQuery.isPending
+        && !unreadCountQuery.isPaused
+        && !hasUsableUnreadCount;
+    const isUnreadCountUnavailableBeforeData = !hasUsableUnreadCount
+        && (unreadCountQuery.isPaused || unreadCountQuery.isError);
+    const retryList = () => queryClient.resetQueries({ queryKey: listQueryKey });
+    const retryUnreadCount = () => queryClient.resetQueries({ queryKey: unreadCountQueryKey });
 
     // Single effect covering two conceptually separate concerns, merged into
     // one setSearchParams call site so they can never race each other:
@@ -133,6 +154,17 @@ const NotificationsPage = () => {
                     {typeof unreadCount === 'number' && unreadCount > 0 && (
                         <p className="mt-2 text-sm font-medium text-primary">{unreadCount} unread</p>
                     )}
+                    {isUnreadCountInitialLoading && (
+                        <p className="mt-2 text-sm opacity-60">Checking unread count...</p>
+                    )}
+                    {isUnreadCountUnavailableBeforeData && (
+                        <p className="mt-2 text-sm opacity-70">
+                            Unread count is unavailable.{' '}
+                            <button type="button" onClick={retryUnreadCount} className="focus-ring underline underline-offset-2">
+                                Try again
+                            </button>
+                        </p>
+                    )}
                 </div>
                 <button
                     type="button"
@@ -171,7 +203,7 @@ const NotificationsPage = () => {
             </div>
 
             <div className="mt-6">
-                {listQuery.isLoading && (
+                {isListInitialLoading && (
                     <ul className="flex flex-col gap-2" aria-hidden="true">
                         {[0, 1, 2, 3].map((key) => (
                             <li key={key} className="flex items-start gap-3 rounded-lg border border-base-300 px-4 py-4">
@@ -185,16 +217,16 @@ const NotificationsPage = () => {
                     </ul>
                 )}
 
-                {!listQuery.isLoading && listQuery.isError && (
+                {(isListUnavailableBeforeData || isListErrorBeforeData) && (
                     <div className="flex flex-col items-center gap-3 rounded-lg border border-base-300 py-16 text-center">
                         <p className="opacity-70">Could not load notifications.</p>
-                        <button type="button" onClick={() => listQuery.refetch()} className="focus-ring btn btn-primary btn-sm">
-                            Retry
+                        <button type="button" onClick={retryList} className="focus-ring btn btn-primary btn-sm">
+                            Try again
                         </button>
                     </div>
                 )}
 
-                {!listQuery.isLoading && !listQuery.isError && items.length === 0 && filter === 'all' && (
+                {hasAuthoritativeList && items.length === 0 && filter === 'all' && (
                     <div className="rounded-lg border border-base-300 py-16 text-center">
                         <p className="text-lg font-semibold">No notifications yet</p>
                         <p className="mt-2 opacity-70">
@@ -203,7 +235,7 @@ const NotificationsPage = () => {
                     </div>
                 )}
 
-                {!listQuery.isLoading && !listQuery.isError && items.length === 0 && filter === 'unread' && (
+                {hasAuthoritativeList && items.length === 0 && filter === 'unread' && (
                     <div className="rounded-lg border border-base-300 py-16 text-center">
                         <p className="text-lg font-semibold">You&apos;re all caught up</p>
                         <p className="mt-2 opacity-70">There are no unread notifications right now.</p>
@@ -217,7 +249,7 @@ const NotificationsPage = () => {
                     </div>
                 )}
 
-                {!listQuery.isLoading && !listQuery.isError && items.length > 0 && (
+                {hasUsableList && items.length > 0 && (
                     <ul className="flex flex-col gap-2">
                         {items.map((item) => (
                             <li key={item._id} className="rounded-lg border border-base-300">
@@ -228,7 +260,7 @@ const NotificationsPage = () => {
                 )}
             </div>
 
-            {pagination.totalPages > 1 && (
+            {hasUsableList && pagination.totalPages > 1 && (
                 <nav aria-label="Notifications pagination" className="join mt-6 flex justify-center">
                     <button
                         type="button"

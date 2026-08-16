@@ -15,8 +15,8 @@ const ROLE_CONTEXT = {
     admin: { title: 'Administrator account', text: 'Manage users, technician applications, repair requests, assignments, and protected administrative operations.' },
 };
 
-const RoleContextCard = ({ role, roleLoading, isError }) => {
-    const roleKnown = !roleLoading && !isError;
+const RoleContextCard = ({ role, roleLoading, isError, onRetry }) => {
+    const roleKnown = typeof role === 'string';
     const context = roleKnown ? ROLE_CONTEXT[role] : null;
     const shortcut = roleKnown ? ROLE_SHORTCUTS[role] : null;
 
@@ -39,9 +39,20 @@ const RoleContextCard = ({ role, roleLoading, isError }) => {
                     )}
                 </>
             ) : (
-                <p className="mt-3 text-sm text-ds-muted-foreground">
-                    {roleLoading ? 'Loading account context…' : 'Account context is unavailable right now.'}
-                </p>
+                <>
+                    <p className="mt-3 text-sm text-ds-muted-foreground">
+                        {roleLoading ? 'Loading account context…' : 'Account context is unavailable right now.'}
+                    </p>
+                    {!roleLoading && (isError || !roleKnown) && onRetry && (
+                        <button
+                            type="button"
+                            onClick={onRetry}
+                            className={`${buttonVariants({ variant: 'outline', size: 'sm' })} mt-4`}
+                        >
+                            Try again
+                        </button>
+                    )}
+                </>
             )}
         </div>
     );
