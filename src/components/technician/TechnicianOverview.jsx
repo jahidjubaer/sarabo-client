@@ -2,18 +2,16 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { motion as Motion, MotionConfig } from 'motion/react';
-import { Briefcase, CircleAlert, Wrench, CheckCheck, ChevronRight } from 'lucide-react';
+import { ArrowRight, Briefcase } from 'lucide-react';
 import useAuth from '../../hooks/useAuth';
 import useAxiosSecure from '../../hooks/useAxiosSecure';
 import { PageHeader } from '../common/PageHeader';
-import { StatCard } from '../common/StatCard';
 import { EmptyState } from '../common/EmptyState';
 import { ErrorState } from '../common/ErrorState';
 import { CardSkeleton } from '../common/Skeletons';
-import { Card, CardContent } from '../ui/card';
-import { StatusBadge } from '../common/StatusBadge';
+import { buttonVariants } from '../ui/button-variants';
 import { TechnicianActiveJob } from './TechnicianActiveJob';
-import { getProductSummary } from '../../utils/customerRequestPresentation';
+import { TechnicianRecentJobs } from './TechnicianRecentJobs';
 import { summarizeJobs, selectActiveJob, getRecentJobs } from '../../utils/technicianJobPresentation';
 import { getStatusPresentation } from '../../config/statusPresentation';
 import { getRepairStatusActionErrorMessage } from '../../utils/repairStatusActionErrorMessage';
@@ -27,9 +25,8 @@ function buildDescription({ total, needsAttention, inRepair }) {
     return 'No jobs need action right now.';
 }
 
-// Technician work dashboard (Phase 7.4): an operational overview - counts,
-// the current/next job, and a short attention list. No revenue/earnings,
-// productivity, or SLA metrics. Reuses the existing ['tech-active-jobs'] query.
+// Operational Technician dashboard. The established selector chooses one
+// focused job; the rest of the already-loaded queue stays secondary.
 function TechnicianOverview() {
     const { user } = useAuth();
     const axiosSecure = useAxiosSecure();
@@ -51,8 +48,8 @@ function TechnicianOverview() {
     const isReadErrorBeforeData = isError && !hasUsableJobs;
     const retryJobs = () => queryClient.resetQueries({ queryKey: jobsQueryKey });
 
-    // Preserved status-advance mutation (same endpoint/behaviour as the legacy
-    // Assigned Jobs page). Only feedback moved to a toast.
+    // Preserved legacy status-advance mutation. Inspection, quote and repair
+    // transitions remain owned by their existing detail-workspace mutations.
     const handleAdvance = (job, status) => {
         if (pendingAction) return;
         setPendingAction({ id: job._id, status });
@@ -75,10 +72,8 @@ function TechnicianOverview() {
     if (isInitialLoading) {
         return (
             <div className="space-y-6">
-                <PageHeader eyebrow="Technician" title="Work Dashboard" description="Loading your assigned work..." />
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    {[0, 1, 2, 3].map((key) => <CardSkeleton key={key} />)}
-                </div>
+                <PageHeader eyebrow="Technician" title="Your repair work" description="Loading your assigned work..." />
+                <CardSkeleton className="h-72" />
                 <CardSkeleton className="h-40" />
             </div>
         );
@@ -87,7 +82,7 @@ function TechnicianOverview() {
     if (isReadErrorBeforeData || isUnavailableBeforeData) {
         return (
             <div className="space-y-6">
-                <PageHeader eyebrow="Technician" title="Work Dashboard" />
+                <PageHeader eyebrow="Technician" title="Your repair work" />
                 <ErrorState
                     title="Couldn't load your jobs"
                     description="We couldn't load your assigned work right now. Please try again."
@@ -99,72 +94,47 @@ function TechnicianOverview() {
 
     const summary = summarizeJobs(jobs);
     const activeJob = selectActiveJob(jobs);
-    const recent = getRecentJobs(jobs, 4);
+    const recent = getRecentJobs(jobs.filter((job) => job._id !== activeJob?._id), 4);
+    const allJobsAction = summary.total > 0 ? (
+        <Link to="/dashboard/assigned-jobs" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+            All assigned jobs
+            <ArrowRight aria-hidden="true" />
+        </Link>
+    ) : null;
 
     return (
         <MotionConfig reducedMotion="user">
             <div className="space-y-6">
-                <PageHeader eyebrow="Technician" title="Work Dashboard" description={buildDescription(summary)} />
+                <PageHeader
+                    eyebrow="Technician"
+                    title="Your repair work"
+                    description={buildDescription(summary)}
+                    actions={allJobsAction}
+                />
 
                 {summary.total === 0 ? (
                     <EmptyState
                         icon={Briefcase}
                         title="No assigned jobs"
                         description="You don't have any repair jobs assigned right now. New assignments will appear here."
+                        className="py-16"
                     />
                 ) : (
                     <Motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-6">
-                        <Motion.div variants={staggerItem} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                            <StatCard label="Assigned jobs" value={summary.total} icon={Briefcase} />
-                            <StatCard
-                                label="Needs attention"
-                                value={summary.needsAttention}
-                                icon={CircleAlert}
-                                helper={summary.needsAttention > 0 ? 'Action needed' : undefined}
-                                trend={summary.needsAttention > 0 ? 'down' : undefined}
-                            />
-                            <StatCard label="In repair" value={summary.inRepair} icon={Wrench} />
-                            <StatCard label="Completed" value={summary.completed} icon={CheckCheck} />
-                        </Motion.div>
-
                         {activeJob && (
-                            <Motion.div variants={staggerItem}>
+                            <Motion.section variants={staggerItem} aria-labelledby="technician-attention-heading" className="space-y-3">
+                                <div>
+                                    <p className="ds-label text-ds-primary">Next operational action</p>
+                                    <h2 id="technician-attention-heading" className="mt-1 text-xl font-semibold tracking-tight text-ds-foreground">
+                                        What job needs your attention now?
+                                    </h2>
+                                </div>
                                 <TechnicianActiveJob job={activeJob} onAdvance={handleAdvance} pendingAction={pendingAction} />
-                            </Motion.div>
+                            </Motion.section>
                         )}
 
                         <Motion.div variants={staggerItem}>
-                            <Card>
-                                <div className="flex items-center justify-between gap-2 border-b border-ds-border px-5 py-3">
-                                    <h2 className="text-sm font-semibold text-ds-foreground">Recent jobs</h2>
-                                    <Link to="/dashboard/assigned-jobs" className="focus-ring inline-flex items-center gap-1 rounded-ds text-sm font-medium text-ds-primary hover:underline">
-                                        View all
-                                        <ChevronRight aria-hidden="true" className="size-4" />
-                                    </Link>
-                                </div>
-                                <CardContent className="p-0">
-                                    <ul className="divide-y divide-ds-border">
-                                        {recent.map((job) => {
-                                            const { device, category } = getProductSummary(job);
-                                            const presentation = getStatusPresentation(job.deliveryStatus);
-                                            return (
-                                                <li key={job._id}>
-                                                    <Link to={`/dashboard/assigned-jobs/${job._id}`} className="focus-ring flex items-center gap-3 px-5 py-3 hover:bg-ds-muted/50">
-                                                        <div className="min-w-0 flex-1">
-                                                            <p className="truncate text-sm font-medium text-ds-foreground">{device}</p>
-                                                            <p className="truncate text-xs text-ds-muted-foreground">
-                                                                {category && `${category} · `}{presentation.technicianNextStep || presentation.technicianDescription}
-                                                            </p>
-                                                        </div>
-                                                        <StatusBadge status={job.deliveryStatus} showIcon={false} className="shrink-0" />
-                                                        <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-ds-muted-foreground" />
-                                                    </Link>
-                                                </li>
-                                            );
-                                        })}
-                                    </ul>
-                                </CardContent>
-                            </Card>
+                            <TechnicianRecentJobs jobs={recent} />
                         </Motion.div>
                     </Motion.div>
                 )}

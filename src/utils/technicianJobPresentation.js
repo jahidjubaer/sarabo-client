@@ -1,4 +1,6 @@
 import { getRequestStatus, getProductSummary } from './customerRequestPresentation';
+import { getStatusPresentation } from '../config/statusPresentation';
+import { getSpineModel } from './repairStage';
 
 // Technician-facing, PRESENTATION-ONLY helpers for the redesigned technician
 // dashboard + Assigned Jobs (Phase 7.4). Everything is derived from the data
@@ -100,6 +102,57 @@ export function getTechnicianAction(job) {
         default:
             return { kind: 'navigate', label: 'View job', to, variant: 'outline' };
     }
+}
+
+// Presentation-only attention model for Technician cards. Action availability
+// still comes from the existing status-group/action helpers above; lifecycle
+// exceptions come from the shared service-spine model. This adds no
+// authorization or transition rule.
+export function getTechnicianAttention(job) {
+    const status = getRequestStatus(job);
+    const presentation = getStatusPresentation(status);
+    const action = getTechnicianAction(job);
+    const group = getJobGroup(job);
+    const spine = getSpineModel(job);
+    const actionRequired = group === 'needs-attention' || group === 'in-repair';
+
+    if (actionRequired) {
+        return {
+            kind: 'action',
+            eyebrow: 'Action required',
+            title: action.label,
+            description: presentation.technicianNextStep || presentation.technicianDescription,
+            action,
+        };
+    }
+
+    if (spine.flow === 'blocked' || spine.flow === 'cancelled') {
+        return {
+            kind: 'blocked',
+            eyebrow: 'Job update',
+            title: presentation.label,
+            description: presentation.technicianDescription,
+            action: null,
+        };
+    }
+
+    if (spine.flow === 'complete') {
+        return {
+            kind: 'done',
+            eyebrow: 'Job update',
+            title: presentation.label,
+            description: presentation.technicianDescription,
+            action: null,
+        };
+    }
+
+    return {
+        kind: 'waiting',
+        eyebrow: 'No action required',
+        title: presentation.label,
+        description: presentation.technicianNextStep || presentation.technicianDescription,
+        action: null,
+    };
 }
 
 // Short, operationally-useful location (district, region) - never the full

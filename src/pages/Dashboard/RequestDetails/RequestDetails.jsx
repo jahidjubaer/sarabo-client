@@ -16,6 +16,7 @@ import { RepairLifecycleTimeline } from '../../../components/workspace/RepairLif
 import { CurrentStageActionPanel } from '../../../components/workspace/CurrentStageActionPanel';
 import { WorkspaceContextPanels } from '../../../components/workspace/WorkspaceContextPanels';
 import { CustomerRequestDetailsView } from '../../../components/customer/CustomerRequestDetailsView';
+import { TechnicianRequestDetailsView } from '../../../components/technician/TechnicianRequestDetailsView';
 import DamageImageManager from '../../../components/damage-images/DamageImageManager';
 import InspectionSection from '../../../components/inspection/InspectionSection';
 import QuoteSection from '../../../components/quote/QuoteSection';
@@ -113,7 +114,8 @@ const RequestDetails = () => {
     const isOwner = request.senderEmail === user?.email;
     const isV2Request = !isLegacyRequest(request);
     const damageImagesEditable = isOwner && !isAdminContext && canEditDamageImages(request);
-    const isAssignedTechnicianView = isV2Request && isTechnicianContext && request.technicianEmail === user?.email;
+    const isTechnicianViewer = isTechnicianContext && request.technicianEmail === user?.email;
+    const isAssignedTechnicianView = isV2Request && isTechnicianViewer;
     const canInspect = isAssignedTechnicianView && request.deliveryStatus === 'parcel_picked_up';
     const canSubmitQuote = isAssignedTechnicianView && request.deliveryStatus === 'inspection_completed';
 
@@ -122,7 +124,7 @@ const RequestDetails = () => {
     // Legacy technician generic-status progression is offered to the assigned
     // technician too (the workspace is reached via assigned-jobs/:id); the panel
     // decides whether an advance exists for the current status.
-    const technicianCanAdvance = isTechnicianContext && request.technicianEmail === user?.email && !isCancelled;
+    const technicianCanAdvance = isTechnicianViewer && !isCancelled;
 
     const handleAdvance = (nextStatus) => {
         if (advancing) return;
@@ -251,6 +253,22 @@ const RequestDetails = () => {
                         sections={sections}
                         isV2Request={isV2Request}
                         damageImagesEditable={damageImagesEditable}
+                    />
+                ) : isTechnicianViewer ? (
+                    <TechnicianRequestDetailsView
+                        request={request}
+                        sections={sections}
+                        isV2Request={isV2Request}
+                        damageImagesEditable={damageImagesEditable}
+                        isAssignedTechnicianView={isAssignedTechnicianView}
+                        technicianCanAdvance={technicianCanAdvance}
+                        canInspect={canInspect}
+                        canSubmitQuote={canSubmitQuote}
+                        onAdvance={handleAdvance}
+                        advancing={advancing}
+                        onAccept={handleAccept}
+                        onReject={() => setRejectOpen(true)}
+                        deciding={deciding}
                     />
                 ) : (
                 <Motion.div variants={staggerContainer} initial="hidden" animate="show" className="grid gap-6 lg:grid-cols-3">

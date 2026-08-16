@@ -1,18 +1,22 @@
+import { Link } from 'react-router';
+import { CalendarDays, ChevronRight, Hash, PackageCheck } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import useAuth from '../../../hooks/useAuth';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Loading from '../../../components/Loading/Loading';
+import { PageHeader } from '../../../components/common/PageHeader';
+import { EmptyState } from '../../../components/common/EmptyState';
 import { ErrorState } from '../../../components/common/ErrorState';
+import { StatusBadge } from '../../../components/common/StatusBadge';
+import { Card } from '../../../components/ui/card';
+import { Badge } from '../../../components/ui/badge';
 import { formatMoney } from '../../../utils/currency';
 import { formatAbsoluteDateTime } from '../../../utils/relativeTime';
-import { humanizeSlug } from '../../../utils/serviceDefinitionCatalog';
+import { getProductSummary } from '../../../utils/customerRequestPresentation';
 
-// Technician Completed Repairs + earnings (Phase 8.11). A canonical V2 repair is
-// completed when deliveryStatus === 'repair_completed' (set by the completion
-// endpoint) - NOT the legacy courier 'parcel_delivered'. The server scopes rows
-// to the caller's own technicianEmail and attaches a sanitized technicianEarning
-// (labor-only, no commission; paidBy withheld). Financial totals come from the
-// server-side earnings summary, never client aggregation. BDT throughout.
+// Technician Completed Repairs + earnings. The earnings summary remains the
+// visually frozen Phase 12 block; only the operational history below it is
+// composed as responsive repair cards in Phase 10.
 const EARNING_STATUS_LABEL = { pending: 'Pending', paid: 'Paid' };
 
 function SummaryTile({ label, value }) {
@@ -21,6 +25,76 @@ function SummaryTile({ label, value }) {
             <p className="text-xs uppercase tracking-wide opacity-60">{label}</p>
             <p className="mt-1 text-2xl font-bold">{value}</p>
         </div>
+    );
+}
+
+function CompletedJobItem({ request }) {
+    const { device, category, brandModel } = getProductSummary(request);
+    const earning = request.technicianEarning;
+    const headingId = `completed-job-${request._id}`;
+
+    return (
+        <Card className="overflow-hidden">
+            <article aria-labelledby={headingId}>
+                <div className="space-y-4 p-4 sm:p-5">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0 space-y-2">
+                            <StatusBadge status={request.deliveryStatus} />
+                            <div>
+                                <h3 id={headingId} className="break-words text-base font-semibold text-ds-foreground">{device}</h3>
+                                {(category || brandModel) && (
+                                    <p className="mt-0.5 break-words text-sm text-ds-muted-foreground">
+                                        {[category, brandModel].filter(Boolean).join(' · ')}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                        <span className="inline-flex shrink-0 items-center gap-1.5 text-xs text-ds-muted-foreground">
+                            <CalendarDays aria-hidden="true" className="size-3.5" />
+                            {request.updatedAt ? formatAbsoluteDateTime(request.updatedAt) : 'Completion time unavailable'}
+                        </span>
+                    </div>
+
+                    {request.trackingId && (
+                        <p className="flex min-w-0 items-start gap-1.5 font-mono text-xs text-ds-muted-foreground">
+                            <Hash aria-hidden="true" className="mt-px size-3.5 shrink-0" />
+                            <span className="break-all">{request.trackingId}</span>
+                        </p>
+                    )}
+
+                    <dl className="grid gap-3 border-t border-ds-border pt-4 text-sm sm:grid-cols-3">
+                        <div>
+                            <dt className="text-xs text-ds-muted-foreground">Repair amount</dt>
+                            <dd className="mt-0.5 font-medium tabular-nums text-ds-foreground">
+                                {formatMoney(request.quote?.totalAmount, request.quote?.currency) || '—'}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt className="text-xs text-ds-muted-foreground">Your earning</dt>
+                            <dd className="mt-0.5 font-medium tabular-nums text-ds-foreground">
+                                {earning ? (formatMoney(earning.amount, earning.currency) || '—') : '—'}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt className="text-xs text-ds-muted-foreground">Earning status</dt>
+                            <dd className="mt-1">
+                                {earning
+                                    ? <Badge tone={earning.status === 'paid' ? 'success' : 'neutral'}>{EARNING_STATUS_LABEL[earning.status] || earning.status}</Badge>
+                                    : '—'}
+                            </dd>
+                        </div>
+                    </dl>
+                </div>
+
+                <Link
+                    to={`/dashboard/assigned-jobs/${request._id}`}
+                    className="focus-ring flex items-center justify-between gap-3 border-t border-ds-border bg-ds-muted/20 px-4 py-3 text-sm font-medium text-ds-primary hover:bg-ds-muted/50 sm:px-5"
+                >
+                    View completed job
+                    <ChevronRight aria-hidden="true" className="size-4 shrink-0" />
+                </Link>
+            </article>
+        </Card>
     );
 }
 
@@ -60,13 +134,18 @@ const CompletedJobs = () => {
     const retryEarningsSummary = () => queryClient.resetQueries({ queryKey: earningsSummaryQueryKey });
 
     if (isCompletedInitialLoading) {
-        return <Loading></Loading>;
+        return (
+            <div className="space-y-6">
+                <PageHeader eyebrow="Technician" title="Completed Repairs" />
+                <Loading />
+            </div>
+        );
     }
 
     if (isCompletedErrorBeforeData || isCompletedUnavailableBeforeData) {
         return (
             <div className="space-y-6">
-                <h2 className='text-4xl font-bold'>Completed Repairs</h2>
+                <PageHeader eyebrow="Technician" title="Completed Repairs" />
                 <ErrorState
                     title="Couldn't load completed repairs"
                     description="We couldn't load your completed repairs right now. Please try again."
@@ -77,10 +156,13 @@ const CompletedJobs = () => {
     }
 
     const currency = summary?.currency || 'bdt';
+    const description = requests.length === 0
+        ? 'Your completed repair history will appear here.'
+        : `${requests.length} completed repair${requests.length === 1 ? '' : 's'}`;
 
     return (
         <div className="space-y-6">
-            <h2 className='text-4xl font-bold'>Completed Repairs: {requests.length}</h2>
+            <PageHeader eyebrow="Technician" title="Completed Repairs" description={description} />
 
             {isSummaryInitialLoading && (
                 <div className="rounded-lg border border-base-300 p-4">
@@ -106,45 +188,29 @@ const CompletedJobs = () => {
                 </div>
             )}
 
-            <div className="overflow-x-auto">
-                <table className="table table-zebra">
-                    {/* head */}
-                    <thead>
-                        <tr>
-                            <th></th>
-                            <th>Device</th>
-                            <th>Service</th>
-                            <th>Completed</th>
-                            <th>Repair amount</th>
-                            <th>Your earning</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {requests.map((request, index) => {
-                            const earning = request.technicianEarning;
-                            return (
-                                <tr key={request._id}>
-                                    <th>{index + 1}</th>
-                                    <td>{request.deviceName || '—'}</td>
-                                    <td>{request.product?.categorySlug ? humanizeSlug(request.product.categorySlug) : '—'}</td>
-                                    <td>{request.updatedAt ? formatAbsoluteDateTime(request.updatedAt) : '—'}</td>
-                                    <td>{formatMoney(request.quote?.totalAmount, request.quote?.currency) || '—'}</td>
-                                    <td>{earning ? (formatMoney(earning.amount, earning.currency) || '—') : '—'}</td>
-                                    <td>
-                                        {earning
-                                            ? <span className={`badge ${earning.status === 'paid' ? 'badge-success' : 'badge-ghost'}`}>{EARNING_STATUS_LABEL[earning.status] || earning.status}</span>
-                                            : '—'}
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
-                {
-                    requests.length === 0 && <p className='text-center py-8 opacity-60'>No completed repairs yet.</p>
-                }
-            </div>
+            <section aria-labelledby="completed-job-history-heading" className="space-y-3">
+                <div>
+                    <p className="ds-label text-ds-primary">Operational history</p>
+                    <h2 id="completed-job-history-heading" className="mt-1 text-xl font-semibold tracking-tight text-ds-foreground">Completed repair jobs</h2>
+                </div>
+
+                {requests.length === 0 ? (
+                    <EmptyState
+                        icon={PackageCheck}
+                        title="No completed repairs yet"
+                        description="Completed repair work will appear here."
+                        className="py-12"
+                    />
+                ) : (
+                    <ul className="grid gap-3 xl:grid-cols-2">
+                        {requests.map((request) => (
+                            <li key={request._id}>
+                                <CompletedJobItem request={request} />
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </section>
         </div>
     );
 };

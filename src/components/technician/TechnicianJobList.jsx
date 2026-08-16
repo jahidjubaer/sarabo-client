@@ -20,22 +20,25 @@ function TechnicianJobList({ jobs, onClearFilters, onAdvance, pendingAction }) {
     }
 
     return (
-        <Motion.ul layout className="space-y-3">
-            <AnimatePresence initial={false}>
-                {jobs.map((job) => (
-                    <Motion.li
-                        key={job._id}
-                        layout
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.18 }}
-                    >
-                        <TechnicianJobItem job={job} onAdvance={onAdvance} pendingAction={pendingAction} />
-                    </Motion.li>
-                ))}
-            </AnimatePresence>
-        </Motion.ul>
+        <section aria-labelledby="assigned-job-results-heading">
+            <h2 id="assigned-job-results-heading" className="sr-only">Assigned repair jobs</h2>
+            <Motion.ul layout className="space-y-3">
+                <AnimatePresence initial={false}>
+                    {jobs.map((job) => (
+                        <Motion.li
+                            key={job._id}
+                            layout
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.18 }}
+                        >
+                            <TechnicianJobItem job={job} onAdvance={onAdvance} pendingAction={pendingAction} />
+                        </Motion.li>
+                    ))}
+                </AnimatePresence>
+            </Motion.ul>
+        </section>
     );
 }
 

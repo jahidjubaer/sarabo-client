@@ -8,7 +8,11 @@ import { JOB_GROUPS, JOB_GROUP_LABELS, JOB_SORT_OPTIONS } from '../../utils/tech
 // group filter is a segmented button set with aria-pressed (not colour-only).
 function TechnicianJobFilters({ search, onSearchChange, group, onGroupChange, sort, onSortChange }) {
     return (
-        <div className="space-y-3">
+        <section aria-labelledby="job-tools-heading" className="space-y-4 rounded-ds-lg border border-ds-border bg-ds-card p-4 sm:p-5">
+            <div>
+                <p className="ds-label text-ds-primary">Assigned queue</p>
+                <h2 id="job-tools-heading" className="mt-1 text-base font-semibold text-ds-foreground">Find a repair job</h2>
+            </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <div className="relative flex-1">
                     <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ds-muted-foreground" />
@@ -55,7 +59,7 @@ function TechnicianJobFilters({ search, onSearchChange, group, onGroupChange, so
                     </button>
                 ))}
             </div>
-        </div>
+        </section>
     );
 }
 
