@@ -10,10 +10,12 @@ import { notify } from '../../../lib/notify';
 import { Avatar, AvatarImage, AvatarFallback } from '../../../components/ui/avatar';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
+import { Card } from '../../../components/ui/card';
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
 import { FormField } from '../../../components/common/FormField';
 import { LoadingButton } from '../../../components/common/LoadingButton';
+import { PageHeader } from '../../../components/common/PageHeader';
 import { isUserEmailVerified, getVerificationPresentation } from '../../../utils/emailVerification';
 import RoleContextCard from './RoleContextCard';
 import AccountSecurityCard from './AccountSecurityCard';
@@ -27,12 +29,15 @@ function getInitials(name) {
     return name.trim().split(/\s+/).slice(0, 2).map((word) => word[0]?.toUpperCase()).join('');
 }
 
-// My Profile (Phase 7.10: redesigned to ds-*/Lucide, Toastify, ds primitives).
+// My Profile (Phase 7.10: ds-*/Lucide/Toastify; Phase 12: type scale, shared
+// PageHeader/Card, and the marigold Save action).
 // Editing behavior is preserved exactly - the same updateUserProfile call and
 // the same imgbb photo upload; only display name + photo are editable (no
-// invented fields). Only whitelisted, already-available presentation values
-// are rendered (name, email, role label, auth method) - never uid, provider
-// tokens, or raw backend objects.
+// invented fields, no new personal data collected). Only whitelisted,
+// already-available presentation values are rendered (name, email, role label,
+// auth method) - never uid, provider tokens, or raw backend objects. No
+// completion percentage, membership age, badge or security score exists here,
+// because the app has no authoritative source for any of them.
 const Profile = () => {
     const { user, updateUserProfile } = useAuth();
     const { role, roleLoading, isError } = useRole();
@@ -114,15 +119,16 @@ const Profile = () => {
     };
 
     return (
-        <div>
-            <h1 className="text-2xl font-bold tracking-tight text-ds-foreground sm:text-3xl">My Profile</h1>
-            <p className="mt-2 max-w-2xl text-sm text-ds-muted-foreground">
-                Review your account identity and update the basic profile information supported by Sarabo.
-            </p>
+        <div className="space-y-6">
+            <PageHeader
+                eyebrow="Account"
+                title="My Profile"
+                description="Review your account identity and update the basic profile information supported by Sarabo."
+            />
 
-            <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                 <div className="lg:col-span-2">
-                    <div className="rounded-ds-lg border border-ds-border bg-ds-card p-6">
+                    <Card className="p-5 sm:p-6">
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                             <Avatar className="size-20 text-xl">
                                 {user?.photoURL ? <AvatarImage src={user.photoURL} alt="" /> : null}
@@ -130,29 +136,29 @@ const Profile = () => {
                             </Avatar>
                             <div className="min-w-0 flex-1">
                                 <div className="flex flex-wrap items-center gap-2">
-                                    <h2 className="text-xl font-semibold text-ds-foreground">{user?.displayName || 'Unnamed account'}</h2>
+                                    <h2 className="min-w-0 break-words text-heading text-ds-foreground">{user?.displayName || 'Unnamed account'}</h2>
                                     {roleKnown && <Badge tone="accent">{roleDisplayText}</Badge>}
                                 </div>
-                                <p className="truncate text-sm text-ds-muted-foreground" title={user?.email}>{user?.email}</p>
+                                <p className="mt-1 min-w-0 break-all text-body-sm text-ds-muted-foreground">{user?.email}</p>
                             </div>
                         </div>
 
                         <dl className="mt-6 grid grid-cols-1 gap-4 border-t border-ds-border pt-6 sm:grid-cols-2">
-                            <div>
-                                <dt className="text-xs font-semibold uppercase tracking-wide text-ds-muted-foreground">Email address</dt>
-                                <dd className="mt-1 truncate text-sm text-ds-foreground" title={user?.email}>{user?.email}</dd>
+                            <div className="min-w-0">
+                                <dt className="ds-label text-ds-muted-foreground">Email address</dt>
+                                <dd className="mt-1.5 min-w-0 break-all text-body-sm text-ds-foreground">{user?.email}</dd>
                             </div>
-                            <div>
-                                <dt className="text-xs font-semibold uppercase tracking-wide text-ds-muted-foreground">Role</dt>
-                                <dd className="mt-1 text-sm text-ds-foreground">{roleDisplayText}</dd>
+                            <div className="min-w-0">
+                                <dt className="ds-label text-ds-muted-foreground">Role</dt>
+                                <dd className="mt-1.5 text-body-sm text-ds-foreground">{roleDisplayText}</dd>
                             </div>
-                            <div>
-                                <dt className="text-xs font-semibold uppercase tracking-wide text-ds-muted-foreground">Authentication account</dt>
-                                <dd className="mt-1 text-sm text-ds-foreground">{authMethodLabel}</dd>
+                            <div className="min-w-0">
+                                <dt className="ds-label text-ds-muted-foreground">Authentication account</dt>
+                                <dd className="mt-1.5 text-body-sm text-ds-foreground">{authMethodLabel}</dd>
                             </div>
-                            <div>
-                                <dt className="text-xs font-semibold uppercase tracking-wide text-ds-muted-foreground">Email verification</dt>
-                                <dd className="mt-1">
+                            <div className="min-w-0">
+                                <dt className="ds-label text-ds-muted-foreground">Email verification</dt>
+                                <dd className="mt-1.5">
                                     <Badge tone={verification.tone} className="gap-1">
                                         {verification.verified
                                             ? <ShieldCheck aria-hidden="true" className="size-3.5" />
@@ -164,9 +170,9 @@ const Profile = () => {
                         </dl>
 
                         {!verified && (
-                            <div className="mt-4 flex flex-col gap-2 rounded-ds border border-ds-warning/30 bg-ds-warning/10 p-3 text-sm sm:flex-row sm:items-center sm:justify-between" role="status">
+                            <div className="mt-4 flex flex-col gap-2 rounded-ds border border-ds-warning/30 bg-ds-warning/10 p-3 text-body-sm sm:flex-row sm:items-center sm:justify-between" role="status">
                                 <span className="text-ds-foreground">Verify your email to submit repair requests and make payments.</span>
-                                <Link to="/verify-email" className="focus-ring shrink-0 font-medium text-ds-primary underline underline-offset-2">Verify email</Link>
+                                <Link to="/verify-email" className="focus-ring shrink-0 rounded-ds font-medium text-ds-primary underline underline-offset-2">Verify email</Link>
                             </div>
                         )}
 
@@ -183,6 +189,13 @@ const Profile = () => {
                                         autoFocus
                                         disabled={saving}
                                         aria-invalid={!!nameError}
+                                        // FormField renders the message as
+                                        // `${id}-error` but deliberately leaves the
+                                        // association to the caller (it does not own
+                                        // the control). Without this the validation
+                                        // text is visible but never announced with
+                                        // the field.
+                                        aria-describedby={nameError ? 'profile-name-error' : undefined}
                                     />
                                 </FormField>
                                 <div className="space-y-1.5">
@@ -193,16 +206,18 @@ const Profile = () => {
                                         accept="image/*"
                                         disabled={saving}
                                         onChange={(e) => setPhotoFile(e.target.files[0])}
-                                        className="focus-ring block w-full text-sm text-ds-muted-foreground file:mr-3 file:rounded-ds file:border-0 file:bg-ds-primary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-ds-primary-foreground hover:file:bg-ds-primary/90 disabled:opacity-50"
+                                        className="focus-ring block w-full rounded-ds text-body-sm text-ds-muted-foreground file:mr-3 file:rounded-ds file:border-0 file:bg-ds-secondary file:px-3 file:py-1.5 file:text-body-sm file:font-medium file:text-ds-secondary-foreground hover:file:bg-ds-secondary/80 disabled:opacity-50"
                                     />
                                 </div>
-                                <div className="flex gap-2">
-                                    <LoadingButton type="submit" loading={saving} loadingText="Saving…">Save</LoadingButton>
+                                {/* Marigold: saving profile changes is the one real
+                                    primary action this supporting page offers. */}
+                                <div className="flex flex-wrap gap-2">
+                                    <LoadingButton type="submit" variant="action" loading={saving} loadingText="Saving…">Save changes</LoadingButton>
                                     <Button type="button" variant="outline" onClick={handleCancel} disabled={saving}>Cancel</Button>
                                 </div>
                             </form>
                         )}
-                    </div>
+                    </Card>
                 </div>
 
                 <div className="flex flex-col gap-6 lg:col-span-1">

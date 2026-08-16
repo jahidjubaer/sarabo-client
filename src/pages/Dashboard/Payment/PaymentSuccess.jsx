@@ -1,15 +1,25 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
+import { CircleCheckBig, CircleX, Loader2 } from 'lucide-react';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import useAuth from '../../../hooks/useAuth';
-import { FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 import { getPaymentErrorMessage } from '../../../utils/paymentErrorMessage';
+import { Card } from '../../../components/ui/card';
+import { Button } from '../../../components/ui/button';
+import { buttonVariants } from '../../../components/ui/button-variants';
 
 // Gives the customer a moment to read the confirmation before moving on -
 // long enough to not feel rushed, short enough to not feel stuck.
 const AUTO_REDIRECT_SECONDS = 5;
 
+// Phase 12 aligns this page with the design system without touching a single
+// semantic: the same PATCH /payment-success verification, the same
+// once-per-mount guard, the same retry classification (transient 5xx/no
+// response only), the same invalidations, the same countdown. The copy still
+// claims only what the server actually confirmed - "Payment successful" is
+// shown ONLY after a verified response, and the already-processed wording is
+// preserved. No receipt, no invoice, no refund, no guarantee is implied.
 const PaymentSuccess = () => {
     const [searchParams] = useSearchParams();
     const sessionId = searchParams.get('session_id');
@@ -91,96 +101,90 @@ const PaymentSuccess = () => {
 
     if (status === 'failed') {
         return (
-            <div className="flex items-center justify-center min-h-[70vh] p-4">
-                <div className="bg-gradient-to-br from-error/10 via-base-100 to-base-200 rounded-2xl p-4 md:p-8 w-full max-w-md">
-                    <div className="card bg-base-100 shadow-2xl">
-                        <div className="card-body items-center text-center">
-                            <div className="bg-error/10 rounded-full p-4">
-                                <FaTimesCircle className="text-4xl text-error" />
-                            </div>
-                            <h2 className="text-3xl font-bold mt-2">We could not verify your payment yet</h2>
-                            <p className="opacity-70">{errorMessage || 'No payment session was found. If you completed a payment, check My Repair Requests for its status.'}</p>
-                            {
-                                canRetry &&
-                                <p className="opacity-60 text-sm mt-1">Stripe may still be processing your payment - this can take a moment.</p>
-                            }
+            <div className="flex min-h-[70vh] items-center justify-center p-4">
+                <Card className="w-full max-w-md p-6 text-center sm:p-7">
+                    <span aria-hidden="true" className="mx-auto flex size-12 items-center justify-center rounded-full bg-ds-destructive/10 text-ds-destructive">
+                        <CircleX className="size-6" />
+                    </span>
+                    <h1 className="mt-4 text-heading text-ds-foreground">We could not verify your payment yet</h1>
+                    <p className="mt-2 text-body-sm text-ds-muted-foreground">
+                        {errorMessage || 'No payment session was found. If you completed a payment, check My Repair Requests for its status.'}
+                    </p>
+                    {
+                        canRetry &&
+                        <p className="mt-2 text-micro text-ds-muted-foreground">Stripe may still be processing your payment - this can take a moment.</p>
+                    }
 
-                            {
-                                canRetry &&
-                                <button onClick={handleRetry} className="btn btn-primary w-full mt-4">Retry Verification</button>
-                            }
+                    {
+                        canRetry &&
+                        <Button onClick={handleRetry} className="mt-5 w-full">Retry verification</Button>
+                    }
 
-                            <div className="flex flex-col sm:flex-row gap-3 w-full mt-3">
-                                <Link to="/dashboard/my-requests" className="btn btn-outline flex-1">View My Repair Requests</Link>
-                                <Link to="/dashboard" className="btn btn-outline flex-1">Go to Dashboard</Link>
-                            </div>
-                        </div>
+                    <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                        <Link to="/dashboard/my-requests" className={`${buttonVariants({ variant: 'outline' })} flex-1`}>View my repair requests</Link>
+                        <Link to="/dashboard" className={`${buttonVariants({ variant: 'outline' })} flex-1`}>Go to dashboard</Link>
                     </div>
-                </div>
+                </Card>
             </div>
         );
     }
 
     return (
-        <div className="flex items-center justify-center min-h-[70vh] p-4">
-            <div className="bg-gradient-to-br from-primary/10 via-base-100 to-base-200 rounded-2xl p-4 md:p-8 w-full max-w-md">
-                <div className="card bg-base-100 shadow-2xl">
-                    <div className="card-body items-center text-center">
-                        {
-                            status === 'verifying' ?
-                                <>
-                                    <span className="loading loading-spinner loading-lg text-primary"></span>
-                                    <h2 className="text-2xl font-bold mt-2">Verifying your payment...</h2>
-                                    <p className="opacity-70">Please wait while we confirm this with Stripe.</p>
-                                </>
-                                :
-                                <>
-                                    <div className="bg-success/10 rounded-full p-4">
-                                        <FaCheckCircle className="text-4xl text-success" />
-                                    </div>
-                                    <h2 className="text-3xl font-bold mt-2">
-                                        {alreadyProcessed ? 'Payment already confirmed' : 'Payment successful'}
-                                    </h2>
-                                    <p className="opacity-70">
-                                        {alreadyProcessed
-                                            ? 'This payment was already confirmed for your repair request.'
-                                            : 'Your repair request payment has been confirmed.'}
-                                    </p>
+        <div className="flex min-h-[70vh] items-center justify-center p-4">
+            <Card className="w-full max-w-md p-6 text-center sm:p-7">
+                {
+                    status === 'verifying' ?
+                        <div role="status" aria-live="polite">
+                            <Loader2 aria-hidden="true" className="mx-auto size-8 animate-spin text-ds-primary" />
+                            <h1 className="mt-4 text-heading text-ds-foreground">Verifying your payment…</h1>
+                            <p className="mt-2 text-body-sm text-ds-muted-foreground">Please wait while we confirm this with Stripe.</p>
+                        </div>
+                        :
+                        <>
+                            <span aria-hidden="true" className="mx-auto flex size-12 items-center justify-center rounded-full bg-ds-success/10 text-ds-success">
+                                <CircleCheckBig className="size-6" />
+                            </span>
+                            <h1 className="mt-4 text-heading text-ds-foreground">
+                                {alreadyProcessed ? 'Payment already confirmed' : 'Payment successful'}
+                            </h1>
+                            <p className="mt-2 text-body-sm text-ds-muted-foreground">
+                                {alreadyProcessed
+                                    ? 'This payment was already confirmed for your repair request.'
+                                    : 'Your repair request payment has been confirmed.'}
+                            </p>
 
+                            {
+                                (paymentInfo.transactionId || paymentInfo.trackingId) &&
+                                <dl className="mt-5 divide-y divide-ds-border rounded-ds-lg border border-ds-border text-left">
                                     {
-                                        (paymentInfo.transactionId || paymentInfo.trackingId) &&
-                                        <div className="w-full mt-4 text-left bg-base-200 rounded-xl p-4 space-y-2">
-                                            {
-                                                paymentInfo.transactionId &&
-                                                <div className="flex justify-between gap-4">
-                                                    <span className="opacity-70">Transaction ID</span>
-                                                    <span className="font-semibold text-right break-all">{paymentInfo.transactionId}</span>
-                                                </div>
-                                            }
-                                            {
-                                                paymentInfo.trackingId &&
-                                                <div className="flex justify-between gap-4">
-                                                    <span className="opacity-70">Request ID</span>
-                                                    <span className="font-semibold text-right break-all">{paymentInfo.trackingId}</span>
-                                                </div>
-                                            }
+                                        paymentInfo.transactionId &&
+                                        <div className="flex items-start justify-between gap-4 px-4 py-2.5">
+                                            <dt className="shrink-0 text-body-sm text-ds-muted-foreground">Transaction ID</dt>
+                                            <dd className="ds-numeric min-w-0 break-all text-right text-body-sm font-semibold text-ds-foreground">{paymentInfo.transactionId}</dd>
                                         </div>
                                     }
+                                    {
+                                        paymentInfo.trackingId &&
+                                        <div className="flex items-start justify-between gap-4 px-4 py-2.5">
+                                            <dt className="shrink-0 text-body-sm text-ds-muted-foreground">Request ID</dt>
+                                            <dd className="ds-numeric min-w-0 break-all text-right text-body-sm font-semibold text-ds-foreground">{paymentInfo.trackingId}</dd>
+                                        </div>
+                                    }
+                                </dl>
+                            }
 
-                                    <p className="opacity-60 text-sm mt-4">
-                                        Taking you to My Repair Requests in {secondsLeft}s...
-                                    </p>
+                            <p className="mt-5 text-micro text-ds-muted-foreground" role="status">
+                                Taking you to My Repair Requests in {secondsLeft}s…
+                            </p>
 
-                                    <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
-                                        <Link to="/dashboard/my-requests" className="btn btn-primary flex-1">View My Repair Requests</Link>
-                                        <Link to="/dashboard/payment-history" className="btn btn-outline flex-1">View Payment History</Link>
-                                    </div>
-                                    <Link to="/dashboard" className="btn btn-ghost btn-sm w-full mt-2">Return to Dashboard</Link>
-                                </>
-                        }
-                    </div>
-                </div>
-            </div>
+                            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                                <Link to="/dashboard/my-requests" className={`${buttonVariants()} flex-1`}>View my repair requests</Link>
+                                <Link to="/dashboard/payment-history" className={`${buttonVariants({ variant: 'outline' })} flex-1`}>View payment history</Link>
+                            </div>
+                            <Link to="/dashboard" className={`${buttonVariants({ variant: 'ghost', size: 'sm' })} mt-2 w-full`}>Return to dashboard</Link>
+                        </>
+                }
+            </Card>
         </div>
     );
 };

@@ -10,20 +10,28 @@ import { ErrorState } from '../../../components/common/ErrorState';
 import { StatusBadge } from '../../../components/common/StatusBadge';
 import { Card } from '../../../components/ui/card';
 import { Badge } from '../../../components/ui/badge';
+import { Skeleton } from '../../../components/ui/skeleton';
 import { formatMoney } from '../../../utils/currency';
 import { formatAbsoluteDateTime } from '../../../utils/relativeTime';
 import { getProductSummary } from '../../../utils/customerRequestPresentation';
 
-// Technician Completed Repairs + earnings. The earnings summary remains the
-// visually frozen Phase 12 block; only the operational history below it is
-// composed as responsive repair cards in Phase 10.
+// Technician Completed Repairs + earnings. Phase 10 composed the operational
+// history cards below; Phase 12 redesigns ONLY the earnings summary block at
+// the top - the job cards, their hierarchy, statuses, navigation, queries and
+// responsive structure are untouched.
 const EARNING_STATUS_LABEL = { pending: 'Pending', paid: 'Paid' };
 
-function SummaryTile({ label, value }) {
+// One authoritative figure with its accounting breakdown, deliberately not four
+// equal KPI tiles: this is an accounting note on a job-history page, not a
+// payout dashboard. Every value comes straight from the server's
+// earnings-summary response (totalEarned / paidAmount / pendingAmount /
+// completedRepairCount, currency bdt) - nothing is summed, derived, projected
+// or commissioned on the client.
+function EarningFact({ label, value }) {
     return (
-        <div className="rounded-lg border border-base-300 p-4">
-            <p className="text-xs uppercase tracking-wide opacity-60">{label}</p>
-            <p className="mt-1 text-2xl font-bold">{value}</p>
+        <div className="min-w-0">
+            <dt className="text-micro text-ds-muted-foreground">{label}</dt>
+            <dd className="ds-numeric mt-1 min-w-0 break-all text-subhead text-ds-foreground">{value}</dd>
         </div>
     );
 }
@@ -165,9 +173,11 @@ const CompletedJobs = () => {
             <PageHeader eyebrow="Technician" title="Completed Repairs" description={description} />
 
             {isSummaryInitialLoading && (
-                <div className="rounded-lg border border-base-300 p-4">
-                    <p className="text-sm opacity-60">Loading earnings summary...</p>
-                </div>
+                <Card className="space-y-3 p-5" role="status" aria-label="Loading earnings summary">
+                    <Skeleton className="h-3 w-32" />
+                    <Skeleton className="h-8 w-40" />
+                    <Skeleton className="h-3 w-full max-w-xs" />
+                </Card>
             )}
 
             {(isSummaryErrorBeforeData || isSummaryUnavailableBeforeData) && (
@@ -180,12 +190,21 @@ const CompletedJobs = () => {
             )}
 
             {hasUsableSummary && summary && (
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <SummaryTile label="Total earned" value={formatMoney(summary.totalEarned, currency) || '—'} />
-                    <SummaryTile label="Pending" value={formatMoney(summary.pendingAmount, currency) || '—'} />
-                    <SummaryTile label="Paid" value={formatMoney(summary.paidAmount, currency) || '—'} />
-                    <SummaryTile label="Completed repairs" value={summary.completedRepairCount ?? requests.length} />
-                </div>
+                <Card className="p-5" aria-labelledby="earnings-summary-heading">
+                    <h2 id="earnings-summary-heading" className="ds-label text-ds-muted-foreground">Earnings summary</h2>
+                    <p className="ds-numeric mt-2 min-w-0 break-all text-title text-ds-foreground">
+                        {formatMoney(summary.totalEarned, currency) || '—'}
+                    </p>
+                    <p className="mt-1 text-body-sm text-ds-muted-foreground">
+                        Total labour earning recorded across your completed repairs. Parts and other charges are not included.
+                    </p>
+
+                    <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-ds-border pt-4 sm:grid-cols-3">
+                        <EarningFact label="Paid" value={formatMoney(summary.paidAmount, currency) || '—'} />
+                        <EarningFact label="Pending" value={formatMoney(summary.pendingAmount, currency) || '—'} />
+                        <EarningFact label="Completed repairs" value={summary.completedRepairCount ?? requests.length} />
+                    </dl>
+                </Card>
             )}
 
             <section aria-labelledby="completed-job-history-heading" className="space-y-3">

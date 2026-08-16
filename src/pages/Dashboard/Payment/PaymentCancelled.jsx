@@ -1,29 +1,30 @@
-import React from 'react';
 import { Link } from 'react-router';
-import { FaExclamationTriangle } from 'react-icons/fa';
+import { CircleSlash } from 'lucide-react';
+import { Card } from '../../../components/ui/card';
+import { buttonVariants } from '../../../components/ui/button-variants';
 
+// Phase 12: design-system alignment only. The semantics are unchanged and
+// deliberately narrow - the customer cancelled at Stripe, so nothing was
+// charged. It never says the payment "failed", never promises a refund, and
+// never implies the repair request itself was affected.
 const PaymentCancelled = () => {
     return (
-        <div className="flex items-center justify-center min-h-[70vh] p-4">
-            <div className="bg-gradient-to-br from-primary/10 via-base-100 to-base-200 rounded-2xl p-4 md:p-8 w-full max-w-md">
-                <div className="card bg-base-100 shadow-2xl">
-                    <div className="card-body items-center text-center">
-                        <div className="bg-warning/10 rounded-full p-4">
-                            <FaExclamationTriangle className="text-4xl text-warning" />
-                        </div>
-                        <h2 className="text-3xl font-bold mt-2">Payment Cancelled</h2>
-                        <p className="opacity-70">
-                            Payment cancelled - no charge was recorded.
-                            You can try again anytime from My Repair Requests.
-                        </p>
+        <div className="flex min-h-[70vh] items-center justify-center p-4">
+            <Card className="w-full max-w-md p-6 text-center sm:p-7">
+                <span aria-hidden="true" className="mx-auto flex size-12 items-center justify-center rounded-full bg-ds-muted text-ds-muted-foreground">
+                    <CircleSlash className="size-6" />
+                </span>
+                <h1 className="mt-4 text-heading text-ds-foreground">Payment cancelled</h1>
+                <p className="mt-2 text-body-sm text-ds-muted-foreground">
+                    Payment cancelled - no charge was recorded.
+                    You can try again anytime from My Repair Requests.
+                </p>
 
-                        <div className="flex flex-col sm:flex-row gap-3 w-full mt-6">
-                            <Link to="/dashboard/my-requests" className="btn btn-primary flex-1">Return to My Repair Requests</Link>
-                            <Link to="/dashboard" className="btn btn-outline flex-1">Go to Dashboard</Link>
-                        </div>
-                    </div>
+                <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+                    <Link to="/dashboard/my-requests" className={`${buttonVariants()} flex-1`}>Return to my repair requests</Link>
+                    <Link to="/dashboard" className={`${buttonVariants({ variant: 'outline' })} flex-1`}>Go to dashboard</Link>
                 </div>
-            </div>
+            </Card>
         </div>
     );
 };

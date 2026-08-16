@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
+import { Bell, BellOff, CheckCheck, ChevronLeft, ChevronRight } from 'lucide-react';
 import NotificationItem from '../../../components/notifications/NotificationItem';
 import {
     useNotifications,
@@ -9,6 +10,14 @@ import {
     useMarkAllNotificationsRead,
 } from '../../../hooks/useNotifications';
 import { notificationKeys } from '../../../hooks/notificationKeys';
+import { PageHeader } from '../../../components/common/PageHeader';
+import { EmptyState } from '../../../components/common/EmptyState';
+import { ErrorState } from '../../../components/common/ErrorState';
+import { Alert, AlertDescription } from '../../../components/ui/alert';
+import { Button } from '../../../components/ui/button';
+import { LoadingButton } from '../../../components/common/LoadingButton';
+import { Skeleton } from '../../../components/ui/skeleton';
+import { cn } from '../../../lib/utils';
 
 const PAGE_LIMIT = 10;
 
@@ -22,6 +31,13 @@ function normalizeFilter(rawFilter) {
     return rawFilter === 'unread' ? 'unread' : 'all';
 }
 
+// Notification Center (Phase 12 presentation redesign). Every query, key,
+// pagination rule, URL-normalization effect, mutation and optimistic path
+// below is carried over unchanged - only the surface is rebuilt on the design
+// system. Deliberately quiet: this is a supporting surface, so the page's own
+// action ("Mark all as read") uses the ordinary primary treatment rather than
+// marigold, which stays reserved for the operational dashboards' real
+// next-step controls.
 const NotificationsPage = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const headerRef = useRef(null);
@@ -143,51 +159,63 @@ const NotificationsPage = () => {
         markAllRead.mutate();
     };
 
+    const filterTabClass = (active) => cn(
+        'focus-ring rounded-ds px-3 py-1.5 text-body-sm font-medium transition-colors',
+        active
+            ? 'bg-ds-card text-ds-foreground shadow-sm'
+            : 'text-ds-muted-foreground hover:text-ds-foreground'
+    );
+
     return (
-        <div>
-            <div ref={headerRef} className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                    <h1 className="text-4xl font-bold">Notifications</h1>
-                    <p className="mt-2 opacity-70">
-                        Track updates about your technician application, repair requests and payments.
+        <div className="space-y-6">
+            <div ref={headerRef}>
+                <PageHeader
+                    eyebrow="Account"
+                    title="Notifications"
+                    description="Updates about your technician application, repair requests and payments."
+                    actions={
+                        <LoadingButton
+                            type="button"
+                            onClick={handleMarkAll}
+                            disabled={!unreadCount}
+                            loading={markAllRead.isPending}
+                            loadingText="Marking…"
+                            size="sm"
+                        >
+                            <CheckCheck aria-hidden="true" /> Mark all as read
+                        </LoadingButton>
+                    }
+                />
+                {/* Unread count is authoritative or absent - never a false zero. */}
+                {typeof unreadCount === 'number' && unreadCount > 0 && (
+                    <p className="mt-3 text-body-sm text-ds-foreground">
+                        <span className="ds-numeric font-semibold">{unreadCount}</span> unread
                     </p>
-                    {typeof unreadCount === 'number' && unreadCount > 0 && (
-                        <p className="mt-2 text-sm font-medium text-primary">{unreadCount} unread</p>
-                    )}
-                    {isUnreadCountInitialLoading && (
-                        <p className="mt-2 text-sm opacity-60">Checking unread count...</p>
-                    )}
-                    {isUnreadCountUnavailableBeforeData && (
-                        <p className="mt-2 text-sm opacity-70">
-                            Unread count is unavailable.{' '}
-                            <button type="button" onClick={retryUnreadCount} className="focus-ring underline underline-offset-2">
-                                Try again
-                            </button>
-                        </p>
-                    )}
-                </div>
-                <button
-                    type="button"
-                    onClick={handleMarkAll}
-                    disabled={!unreadCount || markAllRead.isPending}
-                    aria-busy={markAllRead.isPending}
-                    className="focus-ring btn btn-outline"
-                >
-                    {markAllRead.isPending ? 'Marking...' : 'Mark all as read'}
-                </button>
+                )}
+                {isUnreadCountInitialLoading && (
+                    <p className="mt-3 text-body-sm text-ds-muted-foreground">Checking unread count…</p>
+                )}
+                {isUnreadCountUnavailableBeforeData && (
+                    <p className="mt-3 text-body-sm text-ds-muted-foreground">
+                        Unread count is unavailable.{' '}
+                        <button type="button" onClick={retryUnreadCount} className="focus-ring rounded-ds font-medium text-ds-primary underline underline-offset-2">
+                            Try again
+                        </button>
+                    </p>
+                )}
             </div>
 
             {markAllRead.isError && (
-                <div className="alert alert-error mt-4">
-                    <span>Could not mark all as read. Please try again.</span>
-                </div>
+                <Alert tone="danger">
+                    <AlertDescription>Could not mark all as read. Please try again.</AlertDescription>
+                </Alert>
             )}
 
-            <div className="mt-6 flex w-fit gap-1 rounded-box border border-base-300 p-1" role="group" aria-label="Filter notifications">
+            <div className="flex w-fit gap-1 rounded-ds-lg border border-ds-border bg-ds-muted p-1" role="group" aria-label="Filter notifications">
                 <button
                     type="button"
                     aria-pressed={filter === 'all'}
-                    className={`focus-ring btn btn-sm ${filter === 'all' ? 'btn-primary' : 'btn-ghost'}`}
+                    className={filterTabClass(filter === 'all')}
                     onClick={() => handleFilterChange('all')}
                 >
                     All
@@ -195,22 +223,22 @@ const NotificationsPage = () => {
                 <button
                     type="button"
                     aria-pressed={filter === 'unread'}
-                    className={`focus-ring btn btn-sm ${filter === 'unread' ? 'btn-primary' : 'btn-ghost'}`}
+                    className={filterTabClass(filter === 'unread')}
                     onClick={() => handleFilterChange('unread')}
                 >
                     Unread{typeof unreadCount === 'number' && unreadCount > 0 ? ` (${unreadCount})` : ''}
                 </button>
             </div>
 
-            <div className="mt-6">
+            <div>
                 {isListInitialLoading && (
                     <ul className="flex flex-col gap-2" aria-hidden="true">
                         {[0, 1, 2, 3].map((key) => (
-                            <li key={key} className="flex items-start gap-3 rounded-lg border border-base-300 px-4 py-4">
-                                <span className="skeleton h-10 w-10 shrink-0 rounded-full"></span>
-                                <span className="flex-1">
-                                    <span className="skeleton mb-2 block h-4 w-1/2 rounded"></span>
-                                    <span className="skeleton block h-4 w-full rounded"></span>
+                            <li key={key} className="flex items-start gap-3 rounded-ds-lg border border-ds-border bg-ds-card px-4 py-4">
+                                <Skeleton className="size-10 shrink-0 rounded-ds-lg" />
+                                <span className="flex-1 space-y-2">
+                                    <Skeleton className="block h-4 w-1/2" />
+                                    <Skeleton className="block h-4 w-full" />
                                 </span>
                             </li>
                         ))}
@@ -218,41 +246,38 @@ const NotificationsPage = () => {
                 )}
 
                 {(isListUnavailableBeforeData || isListErrorBeforeData) && (
-                    <div className="flex flex-col items-center gap-3 rounded-lg border border-base-300 py-16 text-center">
-                        <p className="opacity-70">Could not load notifications.</p>
-                        <button type="button" onClick={retryList} className="focus-ring btn btn-primary btn-sm">
-                            Try again
-                        </button>
-                    </div>
+                    <ErrorState
+                        title="Couldn't load notifications"
+                        description="Your notifications are unavailable right now. Please try again."
+                        onRetry={retryList}
+                    />
                 )}
 
                 {hasAuthoritativeList && items.length === 0 && filter === 'all' && (
-                    <div className="rounded-lg border border-base-300 py-16 text-center">
-                        <p className="text-lg font-semibold">No notifications yet</p>
-                        <p className="mt-2 opacity-70">
-                            Updates about your technician application, repair requests and payments will appear here.
-                        </p>
-                    </div>
+                    <EmptyState
+                        icon={Bell}
+                        title="No notifications yet"
+                        description="Updates about your technician application, repair requests and payments will appear here."
+                    />
                 )}
 
                 {hasAuthoritativeList && items.length === 0 && filter === 'unread' && (
-                    <div className="rounded-lg border border-base-300 py-16 text-center">
-                        <p className="text-lg font-semibold">You&apos;re all caught up</p>
-                        <p className="mt-2 opacity-70">There are no unread notifications right now.</p>
-                        <button
-                            type="button"
-                            onClick={() => handleFilterChange('all')}
-                            className="focus-ring btn btn-ghost btn-sm mt-4"
-                        >
-                            View all notifications
-                        </button>
-                    </div>
+                    <EmptyState
+                        icon={BellOff}
+                        title="You're all caught up"
+                        description="There are no unread notifications right now."
+                        action={
+                            <Button type="button" variant="outline" size="sm" onClick={() => handleFilterChange('all')}>
+                                View all notifications
+                            </Button>
+                        }
+                    />
                 )}
 
                 {hasUsableList && items.length > 0 && (
                     <ul className="flex flex-col gap-2">
                         {items.map((item) => (
-                            <li key={item._id} className="rounded-lg border border-base-300">
+                            <li key={item._id} className="rounded-ds-lg border border-ds-border bg-ds-card">
                                 <NotificationItem notification={item} onActivate={handleActivate} variant="page" />
                             </li>
                         ))}
@@ -261,28 +286,30 @@ const NotificationsPage = () => {
             </div>
 
             {hasUsableList && pagination.totalPages > 1 && (
-                <nav aria-label="Notifications pagination" className="join mt-6 flex justify-center">
-                    <button
+                <nav aria-label="Notifications pagination" className="flex items-center justify-center gap-2">
+                    <Button
                         type="button"
+                        variant="outline"
+                        size="sm"
                         onClick={() => handlePageChange(Math.max(page - 1, 1))}
                         disabled={!pagination.hasPreviousPage || listQuery.isFetching}
                         aria-label="Previous page"
-                        className="join-item btn"
                     >
-                        Previous
-                    </button>
-                    <span className="join-item btn btn-disabled">
+                        <ChevronLeft aria-hidden="true" /> Previous
+                    </Button>
+                    <span className="ds-numeric px-2 text-body-sm text-ds-muted-foreground">
                         Page {pagination.page} of {pagination.totalPages}
                     </span>
-                    <button
+                    <Button
                         type="button"
+                        variant="outline"
+                        size="sm"
                         onClick={() => handlePageChange(page + 1)}
                         disabled={!pagination.hasNextPage || listQuery.isFetching}
                         aria-label="Next page"
-                        className="join-item btn"
                     >
-                        Next
-                    </button>
+                        Next <ChevronRight aria-hidden="true" />
+                    </Button>
                 </nav>
             )}
         </div>

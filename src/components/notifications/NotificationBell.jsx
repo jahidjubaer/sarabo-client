@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { FaBell } from 'react-icons/fa';
+import { Bell } from 'lucide-react';
 import useAuth from '../../hooks/useAuth';
 import useClickOutside from '../../hooks/useClickOutside';
 import {
@@ -12,6 +12,9 @@ import {
 } from '../../hooks/useNotifications';
 import NotificationItem from './NotificationItem';
 import { notificationKeys } from '../../hooks/notificationKeys';
+import { Skeleton } from '../ui/skeleton';
+import { Button } from '../ui/button';
+import { LoadingButton } from '../common/LoadingButton';
 
 // Bell-preview list only ever needs a small, recent slice - never the full
 // notification center's pagination range (Phase 5.3 Unit 1 explicitly
@@ -22,6 +25,15 @@ function formatBadgeCount(count) {
     return count > 99 ? '99+' : String(count);
 }
 
+// Phase 12 owns this component's presentation. Everything behavioural is
+// carried over untouched: the open/close toggle, useClickOutside, the Escape
+// handler that returns focus to the trigger, the route-change and logout
+// close-on-render checks, the preview query (page 1, limit 8, fetched only
+// while open), the shared unread-count query, and mark-one/mark-all.
+//
+// The unread badge is verdigris, not red: an unread notification is
+// information, not an error - and marigold stays reserved for a real primary
+// action, which a passive count is not.
 const NotificationBell = () => {
     const { user } = useAuth();
     const location = useLocation();
@@ -118,13 +130,13 @@ const NotificationBell = () => {
                 aria-expanded={open}
                 aria-controls="notification-panel"
                 aria-label={showBadge ? `Notifications, ${formatBadgeCount(unreadCount)} unread` : 'Notifications'}
-                className="focus-ring relative flex min-h-11 min-w-11 items-center justify-center rounded-full hover:bg-base-200"
+                className="focus-ring relative flex min-h-11 min-w-11 items-center justify-center rounded-ds text-ds-foreground transition-colors hover:bg-ds-accent hover:text-ds-accent-foreground"
             >
-                <FaBell aria-hidden="true" className="h-5 w-5" />
+                <Bell aria-hidden="true" className="size-5" />
                 {showBadge && (
                     <span
                         aria-hidden="true"
-                        className="badge badge-error badge-sm absolute -top-1 -right-1 px-1 text-[10px] leading-none"
+                        className="ds-numeric absolute right-1 top-1 min-w-4 rounded-full bg-ds-primary px-1 py-px text-center text-[10px] font-semibold leading-none text-ds-primary-foreground"
                     >
                         {formatBadgeCount(unreadCount)}
                     </span>
@@ -136,39 +148,44 @@ const NotificationBell = () => {
                     id="notification-panel"
                     role="menu"
                     aria-label="Notifications"
-                    className="absolute right-0 z-50 mt-2 w-[92vw] max-w-[380px] rounded-box border border-base-300 bg-base-100 shadow-lg sm:w-[380px]"
+                    className="absolute right-0 z-50 mt-2 w-[92vw] max-w-[380px] rounded-ds-lg border border-ds-border bg-ds-popover text-ds-popover-foreground shadow-lg sm:w-[380px]"
                 >
-                    <div className="flex items-center justify-between gap-2 border-b border-base-300 px-4 py-3">
-                        <div>
-                            <p className="font-semibold">Notifications</p>
+                    <div className="flex items-start justify-between gap-2 border-b border-ds-border px-4 py-3">
+                        <div className="min-w-0">
+                            <p className="text-subhead text-ds-foreground">Notifications</p>
                             {typeof unreadCount === 'number' && unreadCount > 0 && (
-                                <p className="text-xs text-base-content/60">{unreadCount} unread</p>
+                                <p className="text-micro text-ds-muted-foreground">
+                                    <span className="ds-numeric font-semibold">{unreadCount}</span> unread
+                                </p>
                             )}
                             {isUnreadCountInitialLoading && (
-                                <p className="text-xs text-base-content/60">Checking unread count...</p>
+                                <p className="text-micro text-ds-muted-foreground">Checking unread count…</p>
                             )}
                             {isUnreadCountUnavailableBeforeData && (
-                                <p className="text-xs text-base-content/60">
+                                <p className="text-micro text-ds-muted-foreground">
                                     Unread count unavailable.{' '}
-                                    <button type="button" onClick={retryUnreadCount} className="focus-ring underline underline-offset-2">
+                                    <button type="button" onClick={retryUnreadCount} className="focus-ring rounded-ds font-medium text-ds-primary underline underline-offset-2">
                                         Try again
                                     </button>
                                 </p>
                             )}
                         </div>
-                        <button
+                        <LoadingButton
                             type="button"
                             onClick={handleMarkAll}
-                            disabled={!unreadCount || markAllRead.isPending}
-                            aria-busy={markAllRead.isPending}
-                            className="focus-ring btn btn-ghost btn-xs"
+                            disabled={!unreadCount}
+                            loading={markAllRead.isPending}
+                            loadingText="Marking…"
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 shrink-0 px-2 text-micro"
                         >
-                            {markAllRead.isPending ? 'Marking...' : 'Mark all as read'}
-                        </button>
+                            Mark all as read
+                        </LoadingButton>
                     </div>
 
                     {markAllRead.isError && (
-                        <p className="px-4 pt-2 text-xs text-error" role="alert">
+                        <p className="px-4 pt-2 text-micro text-ds-destructive" role="alert">
                             Could not mark all as read. Please try again.
                         </p>
                     )}
@@ -178,10 +195,10 @@ const NotificationBell = () => {
                             <div className="flex flex-col gap-1 p-1" aria-hidden="true">
                                 {[0, 1, 2].map((key) => (
                                     <div key={key} className="flex items-start gap-3 px-2 py-2.5">
-                                        <span className="skeleton h-8 w-8 shrink-0 rounded-full"></span>
-                                        <span className="flex-1">
-                                            <span className="skeleton mb-2 block h-3 w-3/4 rounded"></span>
-                                            <span className="skeleton block h-3 w-1/2 rounded"></span>
+                                        <Skeleton className="size-8 shrink-0 rounded-ds-lg" />
+                                        <span className="flex-1 space-y-2">
+                                            <Skeleton className="block h-3 w-3/4" />
+                                            <Skeleton className="block h-3 w-1/2" />
                                         </span>
                                     </div>
                                 ))}
@@ -190,19 +207,15 @@ const NotificationBell = () => {
 
                         {(isPreviewUnavailableBeforeData || isPreviewErrorBeforeData) && (
                             <div className="flex flex-col items-center gap-2 py-8 text-center">
-                                <p className="text-sm text-base-content/70">Could not load notifications.</p>
-                                <button
-                                    type="button"
-                                    onClick={retryPreview}
-                                    className="focus-ring btn btn-ghost btn-xs"
-                                >
+                                <p className="text-body-sm text-ds-muted-foreground">Could not load notifications.</p>
+                                <Button type="button" variant="outline" size="sm" onClick={retryPreview}>
                                     Try again
-                                </button>
+                                </Button>
                             </div>
                         )}
 
                         {hasUsablePreview && items.length === 0 && (
-                            <div className="py-8 text-center text-sm text-base-content/60">
+                            <div className="py-8 text-center text-body-sm text-ds-muted-foreground">
                                 You&apos;re all caught up.
                             </div>
                         )}
@@ -225,7 +238,7 @@ const NotificationBell = () => {
                     <Link
                         to="/dashboard/notifications"
                         onClick={close}
-                        className="focus-ring block border-t border-base-300 px-4 py-2.5 text-center text-sm font-medium text-primary hover:bg-base-200"
+                        className="focus-ring block rounded-b-ds-lg border-t border-ds-border px-4 py-2.5 text-center text-body-sm font-medium text-ds-primary hover:bg-ds-muted"
                     >
                         View all notifications
                     </Link>

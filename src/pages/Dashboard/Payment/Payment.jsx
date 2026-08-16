@@ -1,15 +1,25 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useParams } from 'react-router';
+import { CreditCard, Lock } from 'lucide-react';
+import Swal from 'sweetalert2';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import Loading from '../../../components/Loading/Loading';
-import { MdPayment } from 'react-icons/md';
-import { FaLock } from 'react-icons/fa';
-import Swal from 'sweetalert2';
 import { getPaymentErrorMessage } from '../../../utils/paymentErrorMessage';
 import { formatCurrency } from '../../../utils/formatCurrency';
 import { ErrorState } from '../../../components/common/ErrorState';
+import { Card } from '../../../components/ui/card';
+import { LoadingButton } from '../../../components/common/LoadingButton';
 
+// Legacy (v1) checkout for a pre-quote repair request - reached only from
+// Request Details, and only for a non-v2, unpaid, non-cancelled request the
+// caller owns. Phase 12 aligns the presentation with the design system and
+// changes NOTHING about the payment itself: the same query, the same
+// query-state classification, the same single POST /payment-checkout-session
+// carrying only the request id, the same Stripe redirect, the same amount
+// source (request.cost, formatted by the legacy USD formatter). The CTA is
+// still unreachable until the request is genuinely usable, so an unknown
+// request can never expose a pay control.
 const Payment = () => {
     const { requestId } = useParams();
     const axiosSecure = useAxiosSecure();
@@ -65,55 +75,73 @@ const Payment = () => {
     }
 
     return (
-        <div className="flex items-center justify-center min-h-[70vh] p-4">
-            <div className="bg-gradient-to-br from-primary/10 via-base-100 to-base-200 rounded-2xl p-4 md:p-8 w-full max-w-md">
-                <div className="card bg-base-100 shadow-2xl">
-                    <div className="card-body items-center text-center">
-                        <div className="bg-primary/10 rounded-full p-4">
-                            <MdPayment className="text-4xl text-primary" />
-                        </div>
-                        <h2 className="text-3xl font-bold mt-2">Complete Your Payment</h2>
-
-                        <div className="w-full mt-4 text-left bg-base-200 rounded-xl p-4 space-y-2">
-                            {
-                                request?.deviceName &&
-                                <div className="flex justify-between gap-4">
-                                    <span className="opacity-70">Repair Request</span>
-                                    <span className="font-semibold text-right">{request.deviceName}</span>
-                                </div>
-                            }
-                            {
-                                request?.receiverRegion &&
-                                <div className="flex justify-between gap-4">
-                                    <span className="opacity-70">Device Category</span>
-                                    <span className="font-semibold text-right">{request.receiverRegion}</span>
-                                </div>
-                            }
-                            {
-                                request?.priority &&
-                                <div className="flex justify-between gap-4">
-                                    <span className="opacity-70">Priority</span>
-                                    <span className="font-semibold text-right capitalize">{request.priority}</span>
-                                </div>
-                            }
-                        </div>
-
-                        <div className="w-full mt-6">
-                            <p className="opacity-70">Amount Payable</p>
-                            <p className="text-4xl font-bold text-primary">{formatCurrency(request.cost)}</p>
-                        </div>
-
-                        <button onClick={handlePayment} disabled={submitting} className="btn btn-primary w-full mt-6">
-                            {submitting ? 'Starting payment...' : 'Pay Now'}
-                        </button>
-
-                        <p className="flex items-center justify-center gap-2 text-xs opacity-60 mt-4">
-                            <FaLock />
-                            Secure payment powered by Stripe
-                        </p>
+        <div className="flex min-h-[70vh] items-center justify-center p-4">
+            <Card className="w-full max-w-md p-6 sm:p-7">
+                <div className="flex items-center gap-3">
+                    <span aria-hidden="true" className="flex size-11 shrink-0 items-center justify-center rounded-ds-lg bg-ds-accent text-ds-primary">
+                        <CreditCard className="size-5" />
+                    </span>
+                    <div className="min-w-0">
+                        <p className="ds-label text-ds-muted-foreground">Payment</p>
+                        <h1 className="mt-1 text-heading text-ds-foreground">Complete your payment</h1>
                     </div>
                 </div>
-            </div>
+
+                {(request?.deviceName || request?.receiverRegion || request?.priority) && (
+                    <dl className="mt-6 divide-y divide-ds-border rounded-ds-lg border border-ds-border">
+                        {
+                            request?.deviceName &&
+                            <div className="flex items-start justify-between gap-4 px-4 py-2.5">
+                                <dt className="text-body-sm text-ds-muted-foreground">Device</dt>
+                                <dd className="min-w-0 break-words text-right text-body-sm font-semibold text-ds-foreground">{request.deviceName}</dd>
+                            </div>
+                        }
+                        {
+                            // Legacy field: this is the request's service region,
+                            // never a device category (the previous label said so
+                            // and was simply wrong - see the server's own
+                            // "legacy fields (deviceName, receiverRegion, ...)"
+                            // note in technicianEligibilityService.js).
+                            request?.receiverRegion &&
+                            <div className="flex items-start justify-between gap-4 px-4 py-2.5">
+                                <dt className="text-body-sm text-ds-muted-foreground">Service region</dt>
+                                <dd className="min-w-0 break-words text-right text-body-sm font-semibold text-ds-foreground">{request.receiverRegion}</dd>
+                            </div>
+                        }
+                        {
+                            request?.priority &&
+                            <div className="flex items-start justify-between gap-4 px-4 py-2.5">
+                                <dt className="text-body-sm text-ds-muted-foreground">Priority</dt>
+                                <dd className="min-w-0 break-words text-right text-body-sm font-semibold capitalize text-ds-foreground">{request.priority}</dd>
+                            </div>
+                        }
+                    </dl>
+                )}
+
+                <div className="mt-6 rounded-ds-lg bg-ds-muted p-4">
+                    <p className="ds-label text-ds-muted-foreground">Amount payable</p>
+                    {/* Unchanged amount source and formatter - this legacy flow
+                        has always shown request.cost through formatCurrency. */}
+                    <p className="ds-numeric mt-1 break-all text-title text-ds-foreground">{formatCurrency(request.cost)}</p>
+                </div>
+
+                {/* Marigold: the single highest-priority real action on this page. */}
+                <LoadingButton
+                    onClick={handlePayment}
+                    loading={submitting}
+                    loadingText="Starting payment…"
+                    variant="action"
+                    size="lg"
+                    className="mt-6 w-full"
+                >
+                    Pay now
+                </LoadingButton>
+
+                <p className="mt-4 flex items-center justify-center gap-2 text-micro text-ds-muted-foreground">
+                    <Lock aria-hidden="true" className="size-3.5" />
+                    Secure payment powered by Stripe
+                </p>
+            </Card>
         </div>
     );
 };
