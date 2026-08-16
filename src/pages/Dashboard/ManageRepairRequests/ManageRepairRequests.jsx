@@ -1,4 +1,4 @@
-import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Eye, UserCog, Search, X } from 'lucide-react';
@@ -47,6 +47,7 @@ function PaymentBadge({ paid }) {
 // (view / assign) reuse the existing routes; no business logic changes.
 const ManageRepairRequests = () => {
     const axiosSecure = useAxiosSecure();
+    const queryClient = useQueryClient();
     const navigate = useNavigate();
 
     const [searchInput, setSearchInput] = useState('');
@@ -63,8 +64,9 @@ const ManageRepairRequests = () => {
         return () => clearTimeout(handle);
     }, [searchInput]);
 
-    const { data, isLoading, isError, error, isFetching, refetch } = useQuery({
-        queryKey: ['adminRepairRequests', { page, search: debouncedSearch, status, paymentStatus }],
+    const repairRequestsQueryKey = ['adminRepairRequests', { page, search: debouncedSearch, status, paymentStatus }];
+    const { data, isPending, isPaused, isError, error, isFetching } = useQuery({
+        queryKey: repairRequestsQueryKey,
         queryFn: async () => {
             const params = { page, limit: PAGE_LIMIT };
             if (debouncedSearch) params.search = debouncedSearch;
@@ -76,6 +78,10 @@ const ManageRepairRequests = () => {
         placeholderData: keepPreviousData,
         retry: 1,
     });
+    const hasUsablePage = Array.isArray(data?.data) && !!data?.pagination && typeof data.pagination === 'object';
+    const isInitialLoading = isPending && !isPaused && !hasUsablePage;
+    const isUnavailableBeforeData = !hasUsablePage && (isPaused || isError);
+    const retryRepairRequests = () => queryClient.resetQueries({ queryKey: repairRequestsQueryKey });
 
     const hasActiveFilters = !!debouncedSearch || status !== 'all' || paymentStatus !== 'all';
 
@@ -146,17 +152,21 @@ const ManageRepairRequests = () => {
         },
     ], [navigate]);
 
-    if (isError) {
+    if (isUnavailableBeforeData) {
         return (
             <div className="space-y-6">
                 <PageHeader eyebrow="Admin" title="Repair Requests" />
-                <ErrorState title="Couldn't load repair requests" description={getManageRepairRequestsErrorMessage(error)} onRetry={() => refetch()} />
+                <ErrorState
+                    title="Couldn't load repair requests"
+                    description={isError ? getManageRepairRequestsErrorMessage(error) : "We couldn't load repair requests right now. Please try again."}
+                    onRetry={retryRepairRequests}
+                />
             </div>
         );
     }
 
-    const requests = data?.data ?? [];
-    const pagination = data?.pagination ?? { page: 1, limit: PAGE_LIMIT, totalItems: 0, totalPages: 1 };
+    const requests = hasUsablePage ? data.data : [];
+    const pagination = hasUsablePage ? data.pagination : { page: 1, limit: PAGE_LIMIT, totalItems: 0, totalPages: 1 };
 
     const renderCard = (request) => {
         const { device } = getProductSummary(request);
@@ -206,12 +216,12 @@ const ManageRepairRequests = () => {
 
     return (
         <div className="space-y-6">
-            <PageHeader eyebrow="Admin" title="Repair Requests" description={`${pagination.totalItems} request${pagination.totalItems === 1 ? '' : 's'} across every stage`} />
+            <PageHeader eyebrow="Admin" title="Repair Requests" description={isInitialLoading ? 'Loading repair requests...' : `${pagination.totalItems} request${pagination.totalItems === 1 ? '' : 's'} across every stage`} />
             <p className={cn("text-sm text-ds-muted-foreground transition-opacity", isFetching ? "opacity-100" : "opacity-0")} role="status" aria-live="polite">Updating results…</p>
             <AdminDataTable
                 columns={columns}
                 data={requests}
-                isLoading={isLoading}
+                isLoading={isInitialLoading}
                 enableColumnVisibility
                 getRowId={(row) => row._id}
                 toolbar={toolbar}

@@ -20,6 +20,8 @@ import { getWorkStatusLabel, getWorkStatusTone, formatRecommendationReasons, get
 import { formatAbsoluteDateTime } from '../../../utils/relativeTime';
 import { getAssignmentErrorMessage } from '../../../utils/assignmentErrorMessage';
 
+const EMPTY_REQUESTS = [];
+
 // Phase 7.5: technician assignment rebuilt around the EXPERTISE-AWARE backend.
 // The assignment Sheet uses the authoritative eligible-technicians endpoint
 // (GET /repair-requests/:id/eligible-technicians) - only server-eligible, server-ranked
@@ -37,27 +39,38 @@ const AssignTechnicians = () => {
     const preselectRequestId = searchParams.get('request');
     const [autoOpenedFor, setAutoOpenedFor] = useState(null);
 
-    const { data: requests = [], refetch: refetchRequests, isLoading, isError } = useQuery({
-        queryKey: ['requests', 'pending-assignment'],
+    const pendingRequestsQueryKey = ['requests', 'pending-assignment'];
+    const { data: requestsData, refetch: refetchRequests, isPending, isPaused, isError } = useQuery({
+        queryKey: pendingRequestsQueryKey,
         queryFn: async () => (await axiosSecure.get('/repair-requests?deliveryStatus=pending-pickup')).data,
     });
+    const hasUsableRequests = Array.isArray(requestsData);
+    const requests = hasUsableRequests ? requestsData : EMPTY_REQUESTS;
+    const isInitialLoading = isPending && !isPaused && !hasUsableRequests;
+    const isUnavailableBeforeData = !hasUsableRequests && (isPaused || isError);
+    const retryPendingRequests = () => queryClient.resetQueries({ queryKey: pendingRequestsQueryKey });
 
+    const eligibleTechniciansQueryKey = ['eligible-technicians', selectedRequest?._id];
     const eligibleQuery = useQuery({
-        queryKey: ['eligible-technicians', selectedRequest?._id],
+        queryKey: eligibleTechniciansQueryKey,
         enabled: !!selectedRequest?._id,
         queryFn: async () => (await axiosSecure.get(`/repair-requests/${selectedRequest._id}/eligible-technicians`)).data,
     });
+    const hasUsableEligibleTechnicians = Array.isArray(eligibleQuery.data?.technicians);
+    const isEligibleInitialLoading = eligibleQuery.isPending && !eligibleQuery.isPaused && !hasUsableEligibleTechnicians;
+    const isEligibleUnavailableBeforeData = !hasUsableEligibleTechnicians && (eligibleQuery.isPaused || eligibleQuery.isError);
+    const retryEligibleTechnicians = () => queryClient.resetQueries({ queryKey: eligibleTechniciansQueryKey });
 
     // Preserved deep-link: open the assignment Sheet once for ?request=<id> if
     // that request is actually still pending assignment.
     useEffect(() => {
-        if (isLoading || !preselectRequestId || autoOpenedFor === preselectRequestId) return;
+        if (!hasUsableRequests || !preselectRequestId || autoOpenedFor === preselectRequestId) return;
         const match = requests.find((r) => r._id === preselectRequestId);
         if (match) setSelectedRequest(match);
         setAutoOpenedFor(preselectRequestId);
         setSearchParams((params) => { params.delete('request'); return params; }, { replace: true });
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isLoading, requests, preselectRequestId, autoOpenedFor]);
+    }, [hasUsableRequests, requests, preselectRequestId, autoOpenedFor]);
 
     const filtered = useMemo(() => requests.filter((r) => {
         const term = search.trim().toLowerCase();
@@ -121,17 +134,17 @@ const AssignTechnicians = () => {
         },
     ], []);
 
-    if (isError) {
+    if (isUnavailableBeforeData) {
         return (
             <div className="space-y-6">
                 <PageHeader eyebrow="Admin" title="Assign Technicians" />
-                <ErrorState title="Couldn't load requests" description="We couldn't load requests awaiting assignment right now. Please try again." onRetry={() => refetchRequests()} />
+                <ErrorState title="Couldn't load requests" description="We couldn't load requests awaiting assignment right now. Please try again." onRetry={retryPendingRequests} />
             </div>
         );
     }
 
-    const summary = eligibleQuery.data?.requestSummary;
-    const eligibleTechnicians = eligibleQuery.data?.technicians ?? [];
+    const summary = hasUsableEligibleTechnicians ? eligibleQuery.data.requestSummary : undefined;
+    const eligibleTechnicians = hasUsableEligibleTechnicians ? eligibleQuery.data.technicians : [];
 
     const renderCard = (request) => {
         const { device, category } = getProductSummary(request);
@@ -160,11 +173,11 @@ const AssignTechnicians = () => {
 
     return (
         <div className="space-y-6">
-            <PageHeader eyebrow="Admin" title="Assign Technicians" description={`${requests.length} request${requests.length === 1 ? '' : 's'} awaiting assignment`} />
+            <PageHeader eyebrow="Admin" title="Assign Technicians" description={isInitialLoading ? 'Loading requests awaiting assignment...' : `${requests.length} request${requests.length === 1 ? '' : 's'} awaiting assignment`} />
             <AdminDataTable
                 columns={columns}
                 data={filtered}
-                isLoading={isLoading}
+                isLoading={isInitialLoading}
                 getRowId={(row) => row._id}
                 toolbar={toolbar}
                 renderCard={renderCard}
@@ -195,13 +208,13 @@ const AssignTechnicians = () => {
                             </div>
                         )}
 
-                        {eligibleQuery.isLoading ? (
+                        {isEligibleInitialLoading ? (
                             <div className="space-y-3">{[0, 1, 2].map((k) => <Skeleton key={k} className="h-24 w-full" />)}</div>
-                        ) : eligibleQuery.isError ? (
+                        ) : isEligibleUnavailableBeforeData ? (
                             <ErrorState
                                 title="Couldn't match technicians"
-                                description={getAssignmentErrorMessage(eligibleQuery.error)}
-                                onRetry={() => eligibleQuery.refetch()}
+                                description={eligibleQuery.isError ? getAssignmentErrorMessage(eligibleQuery.error) : "We couldn't load eligible technicians right now. Please try again."}
+                                onRetry={retryEligibleTechnicians}
                             />
                         ) : eligibleTechnicians.length === 0 ? (
                             <EmptyState title="No eligible technicians" description="No approved, available technician currently matches this request's expertise and service area." />

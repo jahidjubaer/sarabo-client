@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { ShieldCheck, ShieldX, Search } from 'lucide-react';
 import Swal from 'sweetalert2';
@@ -17,6 +17,7 @@ import { getRoleLabel, getRoleTone, ROLE_FILTER_OPTIONS } from '../../../utils/a
 import { getUserRoleUpdateErrorMessage } from '../../../utils/userRoleUpdateErrorMessage';
 
 const selectClass = "h-10 rounded-ds border border-ds-input bg-ds-background px-3 text-sm text-ds-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-ring";
+const EMPTY_USERS = [];
 
 function initials(name) {
     if (!name) return '';
@@ -29,6 +30,7 @@ function initials(name) {
 // confirmation, and Toastify feedback changed.
 const UsersManagement = () => {
     const axiosSecure = useAxiosSecure();
+    const queryClient = useQueryClient();
     const [searchInput, setSearchInput] = useState('');
     const [search, setSearch] = useState('');
     const [roleFilter, setRoleFilter] = useState('all');
@@ -39,10 +41,16 @@ const UsersManagement = () => {
         return () => clearTimeout(handle);
     }, [searchInput]);
 
-    const { refetch, data: users = [], isLoading, isError } = useQuery({
-        queryKey: ['users', search],
+    const usersQueryKey = ['users', search];
+    const { refetch, data, isPending, isPaused, isError } = useQuery({
+        queryKey: usersQueryKey,
         queryFn: async () => (await axiosSecure.get(`/users?searchText=${encodeURIComponent(search)}`)).data,
     });
+    const hasUsableUsers = Array.isArray(data);
+    const users = hasUsableUsers ? data : EMPTY_USERS;
+    const isInitialLoading = isPending && !isPaused && !hasUsableUsers;
+    const isUnavailableBeforeData = !hasUsableUsers && (isPaused || isError);
+    const retryUsers = () => queryClient.resetQueries({ queryKey: usersQueryKey });
 
     const filteredUsers = useMemo(
         () => (roleFilter === 'all' ? users : users.filter((user) => user.role === roleFilter)),
@@ -132,11 +140,11 @@ const UsersManagement = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     ], [pendingUserId]);
 
-    if (isError) {
+    if (isUnavailableBeforeData) {
         return (
             <div className="space-y-6">
                 <PageHeader eyebrow="Admin" title="Users" />
-                <ErrorState title="Couldn't load users" description="We couldn't load the user list right now. Please try again." onRetry={() => refetch()} />
+                <ErrorState title="Couldn't load users" description="We couldn't load the user list right now. Please try again." onRetry={retryUsers} />
             </div>
         );
     }
@@ -187,11 +195,11 @@ const UsersManagement = () => {
 
     return (
         <div className="space-y-6">
-            <PageHeader eyebrow="Admin" title="Users" description={`${users.length} user${users.length === 1 ? '' : 's'}`} />
+            <PageHeader eyebrow="Admin" title="Users" description={isInitialLoading ? 'Loading users...' : `${users.length} user${users.length === 1 ? '' : 's'}`} />
             <AdminDataTable
                 columns={columns}
                 data={filteredUsers}
-                isLoading={isLoading}
+                isLoading={isInitialLoading}
                 getRowId={(row) => row._id}
                 toolbar={toolbar}
                 renderCard={renderCard}

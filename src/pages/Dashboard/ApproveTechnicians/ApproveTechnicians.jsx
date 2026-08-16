@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { Check, X, Eye, Search } from 'lucide-react';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
@@ -17,6 +17,7 @@ import { getWorkStatusLabel, getWorkStatusTone, getExpertiseBadges, isTechnician
 import { getTechnicianApprovalErrorMessage } from '../../../utils/technicianApprovalErrorMessage';
 
 const selectClass = "h-10 rounded-ds border border-ds-input bg-ds-background px-3 text-sm text-ds-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-ring";
+const EMPTY_TECHNICIANS = [];
 
 const APPLICATION_TONE = { pending: 'warning', approved: 'success', rejected: 'danger' };
 function ApplicationBadge({ status }) {
@@ -78,15 +79,22 @@ function TechnicianExpertiseDetails({ technician }) {
 // Toastify feedback changed. No workStatus is guessed; only stored values shown.
 const ApproveTechnicians = () => {
     const axiosSecure = useAxiosSecure();
+    const queryClient = useQueryClient();
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [pendingAction, setPendingAction] = useState(null);
     const [detailsFor, setDetailsFor] = useState(null);
 
-    const { refetch, data: technicians = [], isLoading, isError } = useQuery({
-        queryKey: ['technicians', 'all'],
+    const techniciansQueryKey = ['technicians', 'all'];
+    const { refetch, data, isPending, isPaused, isError } = useQuery({
+        queryKey: techniciansQueryKey,
         queryFn: async () => (await axiosSecure.get('/technicians')).data,
     });
+    const hasUsableTechnicians = Array.isArray(data);
+    const technicians = hasUsableTechnicians ? data : EMPTY_TECHNICIANS;
+    const isInitialLoading = isPending && !isPaused && !hasUsableTechnicians;
+    const isUnavailableBeforeData = !hasUsableTechnicians && (isPaused || isError);
+    const retryTechnicians = () => queryClient.resetQueries({ queryKey: techniciansQueryKey });
 
     const statusOptions = useMemo(() => [...new Set(technicians.map((t) => t.status).filter(Boolean))], [technicians]);
 
@@ -155,11 +163,11 @@ const ApproveTechnicians = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     ], [pendingAction]);
 
-    if (isError) {
+    if (isUnavailableBeforeData) {
         return (
             <div className="space-y-6">
                 <PageHeader eyebrow="Admin" title="Technicians" />
-                <ErrorState title="Couldn't load technicians" description="We couldn't load the technician list right now. Please try again." onRetry={() => refetch()} />
+                <ErrorState title="Couldn't load technicians" description="We couldn't load the technician list right now. Please try again." onRetry={retryTechnicians} />
             </div>
         );
     }
@@ -210,11 +218,11 @@ const ApproveTechnicians = () => {
 
     return (
         <div className="space-y-6">
-            <PageHeader eyebrow="Admin" title="Technicians" description={`${technicians.length} technician application${technicians.length === 1 ? '' : 's'}`} />
+            <PageHeader eyebrow="Admin" title="Technicians" description={isInitialLoading ? 'Loading technician applications...' : `${technicians.length} technician application${technicians.length === 1 ? '' : 's'}`} />
             <AdminDataTable
                 columns={columns}
                 data={filtered}
-                isLoading={isLoading}
+                isLoading={isInitialLoading}
                 getRowId={(row) => row._id}
                 toolbar={toolbar}
                 renderCard={renderCard}
