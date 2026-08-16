@@ -79,6 +79,7 @@ function DashboardShell() {
                     <DashboardHeader
                         role={role}
                         onOpenMobileNav={() => setMobileNavOpen(true)}
+                        mobileNavOpen={mobileNavOpen}
                         onOpenCommand={() => setCommandOpen(true)}
                     />
                     <main id="dashboard-main" tabIndex={-1} className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
