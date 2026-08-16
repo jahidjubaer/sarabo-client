@@ -53,7 +53,7 @@ const TechnicianEarningSettlement = ({ requestId, earning }) => {
                     </p>
                 </div>
                 {!isPaid && (
-                    <Button size="sm" onClick={() => setOpen(true)} disabled={mutation.isPending}>
+                    <Button variant="action" size="sm" onClick={() => setOpen(true)} disabled={mutation.isPending}>
                         <Wallet aria-hidden="true" /> Mark as Paid
                     </Button>
                 )}

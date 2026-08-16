@@ -1,12 +1,13 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
-import { ShieldCheck, ShieldX, Search } from 'lucide-react';
+import { ShieldCheck, ShieldX, Search, UsersRound } from 'lucide-react';
 import Swal from 'sweetalert2';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { EmptyState } from '../../../components/common/EmptyState';
 import { ErrorState } from '../../../components/common/ErrorState';
 import { AdminDataTable } from '../../../components/admin/data-table/AdminDataTable';
+import { AdminPageLead } from '../../../components/admin/AdminPageLead';
 import { Avatar, AvatarImage, AvatarFallback } from '../../../components/ui/avatar';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
@@ -196,6 +197,14 @@ const UsersManagement = () => {
     return (
         <div className="space-y-6">
             <PageHeader eyebrow="Admin" title="Users" description={isInitialLoading ? 'Loading users...' : `${users.length} user${users.length === 1 ? '' : 's'}`} />
+            <AdminPageLead
+                eyebrow="Access management"
+                title="Manage account roles"
+                description="Find an existing account and use the established confirmation flow to grant or remove Admin access."
+                icon={UsersRound}
+                metric={isInitialLoading ? undefined : users.length}
+                metricLabel="users returned"
+            />
             <AdminDataTable
                 columns={columns}
                 data={filteredUsers}

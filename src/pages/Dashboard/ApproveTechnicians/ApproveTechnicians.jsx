@@ -1,11 +1,12 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
-import { Check, X, Eye, Search } from 'lucide-react';
+import { Check, X, Eye, Search, UserCheck } from 'lucide-react';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { EmptyState } from '../../../components/common/EmptyState';
 import { ErrorState } from '../../../components/common/ErrorState';
 import { AdminDataTable } from '../../../components/admin/data-table/AdminDataTable';
+import { AdminPageLead } from '../../../components/admin/AdminPageLead';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
@@ -104,6 +105,7 @@ const ApproveTechnicians = () => {
         const matchesStatus = statusFilter === 'all' || tech.status === statusFilter;
         return matchesSearch && matchesStatus;
     }), [technicians, search, statusFilter]);
+    const pendingApplicationCount = technicians.filter((technician) => technician.status === 'pending').length;
 
     const updateStatus = (technician, status) => {
         if (pendingAction) return;
@@ -219,6 +221,15 @@ const ApproveTechnicians = () => {
     return (
         <div className="space-y-6">
             <PageHeader eyebrow="Admin" title="Technicians" description={isInitialLoading ? 'Loading technician applications...' : `${technicians.length} technician application${technicians.length === 1 ? '' : 's'}`} />
+            <AdminPageLead
+                eyebrow="Application decisions"
+                title={isInitialLoading ? 'Checking the application queue' : pendingApplicationCount > 0 ? `${pendingApplicationCount} application${pendingApplicationCount === 1 ? '' : 's'} need review` : 'No applications need review'}
+                description="Review each applicant's recorded expertise and service area before approving or rejecting the application."
+                icon={UserCheck}
+                tone={pendingApplicationCount > 0 ? 'action' : 'clear'}
+                metric={isInitialLoading ? undefined : pendingApplicationCount}
+                metricLabel="pending"
+            />
             <AdminDataTable
                 columns={columns}
                 data={filtered}

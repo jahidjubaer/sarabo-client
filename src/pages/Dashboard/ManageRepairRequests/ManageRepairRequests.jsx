@@ -1,12 +1,13 @@
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { Eye, UserCog, Search, X } from 'lucide-react';
+import { Eye, UserCog, Search, X, ClipboardList } from 'lucide-react';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { EmptyState } from '../../../components/common/EmptyState';
 import { ErrorState } from '../../../components/common/ErrorState';
 import { AdminDataTable } from '../../../components/admin/data-table/AdminDataTable';
+import { AdminPageLead } from '../../../components/admin/AdminPageLead';
 import { StatusBadge } from '../../../components/common/StatusBadge';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
@@ -95,9 +96,29 @@ const ManageRepairRequests = () => {
 
     const columns = useMemo(() => [
         {
+            id: 'status', header: 'Status', enableSorting: false, enableHiding: false,
+            cell: ({ row }) => <StatusBadge status={row.original.deliveryStatus || 'pending-pickup'} />,
+            meta: { label: 'Status' },
+        },
+        {
+            id: 'device', header: 'Device', enableSorting: false, enableHiding: false,
+            cell: ({ row }) => row.original.deviceName,
+            meta: { label: 'Device' },
+        },
+        {
+            id: 'technician', header: 'Technician', enableSorting: false,
+            cell: ({ row }) => row.original.technicianName || <span className="text-ds-muted-foreground">Unassigned</span>,
+            meta: { label: 'Technician' },
+        },
+        {
             id: 'tracking', accessorKey: 'trackingId', header: 'Tracking', enableSorting: false, enableHiding: false,
-            cell: ({ row }) => <span className="font-medium text-ds-foreground">{row.original.trackingId}</span>,
+            cell: ({ row }) => <span className="break-all font-mono text-xs font-medium text-ds-foreground">{row.original.trackingId}</span>,
             meta: { label: 'Tracking' },
+        },
+        {
+            id: 'payment', header: 'Payment', enableSorting: false,
+            cell: ({ row }) => <PaymentBadge paid={row.original.paymentStatus === 'paid'} />,
+            meta: { label: 'Payment' },
         },
         {
             id: 'customer', header: 'Customer', enableSorting: false,
@@ -108,26 +129,6 @@ const ManageRepairRequests = () => {
                 </div>
             ),
             meta: { label: 'Customer' },
-        },
-        {
-            id: 'device', header: 'Device', enableSorting: false, enableHiding: false,
-            cell: ({ row }) => row.original.deviceName,
-            meta: { label: 'Device' },
-        },
-        {
-            id: 'status', header: 'Status', enableSorting: false, enableHiding: false,
-            cell: ({ row }) => <StatusBadge status={row.original.deliveryStatus || 'pending-pickup'} />,
-            meta: { label: 'Status' },
-        },
-        {
-            id: 'payment', header: 'Payment', enableSorting: false,
-            cell: ({ row }) => <PaymentBadge paid={row.original.paymentStatus === 'paid'} />,
-            meta: { label: 'Payment' },
-        },
-        {
-            id: 'technician', header: 'Technician', enableSorting: false,
-            cell: ({ row }) => row.original.technicianName || <span className="text-ds-muted-foreground">Unassigned</span>,
-            meta: { label: 'Technician' },
         },
         {
             id: 'created', header: 'Created', enableSorting: false,
@@ -175,7 +176,7 @@ const ManageRepairRequests = () => {
                 <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-ds-foreground">{device}</p>
-                        <p className="truncate text-xs text-ds-muted-foreground">{request.trackingId}</p>
+                        <p className="break-all font-mono text-xs text-ds-muted-foreground">{request.trackingId}</p>
                     </div>
                     <StatusBadge status={request.deliveryStatus || 'pending-pickup'} className="shrink-0" />
                 </div>
@@ -217,6 +218,14 @@ const ManageRepairRequests = () => {
     return (
         <div className="space-y-6">
             <PageHeader eyebrow="Admin" title="Repair Requests" description={isInitialLoading ? 'Loading repair requests...' : `${pagination.totalItems} request${pagination.totalItems === 1 ? '' : 's'} across every stage`} />
+            <AdminPageLead
+                eyebrow="Repair operations"
+                title="Scan workflow state before intervening"
+                description="Search and filter the existing request record, then open details or route an assignable request to the assignment workflow."
+                icon={ClipboardList}
+                metric={isInitialLoading ? undefined : pagination.totalItems}
+                metricLabel="matching requests"
+            />
             <p className={cn("text-sm text-ds-muted-foreground transition-opacity", isFetching ? "opacity-100" : "opacity-0")} role="status" aria-live="polite">Updating results…</p>
             <AdminDataTable
                 columns={columns}

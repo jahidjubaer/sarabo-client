@@ -17,6 +17,7 @@ import { CurrentStageActionPanel } from '../../../components/workspace/CurrentSt
 import { WorkspaceContextPanels } from '../../../components/workspace/WorkspaceContextPanels';
 import { CustomerRequestDetailsView } from '../../../components/customer/CustomerRequestDetailsView';
 import { TechnicianRequestDetailsView } from '../../../components/technician/TechnicianRequestDetailsView';
+import { AdminRequestDetailsView } from '../../../components/admin/AdminRequestDetailsView';
 import DamageImageManager from '../../../components/damage-images/DamageImageManager';
 import InspectionSection from '../../../components/inspection/InspectionSection';
 import QuoteSection from '../../../components/quote/QuoteSection';
@@ -269,6 +270,12 @@ const RequestDetails = () => {
                         onAccept={handleAccept}
                         onReject={() => setRejectOpen(true)}
                         deciding={deciding}
+                    />
+                ) : viewerRole === 'admin' ? (
+                    <AdminRequestDetailsView
+                        request={request}
+                        sections={sections}
+                        isV2Request={isV2Request}
                     />
                 ) : (
                 <Motion.div variants={staggerContainer} initial="hidden" animate="show" className="grid gap-6 lg:grid-cols-3">

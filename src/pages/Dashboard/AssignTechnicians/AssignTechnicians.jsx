@@ -7,6 +7,7 @@ import { PageHeader } from '../../../components/common/PageHeader';
 import { EmptyState } from '../../../components/common/EmptyState';
 import { ErrorState } from '../../../components/common/ErrorState';
 import { AdminDataTable } from '../../../components/admin/data-table/AdminDataTable';
+import { AdminPageLead } from '../../../components/admin/AdminPageLead';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
@@ -120,6 +121,11 @@ const AssignTechnicians = () => {
             },
             meta: { label: 'Device' },
         },
+        {
+            id: 'tracking', header: 'Tracking', enableSorting: false,
+            cell: ({ row }) => <span className="break-all font-mono text-xs text-ds-muted-foreground">{row.original.trackingId || '—'}</span>,
+            meta: { label: 'Tracking' },
+        },
         { id: 'customer', header: 'Customer', enableSorting: false, cell: ({ row }) => <span className="truncate">{row.original.senderName || '—'}</span>, meta: { label: 'Customer' } },
         { id: 'district', header: 'District', enableSorting: true, accessorFn: (row) => row.senderDistrict || row.serviceLocation?.district || '', cell: ({ row }) => row.original.senderDistrict || row.original.serviceLocation?.district || '—', meta: { label: 'District' } },
         { id: 'created', header: 'Requested', enableSorting: false, cell: ({ row }) => <span className="whitespace-nowrap text-ds-muted-foreground">{row.original.createdAt ? formatAbsoluteDateTime(row.original.createdAt) : ''}</span>, meta: { label: 'Requested' } },
@@ -150,8 +156,10 @@ const AssignTechnicians = () => {
         const { device, category } = getProductSummary(request);
         return (
             <div className="rounded-ds-lg border border-ds-border bg-ds-card p-4">
+                <p className="ds-label text-ds-warning">Assignment required</p>
                 <p className="truncate text-sm font-semibold text-ds-foreground">{device}</p>
                 <p className="truncate text-xs text-ds-muted-foreground">{[category, request.senderName].filter(Boolean).join(' · ')}</p>
+                {request.trackingId && <p className="mt-2 break-all font-mono text-xs text-ds-muted-foreground">{request.trackingId}</p>}
                 <div className="mt-2 flex items-center gap-2 text-xs text-ds-muted-foreground">
                     <MapPin aria-hidden="true" className="size-3.5" />
                     {request.senderDistrict || request.serviceLocation?.district || '—'}
@@ -174,6 +182,15 @@ const AssignTechnicians = () => {
     return (
         <div className="space-y-6">
             <PageHeader eyebrow="Admin" title="Assign Technicians" description={isInitialLoading ? 'Loading requests awaiting assignment...' : `${requests.length} request${requests.length === 1 ? '' : 's'} awaiting assignment`} />
+            <AdminPageLead
+                eyebrow="Assignment queue"
+                title={isInitialLoading ? 'Checking requests awaiting assignment' : requests.length > 0 ? `${requests.length} request${requests.length === 1 ? '' : 's'} need a Technician` : 'No requests need assignment'}
+                description="Open a request, review the existing server-matched Technician list, and assign one eligible Technician."
+                icon={UserCog}
+                tone={requests.length > 0 ? 'action' : 'clear'}
+                metric={isInitialLoading ? undefined : requests.length}
+                metricLabel="awaiting assignment"
+            />
             <AdminDataTable
                 columns={columns}
                 data={filtered}
@@ -222,7 +239,7 @@ const AssignTechnicians = () => {
                             <ul className="space-y-3">
                                 {eligibleTechnicians.map((tech, index) => (
                                     <li key={tech.technicianId} className="rounded-ds-lg border border-ds-border p-4">
-                                        <div className="flex items-start justify-between gap-3">
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                             <div className="min-w-0">
                                                 <div className="flex items-center gap-2">
                                                     <p className="truncate font-medium text-ds-foreground">{tech.displayName}</p>
@@ -240,7 +257,7 @@ const AssignTechnicians = () => {
                                                     <p className="mt-1 inline-flex items-center gap-1 text-xs text-ds-muted-foreground"><Wrench aria-hidden="true" className="size-3.5" />Completed repairs: {tech.completedRepairCount}</p>
                                                 )}
                                             </div>
-                                            <Button size="sm" disabled={!!assigningId} onClick={() => handleAssign(tech)}>
+                                            <Button size="sm" className="w-full shrink-0 sm:w-auto" disabled={!!assigningId} onClick={() => handleAssign(tech)}>
                                                 {assigningId === tech.technicianId ? 'Assigning…' : 'Assign'}
                                             </Button>
                                         </div>
