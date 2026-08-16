@@ -163,12 +163,13 @@ const NavBar = () => {
                         </SheetContent>
                     </Sheet>
 
-                    {/* Below `sm` the wordmark folds away so the primary action
-                        still fits in the bar at 320px - the mark alone is
-                        enough brand, and losing the CTA would cost more. Scoped
-                        to this instance; the footer, auth and dashboard logos
-                        are untouched. */}
-                    <Logo className="[&>span]:hidden sm:[&>span]:inline" />
+                    {/* The wordmark now lives inside the lockup artwork, so the
+                        old `[&>span]` fold-away selector had nothing left to
+                        target. Measured at 320px the full lockup is 80px wide
+                        and still leaves 24px of clearance before the primary
+                        action, so the bar keeps the complete brand at every
+                        width rather than dropping to the symbol. */}
+                    <Logo />
                 </div>
 
                 {/* Desktop primary navigation */}

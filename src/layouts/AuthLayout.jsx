@@ -21,7 +21,7 @@ const AuthLayout = () => (
     <div className="min-h-dvh bg-ds-background text-ds-foreground lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
         {/* Brand panel - always ink, in both themes, like the footer. */}
         <aside className="tech-grid-pattern hidden border-r border-ds-ink-foreground/15 bg-ds-ink px-10 py-14 text-ds-ink-foreground lg:flex lg:flex-col lg:justify-between xl:px-14">
-            <Logo to="/" className="text-ds-ink-foreground" />
+            <Logo to="/" className="text-ds-ink-foreground" surface="ink" />
 
             <div className="max-w-sm">
                 <p className="ds-label text-ds-action">{HERO.eyebrow}</p>

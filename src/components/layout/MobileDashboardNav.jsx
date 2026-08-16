@@ -26,7 +26,7 @@ function MobileDashboardNav({ role, open, onOpenChange }) {
             >
                 <SheetHeader className="border-b border-ds-ink-foreground/15">
                     <SheetTitle className="flex items-center text-ds-ink-foreground">
-                        <Logo to="/dashboard" ariaLabel="Sarabo dashboard" onClick={close} />
+                        <Logo to="/dashboard" ariaLabel="Sarabo dashboard" onClick={close} surface="ink" />
                     </SheetTitle>
                     {role && (
                         <p className="ds-label text-ds-ink-foreground/50">{ROLE_LABELS[role]} workspace</p>

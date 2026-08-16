@@ -51,7 +51,7 @@ function DashboardSidebar({ role, collapsed, onToggleCollapse }) {
                 'flex h-14 shrink-0 items-center border-b border-ds-ink-foreground/15',
                 collapsed ? 'justify-center px-0' : 'px-4'
             )}>
-                <Logo to="/dashboard" ariaLabel="Sarabo dashboard" showWordmark={!collapsed} />
+                <Logo to="/dashboard" ariaLabel="Sarabo dashboard" showWordmark={!collapsed} surface="ink" />
             </div>
 
             <div className="flex-1 overflow-y-auto px-3 py-5">

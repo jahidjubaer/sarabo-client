@@ -26,7 +26,7 @@ const Footer = () => (
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="lg:col-span-2">
-                    <Logo />
+                    <Logo surface="ink" />
                     <p className="mt-4 max-w-sm text-body-sm text-ds-ink-foreground/70">
                         Sarabo manages electronics and appliance repairs end to end &mdash; request, technician
                         assignment, inspection, an agreed quote, and tracked completion.
