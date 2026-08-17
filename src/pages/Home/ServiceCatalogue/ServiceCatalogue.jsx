@@ -1,11 +1,11 @@
 import { Link } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowRight, ChevronRight, RotateCcw, Wrench } from 'lucide-react';
+import { ArrowRight, RotateCcw, Wrench } from 'lucide-react';
 import useAuth from '../../../hooks/useAuth';
 import useRole from '../../../hooks/useRole';
 import { useServiceDefinitions } from '../../../hooks/useServiceDefinitions';
 import { serviceDefinitionKeys } from '../../../hooks/serviceDefinitionKeys';
-import { normalizeServiceDefinitions, deriveProductCategories } from '../../../utils/serviceDefinitionCatalog';
+import { normalizeServiceDefinitions, deriveProductCategories, getServicesForProduct } from '../../../utils/serviceDefinitionCatalog';
 import { getProductCategoryIcon } from '../../../utils/productCategoryIcons';
 import { shouldShowCreateRequestLink, REQUEST_REPAIR_ROUTE } from '../../../utils/publicContent';
 import { getCategoryEstimateRanges } from '../categoryPricing';
@@ -13,7 +13,8 @@ import { Skeleton } from '../../../components/ui/skeleton';
 import { buttonVariants } from '../../../components/ui/button-variants';
 import { cn } from '../../../lib/utils';
 
-// What Sarabo repairs, as a price LIST rather than a card grid (Phase 3).
+// What Sarabo repairs, as a grid of service cards: category, the real repairs
+// listed under it, what the price actually depends on, and one action.
 //
 // CANONICAL SLUGS ONLY. Categories come from the live catalogue via the
 // existing useServiceDefinitions hook - the same public GET /service-definitions
@@ -32,6 +33,10 @@ import { cn } from '../../../lib/utils';
 // services. They are labelled as estimates because the binding number is the
 // quote, after inspection.
 const MAX_ROWS = 8;
+// A few real examples per card. More than this turns a service card into a
+// table and pushes the price block below the fold on a phone. Categories that
+// list fewer simply show fewer - nothing is padded out.
+const EXAMPLES_PER_CARD = 3;
 
 const ServiceCatalogue = () => {
     const { user } = useAuth();
@@ -72,52 +77,84 @@ const ServiceCatalogue = () => {
                 </div>
 
                 {loading && (
-                    <div className="mt-10 flex flex-col" aria-busy="true" aria-label="Loading repair services">
-                        {Array.from({ length: 6 }).map((_, index) => (
-                            <Skeleton key={index} className="mt-px h-[73px] rounded-none first:rounded-t-ds" />
+                    <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" aria-busy="true" aria-label="Loading repair services">
+                        {Array.from({ length: 8 }).map((_, index) => (
+                            <Skeleton key={index} className="h-64 rounded-ds-lg" />
                         ))}
                     </div>
                 )}
 
                 {!loading && !unavailable && (
-                    <ul className="mt-10 border-t border-ds-border">
+                    <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         {categories.map((category) => {
                             const Icon = getProductCategoryIcon(category.slug);
                             const range = ranges[category.slug];
+                            const examples = getServicesForProduct(definitions, category.slug).slice(0, EXAMPLES_PER_CARD);
                             const to = showRequestLinks
                                 ? `${REQUEST_REPAIR_ROUTE}?category=${encodeURIComponent(category.slug)}`
                                 : '/services';
                             return (
-                                <li key={category.slug} className="border-b border-ds-border">
-                                    <Link
-                                        to={to}
-                                        className="focus-ring group grid grid-cols-[auto_1fr_auto] items-center gap-4 rounded-ds px-2 py-4 transition-colors hover:bg-ds-muted/60 sm:gap-6"
-                                    >
-                                        <span className="flex size-11 items-center justify-center rounded-ds border border-ds-border bg-ds-card text-ds-foreground">
-                                            <Icon aria-hidden="true" className="size-5" />
-                                        </span>
-
-                                        <span className="min-w-0">
-                                            <span className="block text-subhead text-ds-foreground">{category.label}</span>
-                                            {range && (
-                                                <span className="mt-0.5 block text-micro text-ds-muted-foreground sm:hidden">
-                                                    Estimated {range}
-                                                </span>
-                                            )}
-                                        </span>
-
-                                        <span className="flex items-center gap-3 sm:gap-5">
-                                            {range && (
-                                                <span className="hidden text-right sm:block">
-                                                    <span className="ds-numeric block text-body-sm font-semibold text-ds-foreground">{range}</span>
-                                                    <span className="block text-micro text-ds-muted-foreground">estimated range</span>
-                                                </span>
-                                            )}
-                                            <span className="flex size-8 items-center justify-center rounded-full border border-ds-border text-ds-muted-foreground transition-colors group-hover:border-ds-primary/50 group-hover:text-ds-primary">
-                                                <ChevronRight aria-hidden="true" className="size-4" />
+                                <li key={category.slug}>
+                                    {/* h-full + flex-col + an mt-auto footer keeps
+                                        the price block and the action on one
+                                        baseline across a row, however many
+                                        example lines a category happens to have. */}
+                                    <article className="flex h-full flex-col rounded-ds-lg border border-ds-border bg-ds-card p-5 transition-colors hover:border-ds-primary/40">
+                                        <div className="flex items-start gap-3">
+                                            <span className="flex size-11 shrink-0 items-center justify-center rounded-ds border border-ds-border bg-ds-muted/40 text-ds-primary">
+                                                <Icon aria-hidden="true" className="size-5" />
                                             </span>
-                                        </span>
-                                    </Link>
+                                            <h3 className="min-w-0 pt-1.5 text-subhead text-ds-foreground">{category.label}</h3>
+                                        </div>
+
+                                        {examples.length > 0 && (
+                                            <>
+                                                <p className="ds-label mt-5 text-ds-muted-foreground">Common repairs</p>
+                                                {/* Real catalogue service labels, not
+                                                    marketing examples. */}
+                                                <ul className="mt-2 flex flex-col gap-1.5">
+                                                    {examples.map((service) => (
+                                                        <li key={service.id} className="flex items-start gap-2 text-body-sm text-ds-muted-foreground">
+                                                            <Wrench aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-ds-primary/70" />
+                                                            <span className="min-w-0">{service.label}</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </>
+                                        )}
+
+                                        <div className="mt-auto pt-5">
+                                            {/* The binding number is the quote. A
+                                                catalogue range is shown only when the
+                                                server actually stated one, and never
+                                                as a "from" price. */}
+                                            <div className="rounded-ds border border-ds-border bg-ds-muted/30 p-3">
+                                                {range ? (
+                                                    <>
+                                                        <p className="ds-numeric text-body-sm font-semibold text-ds-foreground">{range}</p>
+                                                        <p className="ds-label mt-0.5 text-ds-muted-foreground">Estimated range</p>
+                                                    </>
+                                                ) : (
+                                                    <p className="text-body-sm font-semibold text-ds-foreground">Quote after inspection</p>
+                                                )}
+                                                <p className="mt-2 text-micro text-ds-muted-foreground">
+                                                    The final cost is the quote you approve after inspection — it depends on the
+                                                    device condition, the repair needed, and parts.
+                                                </p>
+                                            </div>
+
+                                            <Link
+                                                to={to}
+                                                aria-label={showRequestLinks
+                                                    ? `Request a repair — ${category.label}`
+                                                    : `Browse services — ${category.label}`}
+                                                className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'mt-4 w-full')}
+                                            >
+                                                {showRequestLinks ? 'Request Repair' : 'Browse services'}
+                                                <ArrowRight aria-hidden="true" />
+                                            </Link>
+                                        </div>
+                                    </article>
                                 </li>
                             );
                         })}

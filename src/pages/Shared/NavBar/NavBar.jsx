@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router';
-import { Menu, LayoutDashboard, LogOut, UserRound } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import Logo from '../../../components/Logo/Logo';
 import useAuth from '../../../hooks/useAuth';
 import useRole from '../../../hooks/useRole';
 import NotificationBell from '../../../components/notifications/NotificationBell';
+import AccountMenu from '../../../components/public/AccountMenu';
 import { ThemeToggle } from '../../../components/layout/ThemeToggle';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../../../components/ui/sheet';
 import { buttonVariants } from '../../../components/ui/button-variants';
@@ -52,7 +53,7 @@ function mobileLink(active) {
 }
 
 const NavBar = () => {
-    const { user, logOut } = useAuth();
+    const { user } = useAuth();
     const { role, roleLoading, isError } = useRole();
     const location = useLocation();
     const [mobileOpen, setMobileOpen] = useState(false);
@@ -66,12 +67,6 @@ const NavBar = () => {
         setPrevPath(location.pathname);
         if (mobileOpen) setMobileOpen(false);
     }
-
-    const handleLogOut = () => {
-        logOut().catch((error) => {
-            if (import.meta.env.DEV) console.error('Logout failed:', error.message);
-        });
-    };
 
     const roleKnown = !roleLoading && !isError;
     const roleShortcut = roleKnown ? ROLE_SHORTCUTS[role] : null;
@@ -127,27 +122,19 @@ const NavBar = () => {
                                     </Link>
                                 )}
 
+                                {/* Account actions (Dashboard, Profile,
+                                    Notifications, Sign out) now live in the
+                                    avatar menu, which is present at every width -
+                                    so the sheet no longer repeats them. Only the
+                                    role workspace shortcut stays, because it is
+                                    navigation rather than an account action and
+                                    the avatar menu does not carry it. */}
                                 {user ? (
-                                    <>
-                                        {roleShortcut && (
-                                            <Link to={roleShortcut.to} className={buttonVariants({ variant: 'outline' })} onClick={closeMobile}>
-                                                {roleShortcut.label}
-                                            </Link>
-                                        )}
-                                        <Link to="/dashboard" className={buttonVariants({ variant: 'outline' })} onClick={closeMobile}>
-                                            <LayoutDashboard aria-hidden="true" /> Dashboard
+                                    roleShortcut && (
+                                        <Link to={roleShortcut.to} className={buttonVariants({ variant: 'outline' })} onClick={closeMobile}>
+                                            {roleShortcut.label}
                                         </Link>
-                                        <Link to="/dashboard/profile" className={buttonVariants({ variant: 'ghost' })} onClick={closeMobile}>
-                                            <UserRound aria-hidden="true" /> My Profile
-                                        </Link>
-                                        <button
-                                            type="button"
-                                            onClick={() => { closeMobile(); handleLogOut(); }}
-                                            className={cn(buttonVariants({ variant: 'ghost' }), 'text-ds-destructive')}
-                                        >
-                                            <LogOut aria-hidden="true" /> Log out
-                                        </button>
-                                    </>
+                                    )
                                 ) : (
                                     <>
                                         <Link to="/register" className={buttonVariants({ variant: 'outline' })} onClick={closeMobile}>Register</Link>
@@ -197,21 +184,7 @@ const NavBar = () => {
                     {user && <NotificationBell />}
                     <div className="hidden lg:block"><ThemeToggle /></div>
 
-                    {user ? (
-                        <div className="hidden items-center gap-2 lg:flex">
-                            <Link to="/dashboard" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
-                                <LayoutDashboard aria-hidden="true" /> Dashboard
-                            </Link>
-                            <button
-                                type="button"
-                                onClick={handleLogOut}
-                                aria-label="Log out"
-                                className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }), 'text-ds-muted-foreground hover:text-ds-destructive')}
-                            >
-                                <LogOut aria-hidden="true" />
-                            </button>
-                        </div>
-                    ) : (
+                    {!user && (
                         <div className="hidden items-center gap-2 lg:flex">
                             {/* Register is the wider control, so it appears from
                                 xl where there is room; below that it lives in
@@ -223,14 +196,23 @@ const NavBar = () => {
                         </div>
                     )}
 
+                    {/* Signed out, the bar carries no bell or avatar, so the
+                        action keeps its existing 320px slot. Signed in it would
+                        crowd them, and the mobile sheet still leads with the
+                        same action. */}
                     {showRequestCta && (
                         <Link
                             to={requestAction.to}
-                            className={buttonVariants({ variant: 'action', size: 'sm' })}
+                            className={cn(buttonVariants({ variant: 'action', size: 'sm' }), user && 'hidden sm:inline-flex')}
                         >
                             {requestAction.label}
                         </Link>
                     )}
+
+                    {/* The signed-in account control, at every width: the avatar
+                        replaces the log-in action rather than sitting beside it,
+                        and the two states are mutually exclusive. */}
+                    {user && <AccountMenu role={roleKnown ? role : undefined} />}
                 </div>
             </div>
         </header>

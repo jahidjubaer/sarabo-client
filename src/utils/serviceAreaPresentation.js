@@ -47,3 +47,58 @@ export function filterServiceAreas(areas, query) {
 export function countServiceAreas(areas) {
     return (Array.isArray(areas) ? areas : []).filter(isArea).length;
 }
+
+// --- Map support -----------------------------------------------------------
+//
+// serviceAreas.json already carries a real `latitude`/`longitude` per listed
+// district, so the map is drawn from the same source as the list - no invented
+// coordinates, no geocoding call, and no coverage claim beyond what the file
+// lists. An area without well-formed numbers is simply not plotted.
+
+export function hasServiceAreaCoordinates(area) {
+    return Number.isFinite(area?.latitude) && Number.isFinite(area?.longitude);
+}
+
+// Smallest box containing every plottable area, with a little padding so points
+// are not welded to the frame edge. A single area gets a fixed pad instead of a
+// zero-size box (which the tile server would render at absurd zoom).
+export function getServiceAreaBounds(areas) {
+    const points = (Array.isArray(areas) ? areas : []).filter(hasServiceAreaCoordinates);
+    if (points.length === 0) return null;
+
+    let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
+    for (const point of points) {
+        minLat = Math.min(minLat, point.latitude);
+        maxLat = Math.max(maxLat, point.latitude);
+        minLon = Math.min(minLon, point.longitude);
+        maxLon = Math.max(maxLon, point.longitude);
+    }
+
+    const latPad = Math.max((maxLat - minLat) * 0.12, 0.12);
+    const lonPad = Math.max((maxLon - minLon) * 0.12, 0.12);
+
+    return {
+        minLat: Math.max(minLat - latPad, -90),
+        maxLat: Math.min(maxLat + latPad, 90),
+        minLon: Math.max(minLon - lonPad, -180),
+        maxLon: Math.min(maxLon + lonPad, 180),
+        count: points.length,
+    };
+}
+
+// OpenStreetMap's own embed endpoint: no API key, no SDK, no tracking script -
+// just a bounding box. A marker is added ONLY for a single explicitly selected
+// district, whose coordinate is real; a whole-region view carries no pins,
+// because the file has no coordinate for a region as a whole and inventing one
+// would imply precision that does not exist.
+export function buildServiceAreaMapUrl(bounds, marker) {
+    if (!bounds) return null;
+    const bbox = [bounds.minLon, bounds.minLat, bounds.maxLon, bounds.maxLat]
+        .map((value) => value.toFixed(4))
+        .join(',');
+    const params = new URLSearchParams({ bbox, layer: 'mapnik' });
+    if (hasServiceAreaCoordinates(marker)) {
+        params.set('marker', `${marker.latitude.toFixed(4)},${marker.longitude.toFixed(4)}`);
+    }
+    return `https://www.openstreetmap.org/export/embed.html?${params.toString()}`;
+}
