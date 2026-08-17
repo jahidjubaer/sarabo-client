@@ -187,8 +187,8 @@ const ManageRepairRequests = () => {
                     <div><dt className="text-ds-muted-foreground">Created</dt><dd className="text-ds-foreground">{request.createdAt ? formatAbsoluteDateTime(request.createdAt) : ''}</dd></div>
                 </dl>
                 <div className="mt-3 flex gap-2">
-                    <Link to={`/dashboard/manage-repair-requests/${request._id}`} className={buttonVariants({ variant: 'outline', size: 'sm' })}><Eye aria-hidden="true" />View</Link>
-                    {request.canAssign && <Button size="sm" onClick={() => navigate(`/dashboard/assign-technicians?request=${request._id}`)}><UserCog aria-hidden="true" />Assign</Button>}
+                    <Link to={`/dashboard/manage-repair-requests/${request._id}`} aria-label={`View request ${request.trackingId}`} className={buttonVariants({ variant: 'outline', size: 'sm' })}><Eye aria-hidden="true" />View</Link>
+                    {request.canAssign && <Button size="sm" aria-label={`Assign technician for ${request.trackingId}`} onClick={() => navigate(`/dashboard/assign-technicians?request=${request._id}`)}><UserCog aria-hidden="true" />Assign</Button>}
                 </div>
             </div>
         );

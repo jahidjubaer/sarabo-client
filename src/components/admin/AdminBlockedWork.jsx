@@ -45,6 +45,7 @@ function RequestItem({ request, featured }) {
                 </div>
                 <Link
                     to={`/dashboard/assign-technicians?request=${request._id}`}
+                    aria-label={`Assign technician — ${[device, request.trackingId].filter(Boolean).join(' · ')}`}
                     className={cn(buttonVariants({ variant: featured ? 'action' : 'outline', size: 'sm' }), 'w-full shrink-0 sm:w-auto')}
                 >
                     Assign technician <ArrowRight aria-hidden="true" />
@@ -66,6 +67,7 @@ function ApplicationItem({ technician, featured }) {
                 </div>
                 <Link
                     to="/dashboard/approve-technicians"
+                    aria-label={`Review application — ${[technician.name || 'Technician applicant', technician.email].filter(Boolean).join(' · ')}`}
                     className={cn(buttonVariants({ variant: featured ? 'action' : 'outline', size: 'sm' }), 'w-full shrink-0 sm:w-auto')}
                 >
                     Review application <ArrowRight aria-hidden="true" />
