@@ -1,18 +1,23 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import useAxiosSecure from './useAxiosSecure';
 import { repairKeys } from './repairKeys';
+import { walletKeys } from './walletKeys';
 import { startRepair, addProgress, completeRepair, confirmReceipt } from '../api/repairs';
 
 // Shared invalidation: after any repair write, refresh the repair query (so the
 // timeline/summary re-render), the request-detail query (deliveryStatus
 // changed), and the technician's assigned-jobs list. onSettled runs on both
 // success and controlled refusal so the UI always re-syncs to server truth.
-function useRepairInvalidation(requestId) {
+function useRepairInvalidation(requestId, extraQueryKeys = []) {
     const queryClient = useQueryClient();
     return () => {
         queryClient.invalidateQueries({ queryKey: repairKeys.request(requestId) });
         queryClient.invalidateQueries({ queryKey: ['repair-requests', requestId] });
         queryClient.invalidateQueries({ queryKey: ['assignedJobs'] });
+        queryClient.invalidateQueries({ queryKey: ['tech-active-jobs'] });
+        for (const queryKey of extraQueryKeys) {
+            queryClient.invalidateQueries({ queryKey });
+        }
     };
 }
 
@@ -36,7 +41,12 @@ export function useAddProgress(requestId) {
 
 export function useCompleteRepair(requestId) {
     const axiosSecure = useAxiosSecure();
-    const invalidate = useRepairInvalidation(requestId);
+    const invalidate = useRepairInvalidation(requestId, [
+        ['completedRepairs'],
+        ['adminRepairRequests'],
+        ['admin-all-requests'],
+        ['request-status-stats'],
+    ]);
     return useMutation({
         mutationFn: (payload) => completeRepair(axiosSecure, requestId, payload),
         onSettled: invalidate,
@@ -48,7 +58,14 @@ export function useCompleteRepair(requestId) {
 // "Confirm Device Received" action is replaced by the confirmed state.
 export function useConfirmReceipt(requestId) {
     const axiosSecure = useAxiosSecure();
-    const invalidate = useRepairInvalidation(requestId);
+    const invalidate = useRepairInvalidation(requestId, [
+        ['my-requests'],
+        ['completedRepairs'],
+        walletKeys.technician(),
+        ['adminRepairRequests'],
+        ['admin-all-requests'],
+        ['request-status-stats'],
+    ]);
     return useMutation({
         mutationFn: () => confirmReceipt(axiosSecure, requestId),
         onSettled: invalidate,

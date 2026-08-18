@@ -72,6 +72,7 @@ export function isActiveRequest(request) {
 // payable is now not offered.
 export function canOfferPayment(request) {
     if (!request) return false;
+    if (request.isPaid === true) return false;
     if (request.paymentStatus === 'paid') return false;
     if (request.payment && request.payment.status === 'completed') return false;
 
@@ -90,6 +91,7 @@ export function canOfferPayment(request) {
 // control.
 export function isRequestPaid(request) {
     if (!request) return false;
+    if (typeof request.isPaid === 'boolean') return request.isPaid;
     if (request.paymentStatus === 'paid') return true;
     if (request.payment && request.payment.status === 'completed') return true;
     return ['payment_completed', 'repair_in_progress', 'repair_completed', 'parcel_delivered'].includes(getRequestStatus(request));

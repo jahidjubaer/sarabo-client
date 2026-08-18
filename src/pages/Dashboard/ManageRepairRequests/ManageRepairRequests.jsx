@@ -118,7 +118,7 @@ const ManageRepairRequests = () => {
         },
         {
             id: 'payment', header: 'Payment', enableSorting: false,
-            cell: ({ row }) => <PaymentBadge paid={row.original.paymentStatus === 'paid'} />,
+            cell: ({ row }) => <PaymentBadge paid={row.original.isPaid === true} />,
             meta: { label: 'Payment' },
         },
         {
@@ -184,7 +184,7 @@ const ManageRepairRequests = () => {
                 <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
                     <div><dt className="text-ds-muted-foreground">Customer</dt><dd className="truncate text-ds-foreground">{request.senderName}</dd></div>
                     <div><dt className="text-ds-muted-foreground">Technician</dt><dd className="truncate text-ds-foreground">{request.technicianName || 'Unassigned'}</dd></div>
-                    <div><dt className="text-ds-muted-foreground">Payment</dt><dd><PaymentBadge paid={request.paymentStatus === 'paid'} /></dd></div>
+                    <div><dt className="text-ds-muted-foreground">Payment</dt><dd><PaymentBadge paid={request.isPaid === true} /></dd></div>
                     <div><dt className="text-ds-muted-foreground">Created</dt><dd className="text-ds-foreground">{request.createdAt ? formatAbsoluteDateTime(request.createdAt) : ''}</dd></div>
                 </dl>
                 <div className="mt-3 flex gap-2">

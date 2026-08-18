@@ -25,11 +25,15 @@ const ReceiptConfirmationSection = ({ requestId, request, isOwner }) => {
     const mutation = useConfirmReceipt(requestId);
     const busy = mutation.isPending;
 
-    // Only meaningful after the repair itself is completed.
-    if (request?.deliveryStatus !== 'repair_completed') return null;
-
     const confirmation = request.customerReceiptConfirmation || { status: 'pending', confirmedAt: null };
     const isConfirmed = confirmation.status === 'confirmed';
+    const isAwaitingConfirmation = request?.deliveryStatus === 'repair_completed';
+    const isConfirmedHandover = request?.deliveryStatus === 'parcel_delivered' && isConfirmed;
+
+    // Meaningful while awaiting confirmation and after the confirmed terminal
+    // handover. Legacy parcel_delivered records have no confirmation object and
+    // continue rendering no V2 receipt state.
+    if (!isAwaitingConfirmation && !isConfirmedHandover) return null;
 
     const onConfirm = () => {
         mutation.mutate(undefined, {

@@ -45,6 +45,9 @@ function WorkspaceContextPanels({ request, showCustomer }) {
     const approvedQuote = request?.quote && request.quote.status === 'approved' && Number.isFinite(Number(request.quote.totalAmount))
         ? formatMoney(request.quote.totalAmount, request.quote.currency)
         : null;
+    const isPaid = typeof request?.isPaid === 'boolean'
+        ? request.isPaid
+        : request?.paymentStatus === 'paid' || request?.payment?.status === 'completed';
 
     return (
         <div className="space-y-4">
@@ -83,7 +86,7 @@ function WorkspaceContextPanels({ request, showCustomer }) {
             <Panel title="Financial">
                 {estimate && <Row label={legacy ? 'Cost' : 'Estimate'} value={estimate} />}
                 {approvedQuote && <Row label="Approved quote" value={approvedQuote} />}
-                <Row label="Payment" value={request.paymentStatus === 'paid' ? 'Paid' : 'Unpaid'} />
+                <Row label="Payment" value={isPaid ? 'Paid' : 'Unpaid'} />
             </Panel>
         </div>
     );

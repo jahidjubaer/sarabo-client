@@ -9,36 +9,12 @@ import { EmptyState } from '../../../components/common/EmptyState';
 import { ErrorState } from '../../../components/common/ErrorState';
 import { StatusBadge } from '../../../components/common/StatusBadge';
 import { Card } from '../../../components/ui/card';
-import { Badge } from '../../../components/ui/badge';
-import { Skeleton } from '../../../components/ui/skeleton';
-import { formatMoney } from '../../../utils/currency';
+import TechnicianSettlementSummary from '../../../components/repair/TechnicianSettlementSummary';
 import { formatAbsoluteDateTime } from '../../../utils/relativeTime';
 import { getProductSummary } from '../../../utils/customerRequestPresentation';
 
-// Technician Completed Repairs + earnings. Phase 10 composed the operational
-// history cards below; Phase 12 redesigns ONLY the earnings summary block at
-// the top - the job cards, their hierarchy, statuses, navigation, queries and
-// responsive structure are untouched.
-const EARNING_STATUS_LABEL = { pending: 'Pending', paid: 'Paid' };
-
-// One authoritative figure with its accounting breakdown, deliberately not four
-// equal KPI tiles: this is an accounting note on a job-history page, not a
-// payout dashboard. Every value comes straight from the server's
-// earnings-summary response (totalEarned / paidAmount / pendingAmount /
-// completedRepairCount, currency bdt) - nothing is summed, derived, projected
-// or commissioned on the client.
-function EarningFact({ label, value }) {
-    return (
-        <div className="min-w-0">
-            <dt className="text-micro text-ds-muted-foreground">{label}</dt>
-            <dd className="ds-numeric mt-1 min-w-0 break-all text-subhead text-ds-foreground">{value}</dd>
-        </div>
-    );
-}
-
 function CompletedJobItem({ request }) {
     const { device, category, brandModel } = getProductSummary(request);
-    const earning = request.technicianEarning;
     const headingId = `completed-job-${request._id}`;
 
     return (
@@ -70,28 +46,7 @@ function CompletedJobItem({ request }) {
                         </p>
                     )}
 
-                    <dl className="grid gap-3 border-t border-ds-border pt-4 text-sm sm:grid-cols-3">
-                        <div>
-                            <dt className="text-xs text-ds-muted-foreground">Repair amount</dt>
-                            <dd className="mt-0.5 font-medium tabular-nums text-ds-foreground">
-                                {formatMoney(request.quote?.totalAmount, request.quote?.currency) || '—'}
-                            </dd>
-                        </div>
-                        <div>
-                            <dt className="text-xs text-ds-muted-foreground">Your earning</dt>
-                            <dd className="mt-0.5 font-medium tabular-nums text-ds-foreground">
-                                {earning ? (formatMoney(earning.amount, earning.currency) || '—') : '—'}
-                            </dd>
-                        </div>
-                        <div>
-                            <dt className="text-xs text-ds-muted-foreground">Earning status</dt>
-                            <dd className="mt-1">
-                                {earning
-                                    ? <Badge tone={earning.status === 'paid' ? 'success' : 'neutral'}>{EARNING_STATUS_LABEL[earning.status] || earning.status}</Badge>
-                                    : '—'}
-                            </dd>
-                        </div>
-                    </dl>
+                    <TechnicianSettlementSummary settlement={request.technicianSettlement} compact />
                 </div>
 
                 <Link
@@ -112,7 +67,6 @@ const CompletedJobs = () => {
     const axiosSecure = useAxiosSecure();
     const queryClient = useQueryClient();
     const completedRepairsQueryKey = ['completedRepairs', user?.email];
-    const earningsSummaryQueryKey = ['technicianEarningsSummary', user?.email];
 
     const completedRepairsQuery = useQuery({
         queryKey: completedRepairsQueryKey,
@@ -122,25 +76,12 @@ const CompletedJobs = () => {
         },
     });
 
-    // Server-authoritative earnings totals (never summed on the client).
-    const earningsSummaryQuery = useQuery({
-        queryKey: earningsSummaryQueryKey,
-        queryFn: async () => (await axiosSecure.get('/repair-requests/technician/earnings-summary')).data,
-    });
-
     const hasUsableRequests = Array.isArray(completedRepairsQuery.data);
     const requests = hasUsableRequests ? completedRepairsQuery.data : [];
     const isCompletedInitialLoading = completedRepairsQuery.isPending && !completedRepairsQuery.isPaused;
     const isCompletedUnavailableBeforeData = completedRepairsQuery.isPaused && !hasUsableRequests;
     const isCompletedErrorBeforeData = completedRepairsQuery.isError && !hasUsableRequests;
     const retryCompletedRepairs = () => queryClient.resetQueries({ queryKey: completedRepairsQueryKey });
-
-    const hasUsableSummary = earningsSummaryQuery.data !== undefined;
-    const summary = earningsSummaryQuery.data;
-    const isSummaryInitialLoading = earningsSummaryQuery.isPending && !earningsSummaryQuery.isPaused;
-    const isSummaryUnavailableBeforeData = earningsSummaryQuery.isPaused && !hasUsableSummary;
-    const isSummaryErrorBeforeData = earningsSummaryQuery.isError && !hasUsableSummary;
-    const retryEarningsSummary = () => queryClient.resetQueries({ queryKey: earningsSummaryQueryKey });
 
     if (isCompletedInitialLoading) {
         return (
@@ -164,7 +105,6 @@ const CompletedJobs = () => {
         );
     }
 
-    const currency = summary?.currency || 'bdt';
     const description = requests.length === 0
         ? 'Your completed repair history will appear here.'
         : `${requests.length} completed repair${requests.length === 1 ? '' : 's'}`;
@@ -172,41 +112,6 @@ const CompletedJobs = () => {
     return (
         <div className="space-y-6">
             <PageHeader eyebrow="Technician" title="Completed Repairs" description={description} />
-
-            {isSummaryInitialLoading && (
-                <Card className="space-y-3 p-5" role="status" aria-label="Loading earnings summary">
-                    <Skeleton className="h-3 w-32" />
-                    <Skeleton className="h-8 w-40" />
-                    <Skeleton className="h-3 w-full max-w-xs" />
-                </Card>
-            )}
-
-            {(isSummaryErrorBeforeData || isSummaryUnavailableBeforeData) && (
-                <ErrorState
-                    title="Couldn't load earnings summary"
-                    description="Your earnings summary is unavailable right now. Please try again."
-                    onRetry={retryEarningsSummary}
-                    className="py-6"
-                />
-            )}
-
-            {hasUsableSummary && summary && (
-                <Card className="p-5" aria-labelledby="earnings-summary-heading">
-                    <h2 id="earnings-summary-heading" className="ds-label text-ds-muted-foreground">Earnings summary</h2>
-                    <p className="ds-numeric mt-2 min-w-0 break-all text-title text-ds-foreground">
-                        {formatMoney(summary.totalEarned, currency) || '—'}
-                    </p>
-                    <p className="mt-1 text-body-sm text-ds-muted-foreground">
-                        Total labour earning recorded across your completed repairs. Parts and other charges are not included.
-                    </p>
-
-                    <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-ds-border pt-4 sm:grid-cols-3">
-                        <EarningFact label="Paid" value={formatMoney(summary.paidAmount, currency) || '—'} />
-                        <EarningFact label="Pending" value={formatMoney(summary.pendingAmount, currency) || '—'} />
-                        <EarningFact label="Completed repairs" value={summary.completedRepairCount ?? requests.length} />
-                    </dl>
-                </Card>
-            )}
 
             <section aria-labelledby="completed-job-history-heading" className="space-y-3">
                 <div>

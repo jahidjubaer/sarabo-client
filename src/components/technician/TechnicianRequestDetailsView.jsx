@@ -10,6 +10,7 @@ import QuoteSection from '../quote/QuoteSection';
 import QuoteRejectedActions from '../quote/QuoteRejectedActions';
 import RepairSection from '../repair/RepairSection';
 import ReceiptConfirmationSection from '../repair/ReceiptConfirmationSection';
+import TechnicianSettlementSummary from '../repair/TechnicianSettlementSummary';
 import { getTechnicianAttention } from '../../utils/technicianJobPresentation';
 import { getHandoverState } from '../../utils/repairStage';
 import { staggerContainer, staggerItem } from '../../theme/motion';
@@ -132,6 +133,12 @@ function TechnicianRequestDetailsView({
                                 canManage={isAssignedTechnicianView}
                                 deliveryStatus={request.deliveryStatus}
                             />
+                        </SectionCard>
+                    )}
+
+                    {request.technicianSettlement && (
+                        <SectionCard id="technician-settlement" eyebrow="Wallet accounting" title="Settlement and receivable">
+                            <TechnicianSettlementSummary settlement={request.technicianSettlement} />
                         </SectionCard>
                     )}
 

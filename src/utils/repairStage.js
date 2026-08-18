@@ -220,17 +220,20 @@ export function getSpineModel(request) {
 // Reads the same field the existing confirmation UI reads
 // (components/repair/ReceiptConfirmationSection.jsx):
 //   request.customerReceiptConfirmation = { status: 'pending'|'confirmed', confirmedAt }
-// Receipt confirmation exists only for v2 requests at `repair_completed`;
-// legacy `parcel_delivered` records have no confirmation step, so this returns
-// null for them rather than inventing a pending action.
+// Receipt confirmation begins at repair_completed and, once confirmed, the V2
+// request advances to parcel_delivered. Legacy parcel_delivered records carry
+// no confirmation object, so this still returns null for them.
 //
 // Returns null when handover is not yet a meaningful question.
 // ---------------------------------------------------------------------------
 export function getHandoverState(request) {
     if (typeof request === 'string' || !request) return null;
-    if (request.deliveryStatus !== 'repair_completed') return null;
+    const isV2HandoverStatus = request.schemaVersion === 2
+        && ['repair_completed', 'parcel_delivered'].includes(request.deliveryStatus);
+    if (!isV2HandoverStatus) return null;
 
     const confirmation = request.customerReceiptConfirmation;
+    if (!confirmation) return null;
     const confirmed = confirmation?.status === 'confirmed';
 
     return {

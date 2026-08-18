@@ -8,6 +8,7 @@ import { getPaymentErrorMessage } from '../../../utils/paymentErrorMessage';
 import { Card } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { buttonVariants } from '../../../components/ui/button-variants';
+import { walletKeys } from '../../../hooks/walletKeys';
 
 // Gives the customer a moment to read the confirmation before moving on -
 // long enough to not feel rushed, short enough to not feel stuck.
@@ -66,6 +67,12 @@ const PaymentSuccess = () => {
                 // (eligibility flips to ALREADY_PAID, hiding Pay Now).
                 queryClient.invalidateQueries({ queryKey: ['quote'] });
                 queryClient.invalidateQueries({ queryKey: ['payment-eligibility'] });
+                // Payment creates the Technician's pending settlement in the
+                // same server transaction. Refresh every existing operational
+                // list that can present the newly paid state.
+                queryClient.invalidateQueries({ queryKey: walletKeys.technician() });
+                queryClient.invalidateQueries({ queryKey: ['adminRepairRequests'] });
+                queryClient.invalidateQueries({ queryKey: ['admin-all-requests'] });
             })
             .catch(error => {
                 if (import.meta.env.DEV) console.error('Payment verification failed:', error);

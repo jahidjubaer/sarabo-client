@@ -135,6 +135,6 @@ export function getSectionVisibility({ request, isOwner, isCancelled }) {
         showInspection: isV2,
         showQuote: isV2,
         showPayment: isV2 && isOwner && !isCancelled,
-        showRepair: isV2 && ['payment_completed', 'repair_in_progress', 'repair_completed'].includes(status),
+        showRepair: isV2 && ['payment_completed', 'repair_in_progress', 'repair_completed', 'parcel_delivered'].includes(status),
     };
 }
