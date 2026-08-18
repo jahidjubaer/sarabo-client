@@ -20,3 +20,16 @@ export async function decideQuote(axiosSecure, requestId, decision) {
     const res = await axiosSecure.post(`/repair-requests/${requestId}/quote/decision`, decision);
     return res.data;
 }
+
+// Post-rejection technician actions (Phase 9.2). Both are POSTs with no body -
+// every parameter the server needs (who is calling, which request, what state
+// it is in) is derived server-side from the token and the stored record.
+export async function reviseQuote(axiosSecure, requestId) {
+    const res = await axiosSecure.post(`/repair-requests/${requestId}/quote/revise`);
+    return res.data;
+}
+
+export async function cancelAfterQuoteRejection(axiosSecure, requestId) {
+    const res = await axiosSecure.post(`/repair-requests/${requestId}/quote/cancel-request`);
+    return res.data;
+}

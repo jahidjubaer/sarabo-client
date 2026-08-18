@@ -4,9 +4,10 @@ import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { buttonVariants } from '../ui/button-variants';
 import { StatusBadge } from '../common/StatusBadge';
+import { Badge } from '../ui/badge';
 import { canCancelRequest } from '../../utils/cancellationEligibility';
 import { canDeleteRequest } from '../../utils/deletionEligibility';
-import { getProductSummary, getAgreedPrice, getRequestAction, getRequestStatus } from '../../utils/customerRequestPresentation';
+import { getProductSummary, getAgreedPrice, getRequestAction, getRequestStatus, canOfferPayment, isRequestPaid } from '../../utils/customerRequestPresentation';
 import { getStatusPresentation } from '../../config/statusPresentation';
 import { formatAbsoluteDateTime } from '../../utils/relativeTime';
 
@@ -22,9 +23,11 @@ function RequestListItem({ request, onCancel, onDelete, onPay, cancellingId, del
     const detailsTo = `/dashboard/my-requests/${request._id}`;
     const headingId = `request-${request._id}`;
 
-    const isPaid = request.paymentStatus === 'paid';
-    const isCancelled = status === 'cancelled';
-    const showPay = !isPaid && !isCancelled;
+    // Payment state comes from the shared rule that mirrors the server's own
+    // eligibility check - never from a local `!isPaid && !isCancelled` guess,
+    // which used to offer Pay on unquoted, declined and already-paid repairs.
+    const isPaid = isRequestPaid(request);
+    const showPay = canOfferPayment(request);
     const showCancel = canCancelRequest(request);
     const showDelete = canDeleteRequest(request);
     const paymentIsNext = action?.kind === 'payment';
@@ -33,6 +36,10 @@ function RequestListItem({ request, onCancel, onDelete, onPay, cancellingId, del
         ? 'Confirm once you have received your repaired device.'
         : presentation.customerNextStep;
 
+    // Paid repairs show the settled state instead of a control. Deliberately a
+    // static badge, not a disabled button: a disabled Pay button still reads as
+    // "payment is a thing you might owe here", which is the confusion this
+    // replaces.
     const paymentButton = showPay ? (
         <Button
             size="sm"
@@ -43,6 +50,11 @@ function RequestListItem({ request, onCancel, onDelete, onPay, cancellingId, del
             <CreditCard aria-hidden="true" />
             {payingId === request._id ? 'Starting...' : (paymentIsNext ? 'Continue to payment' : 'Pay')}
         </Button>
+    ) : isPaid ? (
+        <Badge tone="success">
+            <CreditCard aria-hidden="true" className="size-3.5" />
+            Paid
+        </Badge>
     ) : null;
 
     return (

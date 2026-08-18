@@ -7,6 +7,7 @@ import { WorkspaceContextPanels } from '../workspace/WorkspaceContextPanels';
 import DamageImageManager from '../damage-images/DamageImageManager';
 import InspectionSection from '../inspection/InspectionSection';
 import QuoteSection from '../quote/QuoteSection';
+import QuoteRejectedActions from '../quote/QuoteRejectedActions';
 import RepairSection from '../repair/RepairSection';
 import ReceiptConfirmationSection from '../repair/ReceiptConfirmationSection';
 import { getTechnicianAttention } from '../../utils/technicianJobPresentation';
@@ -89,6 +90,17 @@ function TechnicianRequestDetailsView({
                     </CardContent>
                 </Card>
             </Motion.div>
+
+            {/* Phase 9.2: the only route out of a declined quote. Shown to the
+                assigned technician only, and only while the request is actually
+                at quote_rejected - the server re-checks both. Placed directly
+                under the spine so it reads as the current task, the same
+                position the stage action panel occupies at other stages. */}
+            {isAssignedTechnicianView && request.deliveryStatus === 'quote_rejected' && (
+                <Motion.div variants={staggerItem}>
+                    <QuoteRejectedActions requestId={request._id} />
+                </Motion.div>
+            )}
 
             <Motion.div variants={staggerItem} className="grid gap-6 lg:grid-cols-3 lg:items-start">
                 <div className="space-y-6 lg:col-span-2">

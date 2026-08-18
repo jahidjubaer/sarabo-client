@@ -16,7 +16,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import { Skeleton } from '../../../components/ui/skeleton';
 import { notify } from '../../../lib/notify';
 import { humanizeSlug } from '../../../utils/serviceDefinitionCatalog';
-import { getProductSummary } from '../../../utils/customerRequestPresentation';
+import { getProductSummary, getDeviceLabel } from '../../../utils/customerRequestPresentation';
 import { getWorkStatusLabel, getWorkStatusTone, formatRecommendationReasons, getServiceAreaLabel } from '../../../utils/adminPresentation';
 import { formatAbsoluteDateTime } from '../../../utils/relativeTime';
 import { getAssignmentErrorMessage } from '../../../utils/assignmentErrorMessage';
@@ -76,7 +76,7 @@ const AssignTechnicians = () => {
     const filtered = useMemo(() => requests.filter((r) => {
         const term = search.trim().toLowerCase();
         if (!term) return true;
-        return (r.deviceName || '').toLowerCase().includes(term) || (r.senderDistrict || r.serviceLocation?.district || '').toLowerCase().includes(term);
+        return getDeviceLabel(r).toLowerCase().includes(term) || (r.senderDistrict || r.serviceLocation?.district || '').toLowerCase().includes(term);
     }), [requests, search]);
 
     const handleAssign = (technician) => {
@@ -109,7 +109,7 @@ const AssignTechnicians = () => {
     const columns = useMemo(() => [
         {
             id: 'device', header: 'Device', enableSorting: true, enableHiding: false,
-            accessorFn: (row) => row.deviceName || '',
+            accessorFn: (row) => getDeviceLabel(row),
             cell: ({ row }) => {
                 const { device, category } = getProductSummary(row.original);
                 return (

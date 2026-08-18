@@ -14,7 +14,7 @@ import { Button } from '../../../components/ui/button';
 import { buttonVariants } from '../../../components/ui/button-variants';
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
-import { getProductSummary } from '../../../utils/customerRequestPresentation';
+import { getProductSummary, getDeviceLabel } from '../../../utils/customerRequestPresentation';
 import { formatAbsoluteDateTime } from '../../../utils/relativeTime';
 import { getManageRepairRequestsErrorMessage } from '../../../utils/manageRepairRequestsErrorMessage';
 import { cn } from '../../../lib/utils';
@@ -102,7 +102,8 @@ const ManageRepairRequests = () => {
         },
         {
             id: 'device', header: 'Device', enableSorting: false, enableHiding: false,
-            cell: ({ row }) => row.original.deviceName,
+            // deviceName is legacy-only and blank for every v2 request.
+            cell: ({ row }) => getDeviceLabel(row.original),
             meta: { label: 'Device' },
         },
         {

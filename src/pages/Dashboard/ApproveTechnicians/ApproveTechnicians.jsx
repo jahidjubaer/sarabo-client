@@ -49,7 +49,12 @@ function ExpertiseBadges({ technician }) {
 function TechnicianExpertiseDetails({ technician }) {
     const expertise = Array.isArray(technician?.expertise) ? technician.expertise : [];
     const entries = expertise.filter((entry) => entry && entry.productCategorySlug);
-    if (entries.length === 0) return <span className="text-xs text-ds-muted-foreground">—</span>;
+    // A truthful unavailable state, not a bare dash: an application with no
+    // recorded expertise cannot be matched to any repair, and that is exactly
+    // what an admin needs to know before approving it (Phase 9.2).
+    if (entries.length === 0) {
+        return <span className="text-xs italic text-ds-muted-foreground">No specialisations recorded</span>;
+    }
     return (
         <ul className="space-y-2">
             {entries.map((entry) => (
@@ -259,9 +264,18 @@ const ApproveTechnicians = () => {
                                 ['Region', detailsFor.region],
                                 ['District', detailsFor.district],
                                 ['Address', detailsFor.address],
-                                ['Skills / specialization', detailsFor.license],
+                                ['Phone', detailsFor.phone],
                                 ['National ID', detailsFor.nid],
-                                ['Experience', detailsFor.bike],
+                                // REMOVED (Phase 9.2): 'Skills / specialization'
+                                // and 'Experience' rows, which read `license`
+                                // and `bike` - courier-era fields that never
+                                // held any technician skill or experience data,
+                                // so both always rendered a bare "—" while the
+                                // real values sat in the Expertise block below.
+                                // An admin reading "Skills: —" on an applicant
+                                // who HAS recorded specialisations is worse than
+                                // showing nothing at all. Expertise is the one
+                                // canonical source for both.
                             ].map(([label, value]) => (
                                 <div key={label} className="grid grid-cols-3 gap-2">
                                     <dt className="text-ds-muted-foreground">{label}</dt>

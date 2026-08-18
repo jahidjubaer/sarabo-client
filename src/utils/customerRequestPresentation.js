@@ -54,6 +54,47 @@ export function isActiveRequest(request) {
     return group === 'active' || group === 'needs-action';
 }
 
+// Whether a Pay control may be OFFERED for a request in a list context.
+//
+// This deliberately mirrors the server's own rule (sarabo-server's
+// services/paymentEligibility.js#getV2PaymentEligibility) rather than
+// introducing a second notion of payability: paid wins over everything, and
+// only an approved quote on a quote_approved request can be charged. The
+// request detail page still asks the server outright via
+// GET /repair-requests/:id/payment-eligibility - that endpoint remains the
+// authority, and this is only the list-level guess about whether to show a
+// button at all.
+//
+// The previous rule here was `!isPaid && !isCancelled`, which offered "Pay" on
+// requests that had no quote yet, on declined quotes, and - because it read
+// only paymentStatus - on repairs whose payment had succeeded but whose
+// paymentStatus had not been the field consulted. Anything not explicitly
+// payable is now not offered.
+export function canOfferPayment(request) {
+    if (!request) return false;
+    if (request.paymentStatus === 'paid') return false;
+    if (request.payment && request.payment.status === 'completed') return false;
+
+    const status = getRequestStatus(request);
+    if (status === 'cancelled' || status === 'quote_rejected') return false;
+    // Past the payment stage means it was already paid for.
+    if (['payment_completed', 'repair_in_progress', 'repair_completed', 'parcel_delivered'].includes(status)) return false;
+
+    const quote = request.quote;
+    if (!quote || quote.status !== 'approved') return false;
+    return status === 'quote_approved';
+}
+
+// True once payment has succeeded, by any of the authoritative markers the
+// server may have set. Used to show the paid presentation in place of a Pay
+// control.
+export function isRequestPaid(request) {
+    if (!request) return false;
+    if (request.paymentStatus === 'paid') return true;
+    if (request.payment && request.payment.status === 'completed') return true;
+    return ['payment_completed', 'repair_in_progress', 'repair_completed', 'parcel_delivered'].includes(getRequestStatus(request));
+}
+
 // Customer next-action derived only from existing request presentation state
 // (never a per-request payment-eligibility fetch). Every destination is the
 // request detail page, where the authoritative quote/payment/handover UI lives.
@@ -74,6 +115,24 @@ export function getProductSummary(request) {
     const category = request?.product?.categorySlug ? humanizeSlug(request.product.categorySlug) : '';
     const brandModel = [request?.product?.brand, request?.product?.model].filter(Boolean).join(' ').trim();
     return { device: device || 'Repair request', category, brandModel };
+}
+
+// One device label for compact surfaces (admin tables, assignment lists) that
+// have room for a single line rather than the three fields getProductSummary
+// returns.
+//
+// `deviceName` is the LEGACY (v1) field and is absent on every v2 request, so
+// reading it alone renders blank for essentially all current data - that is
+// exactly the bug this exists to stop repeating. Preference order is most
+// specific first: the v2 brand/model the customer actually entered, then the
+// product category, then the legacy name, and only then a truthful fallback.
+export function getDeviceLabel(request) {
+    const brandModel = [request?.product?.brand, request?.product?.model].filter(Boolean).join(' ').trim();
+    if (brandModel) return brandModel;
+    if (request?.product?.categorySlug) return humanizeSlug(request.product.categorySlug);
+    const legacy = (request?.deviceName || '').trim();
+    if (legacy) return legacy;
+    return 'Device not specified';
 }
 
 // Only an AUTHORITATIVE agreed price is returned - an approved quote's total in

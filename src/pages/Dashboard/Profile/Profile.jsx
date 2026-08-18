@@ -19,6 +19,7 @@ import { PageHeader } from '../../../components/common/PageHeader';
 import { isUserEmailVerified, getVerificationPresentation } from '../../../utils/emailVerification';
 import RoleContextCard from './RoleContextCard';
 import AccountSecurityCard from './AccountSecurityCard';
+import TechnicianProfileCard from './TechnicianProfileCard';
 
 // Formal role wording for this page (deliberately fuller than the navbar's
 // compact mapping).
@@ -218,6 +219,13 @@ const Profile = () => {
                             </form>
                         )}
                     </Card>
+                </div>
+
+                {/* Phase 9.2: the technician's real stored professional record.
+                    Self-guards on role, so customer/admin profiles are
+                    untouched and no request is made for them. */}
+                <div className="lg:col-span-2">
+                    <TechnicianProfileCard role={role} />
                 </div>
 
                 <div className="flex flex-col gap-6 lg:col-span-1">
