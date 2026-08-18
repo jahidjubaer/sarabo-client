@@ -9,6 +9,7 @@ import { normalizeServiceDefinitions, deriveProductCategories, getServicesForPro
 import { getProductCategoryIcon } from '../../../utils/productCategoryIcons';
 import { shouldShowCreateRequestLink, REQUEST_REPAIR_ROUTE } from '../../../utils/publicContent';
 import { getCategoryEstimateRanges } from '../categoryPricing';
+import { getCategoryPhoto, getPhotoCredits } from '../categoryPhotos';
 import { Skeleton } from '../../../components/ui/skeleton';
 import { buttonVariants } from '../../../components/ui/button-variants';
 import { cn } from '../../../lib/utils';
@@ -50,6 +51,7 @@ const ServiceCatalogue = () => {
     const definitions = normalizeServiceDefinitions(data);
     const categories = deriveProductCategories(definitions).slice(0, MAX_ROWS);
     const ranges = getCategoryEstimateRanges(definitions);
+    const photoCredits = getPhotoCredits(categories.map((category) => category.slug));
     const loading = isPending && !isPaused;
     const unreachable = isError || isPaused;
     const unavailable = !loading && (unreachable || categories.length === 0);
@@ -62,9 +64,12 @@ const ServiceCatalogue = () => {
                     <div>
                         <p className="ds-label text-ds-primary">What we repair</p>
                         <h2 className="mt-3 text-title text-ds-foreground">Every service, with an honest range.</h2>
+                        {/* Said once, here, rather than repeated on every card:
+                            the rule is the same for all of them. */}
                         <p className="mt-3 max-w-xl text-body-sm text-ds-muted-foreground">
                             Ranges come straight from the service catalogue. The price you actually pay is the
-                            quote, confirmed after inspection — and you approve it first.
+                            quote, confirmed after inspection and approved by you first — it depends on the device
+                            condition, the repair needed, and parts.
                         </p>
                     </div>
                     {/* Phase 13A: min-h-6 only. Measured at 89x21, this standalone
@@ -93,72 +98,90 @@ const ServiceCatalogue = () => {
                             const to = showRequestLinks
                                 ? `${REQUEST_REPAIR_ROUTE}?category=${encodeURIComponent(category.slug)}`
                                 : '/services';
+                            const photo = getCategoryPhoto(category.slug);
                             return (
                                 <li key={category.slug}>
-                                    {/* h-full + flex-col + an mt-auto footer keeps
-                                        the price block and the action on one
-                                        baseline across a row, however many
-                                        example lines a category happens to have. */}
-                                    <article className="flex h-full flex-col rounded-ds-lg border border-ds-border bg-ds-card p-5 transition-colors hover:border-ds-primary/40">
-                                        <div className="flex items-start gap-3">
-                                            <span className="flex size-11 shrink-0 items-center justify-center rounded-ds border border-ds-border bg-ds-muted/40 text-ds-primary">
-                                                <Icon aria-hidden="true" className="size-5" />
-                                            </span>
-                                            <h3 className="min-w-0 pt-1.5 text-subhead text-ds-foreground">{category.label}</h3>
-                                        </div>
-
-                                        {examples.length > 0 && (
-                                            <>
-                                                <p className="ds-label mt-5 text-ds-muted-foreground">Common repairs</p>
-                                                {/* Real catalogue service labels, not
-                                                    marketing examples. */}
-                                                <ul className="mt-2 flex flex-col gap-1.5">
-                                                    {examples.map((service) => (
-                                                        <li key={service.id} className="flex items-start gap-2 text-body-sm text-ds-muted-foreground">
-                                                            <Wrench aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-ds-primary/70" />
-                                                            <span className="min-w-0">{service.label}</span>
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            </>
+                                    {/* One link per card, named for the category, so
+                                        eight cards never announce eight identical
+                                        "Request repair" targets. h-full + flex-col +
+                                        an mt-auto footer keeps the price and the
+                                        action on one baseline across a row, however
+                                        many example lines a category has. */}
+                                    <Link
+                                        to={to}
+                                        aria-label={showRequestLinks
+                                            ? `Request a repair — ${category.label}`
+                                            : `Browse services — ${category.label}`}
+                                        className="focus-ring group flex h-full flex-col overflow-hidden rounded-ds-lg border border-ds-border bg-ds-card transition-colors hover:border-ds-primary/50"
+                                    >
+                                        {photo && (
+                                            // The photograph is shown as taken - no wash,
+                                            // no tint, no text on top of it. Nothing has to
+                                            // stay legible over an unpredictable part of an
+                                            // image, so nothing has to be faded out to make
+                                            // it legible.
+                                            <div className="aspect-video shrink-0 overflow-hidden border-b border-ds-border bg-ds-muted">
+                                                <img
+                                                    src={photo.src}
+                                                    alt={photo.alt}
+                                                    loading="lazy"
+                                                    decoding="async"
+                                                    className="size-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                                                />
+                                            </div>
                                         )}
 
-                                        <div className="mt-auto pt-5">
+                                        <div className="flex flex-1 flex-col p-5">
+                                            <h3 className="flex items-center gap-2 text-subhead text-ds-foreground">
+                                                <Icon aria-hidden="true" className="size-4 shrink-0 text-ds-primary" />
+                                                <span className="min-w-0 truncate">{category.label}</span>
+                                            </h3>
+
                                             {/* The binding number is the quote. A
                                                 catalogue range is shown only when the
-                                                server actually stated one, and never
-                                                as a "from" price. */}
-                                            <div className="rounded-ds border border-ds-border bg-ds-muted/30 p-3">
-                                                {range ? (
-                                                    <>
-                                                        <p className="ds-numeric text-body-sm font-semibold text-ds-foreground">{range}</p>
-                                                        <p className="ds-label mt-0.5 text-ds-muted-foreground">Estimated range</p>
-                                                    </>
-                                                ) : (
-                                                    <p className="text-body-sm font-semibold text-ds-foreground">Quote after inspection</p>
-                                                )}
-                                                <p className="mt-2 text-micro text-ds-muted-foreground">
-                                                    The final cost is the quote you approve after inspection — it depends on the
-                                                    device condition, the repair needed, and parts.
-                                                </p>
-                                            </div>
+                                                server actually stated one, and never as
+                                                a "from" price. */}
+                                            {range ? (
+                                                <>
+                                                    <p className="ds-numeric mt-3 text-body font-semibold text-ds-foreground">{range}</p>
+                                                    <p className="ds-label mt-1 text-ds-muted-foreground">Estimated range</p>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <p className="mt-3 text-body font-semibold text-ds-foreground">Quote after inspection</p>
+                                                    <p className="ds-label mt-1 text-ds-muted-foreground">No catalogue range yet</p>
+                                                </>
+                                            )}
 
-                                            <Link
-                                                to={to}
-                                                aria-label={showRequestLinks
-                                                    ? `Request a repair — ${category.label}`
-                                                    : `Browse services — ${category.label}`}
-                                                className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'mt-4 w-full')}
-                                            >
-                                                {showRequestLinks ? 'Request Repair' : 'Browse services'}
-                                                <ArrowRight aria-hidden="true" />
-                                            </Link>
+                                            {examples.length > 0 && (
+                                                // Real catalogue service labels, run
+                                                // together rather than set as a bulleted
+                                                // table - the card is a summary, not a
+                                                // service list.
+                                                <p className="mt-4 flex-1 border-t border-ds-border pt-4 text-body-sm text-ds-muted-foreground">
+                                                    {examples.map((service) => service.label).join(' · ')}
+                                                </p>
+                                            )}
+
+                                            <span className="mt-4 flex items-center gap-1.5 text-body-sm font-semibold text-ds-primary">
+                                                {showRequestLinks ? 'Request repair' : 'Browse services'}
+                                                <ArrowRight aria-hidden="true" className="size-4 transition-transform group-hover:translate-x-0.5" />
+                                            </span>
                                         </div>
-                                    </article>
+                                    </Link>
                                 </li>
                             );
                         })}
                     </ul>
+                )}
+
+                {/* CC BY and CC BY-SA both require credit wherever the work is
+                    shown, and only the photographs actually on screen are
+                    credited. */}
+                {!loading && !unavailable && photoCredits.length > 0 && (
+                    <p className="mt-6 text-micro text-ds-muted-foreground/70">
+                        Category photographs: {photoCredits.join(' · ')}.
+                    </p>
                 )}
 
                 {unavailable && (

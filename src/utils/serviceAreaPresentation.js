@@ -54,51 +54,33 @@ export function countServiceAreas(areas) {
 // district, so the map is drawn from the same source as the list - no invented
 // coordinates, no geocoding call, and no coverage claim beyond what the file
 // lists. An area without well-formed numbers is simply not plotted.
-
 export function hasServiceAreaCoordinates(area) {
     return Number.isFinite(area?.latitude) && Number.isFinite(area?.longitude);
 }
 
-// Smallest box containing every plottable area, with a little padding so points
-// are not welded to the frame edge. A single area gets a fixed pad instead of a
-// zero-size box (which the tile server would render at absurd zoom).
-export function getServiceAreaBounds(areas) {
-    const points = (Array.isArray(areas) ? areas : []).filter(hasServiceAreaCoordinates);
-    if (points.length === 0) return null;
-
-    let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
-    for (const point of points) {
-        minLat = Math.min(minLat, point.latitude);
-        maxLat = Math.max(maxLat, point.latitude);
-        minLon = Math.min(minLon, point.longitude);
-        maxLon = Math.max(maxLon, point.longitude);
+// The distinct regions present in a set of areas, alphabetically - used for the
+// region filter. Derived from the data, so a region added to the file appears
+// on its own without a code change.
+export function listServiceRegions(areas) {
+    const regions = new Set();
+    for (const area of Array.isArray(areas) ? areas : []) {
+        if (isArea(area)) regions.add(area.region);
     }
-
-    const latPad = Math.max((maxLat - minLat) * 0.12, 0.12);
-    const lonPad = Math.max((maxLon - minLon) * 0.12, 0.12);
-
-    return {
-        minLat: Math.max(minLat - latPad, -90),
-        maxLat: Math.min(maxLat + latPad, 90),
-        minLon: Math.max(minLon - lonPad, -180),
-        maxLon: Math.min(maxLon + lonPad, 180),
-        count: points.length,
-    };
+    return [...regions].sort((a, b) => a.localeCompare(b));
 }
 
-// OpenStreetMap's own embed endpoint: no API key, no SDK, no tracking script -
-// just a bounding box. A marker is added ONLY for a single explicitly selected
-// district, whose coordinate is real; a whole-region view carries no pins,
-// because the file has no coordinate for a region as a whole and inventing one
-// would imply precision that does not exist.
-export function buildServiceAreaMapUrl(bounds, marker) {
-    if (!bounds) return null;
-    const bbox = [bounds.minLon, bounds.minLat, bounds.maxLon, bounds.maxLat]
-        .map((value) => value.toFixed(4))
-        .join(',');
-    const params = new URLSearchParams({ bbox, layer: 'mapnik' });
-    if (hasServiceAreaCoordinates(marker)) {
-        params.set('marker', `${marker.latitude.toFixed(4)},${marker.longitude.toFixed(4)}`);
-    }
-    return `https://www.openstreetmap.org/export/embed.html?${params.toString()}`;
+// The area a search should jump to. Prefers a district whose own name matches
+// (someone typing "Sylhet" means the district, not every area in the region),
+// then falls back to the first match in the already-filtered list, so a search
+// for a sub-area like "Uttara" still lands on the district that covers it.
+export function findSearchTarget(matches, query) {
+    const list = Array.isArray(matches) ? matches.filter(hasServiceAreaCoordinates) : [];
+    if (list.length === 0) return null;
+
+    const q = (typeof query === 'string' ? query : '').trim().toLowerCase();
+    if (!q) return null;
+
+    return list.find((area) => area.district.toLowerCase() === q)
+        || list.find((area) => area.district.toLowerCase().startsWith(q))
+        || list[0];
 }

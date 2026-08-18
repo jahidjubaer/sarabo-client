@@ -2,25 +2,30 @@ import { Link } from 'react-router';
 import { ArrowRight, Check, LayoutDashboard } from 'lucide-react';
 import useAuth from '../../../hooks/useAuth';
 import useRole from '../../../hooks/useRole';
-import ServiceSpine from '../../../components/spine/ServiceSpine';
 import { buttonVariants } from '../../../components/ui/button-variants';
 import { HERO, HERO_ASSURANCES, shouldShowCreateRequestLink, getRequestRepairAction } from '../../../utils/publicContent';
-import { getExampleJourneyModel } from '../exampleJourney';
+import { SPINE_STAGES } from '../../../utils/repairStage';
 import { cn } from '../../../lib/utils';
-import heroPhoto960 from '../../../assets/hero-repair-960.jpg';
-import heroPhoto1920 from '../../../assets/hero-repair-1920.jpg';
+import heroPhoto from '../../../assets/hero-repair-1920.jpg';
 
-// Homepage hero (Phase 3). The strongest section on the page, and the only one
-// above the fold with a marigold action.
+// Homepage hero. The strongest section on the page, and the only one above the
+// fold with a marigold action.
 //
-// Asymmetric two-column on lg (copy 7 / showcase 5) rather than a centred SaaS
-// block. Below lg the two stack, copy first, so the page stays action-first at
-// 320px.
+// EDITORIAL BLEED. The photograph is not a card sitting on the page - it is
+// pinned to the right edge of the viewport and dissolved into the page ground
+// with a gradient, so the copy reads over the same surface the photo fades
+// into. That is why the image is absolutely positioned against the section
+// rather than living in a grid cell: a grid column cannot escape the centred
+// max-w-7xl container that keeps the copy aligned with the header above it.
 //
-// The showcase is an INK panel holding a light card - the composition from the
-// approved direction. The card itself is explicitly illustrative: it shows the
-// shape of the four-stage journey and carries no tracking code, device, name,
-// timestamp or amount, and says so in its own caption. See exampleJourney.js.
+// Below lg the two stack, photograph first as a wide band, copy underneath, so
+// the page still opens on something concrete at 320px.
+//
+// The four stage pills come from SPINE_STAGES - the single source the whole
+// product uses - so this hero can never drift into a fifth stage or a renamed
+// one. They are deliberately uniform: this is the shape of every repair, not a
+// live progress bar, and lighting some of them would imply a repair that does
+// not exist.
 //
 // Role awareness reuses the existing helper: a signed-in technician or admin is
 // not shown a customer-only action. Guards remain the access boundary.
@@ -30,12 +35,38 @@ const Hero = () => {
 
     const showRequestCta = shouldShowCreateRequestLink({ user, role });
     const requestAction = getRequestRepairAction();
-    const exampleModel = getExampleJourneyModel(3);
 
     return (
-        <section className="px-4 pb-14 pt-14 sm:px-6 lg:px-8 lg:pb-20 lg:pt-20">
-            <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-14">
-                <div className="min-w-0">
+        <section className="relative overflow-hidden border-b border-ds-border">
+            {/* Photograph. A band above the copy on small screens; the right
+                edge of the viewport from lg up. */}
+            <div className="relative h-56 w-full sm:h-72 lg:absolute lg:inset-y-0 lg:right-0 lg:h-auto lg:w-[46%]">
+                {/* One file, declared at its true intrinsic size. There is no
+                    srcSet here because there is only one rendition of this
+                    photograph - advertising a 960w candidate that is the same
+                    bytes as the 1920w one would only mislead the browser's
+                    selection. Add a genuinely smaller file and a srcSet back if
+                    the mobile download cost ever needs bringing down. */}
+                <img
+                    src={heroPhoto}
+                    width="1280"
+                    height="720"
+                    loading="eager"
+                    fetchPriority="high"
+                    decoding="async"
+                    alt="A technician soldering a component onto a circuit board at a repair bench, with a memory module and hand tools laid out beside it."
+                    className="size-full object-cover"
+                />
+                {/* Two fades, because the photograph meets the page on a
+                    different edge at each size. Both are built from the page's
+                    own background token, so they resolve correctly in light and
+                    dark without a second definition. */}
+                <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-ds-background via-ds-background/25 to-transparent lg:hidden" />
+                <div aria-hidden="true" className="absolute inset-0 hidden bg-gradient-to-r from-ds-background via-ds-background/35 to-transparent lg:block" />
+            </div>
+
+            <div className="relative mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
+                <div className="max-w-xl">
                     <p className="ds-label text-ds-primary">{HERO.eyebrow}</p>
 
                     {/* The one highlighted word. A marigold underline behind a
@@ -48,7 +79,26 @@ const Hero = () => {
                         </em>
                     </h1>
 
-                    <p className="mt-5 max-w-xl text-body text-ds-muted-foreground">{HERO.description}</p>
+                    <p className="mt-5 text-body text-ds-muted-foreground">{HERO.description}</p>
+
+                    <ul className="mt-7 flex flex-wrap items-center gap-x-1 gap-y-2">
+                        {SPINE_STAGES.map((stage, index) => (
+                            <li key={stage.key} className="flex items-center gap-1">
+                                <span className="inline-flex items-center gap-2 rounded-full border border-ds-border bg-ds-card/70 px-3.5 py-1.5 text-body-sm font-semibold text-ds-foreground">
+                                    <span aria-hidden="true" className="size-1.5 rounded-full bg-ds-primary" />
+                                    {stage.label}
+                                </span>
+                                {/* The connectors are hidden below sm: at 320px
+                                    the four pills wrap to two rows, and a
+                                    connector left at the end of a row points at
+                                    nothing. The reading order still carries the
+                                    sequence. */}
+                                {index < SPINE_STAGES.length - 1 && (
+                                    <span aria-hidden="true" className="hidden h-px w-3 shrink-0 bg-ds-border sm:block" />
+                                )}
+                            </li>
+                        ))}
+                    </ul>
 
                     <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
                         {showRequestCta ? (
@@ -70,7 +120,7 @@ const Hero = () => {
 
                     {/* Three short, verifiable statements - each one describes a
                         mechanism the platform actually enforces. */}
-                    <ul className="mt-8 flex flex-col gap-3 border-t border-ds-border pt-6 sm:flex-row sm:gap-8">
+                    <ul className="mt-8 flex flex-col gap-3 border-t border-ds-border pt-6 sm:flex-row sm:gap-7">
                         {HERO_ASSURANCES.map((item) => (
                             <li key={item} className="flex max-w-[24ch] items-start gap-2 text-body-sm text-ds-muted-foreground">
                                 <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-ds-primary" />
@@ -78,59 +128,13 @@ const Hero = () => {
                             </li>
                         ))}
                     </ul>
-                </div>
 
-                {/* Ink showcase. The panel is always dark in both themes - it is
-                    a deliberate brand surface, like the footer - so the card
-                    inside keeps its own light tokens and reads on either.
-                    The photograph is the top plate of that same panel rather
-                    than a separate floating image, so the composition reads as
-                    one editorial object: photo, then the four-stage card, then
-                    the caption. */}
-                <div className="tech-grid-pattern min-w-0 overflow-hidden rounded-ds-xl border border-ds-ink-foreground/15 bg-ds-ink">
-                    {/* Real workbench photograph. The marigold hairline under it
-                        is the only accent on the image - nothing is overlaid on
-                        the photo itself, so no figure can be mistaken for a
-                        live statistic. */}
-                    <figure className="relative m-0">
-                        <img
-                            src={heroPhoto1920}
-                            srcSet={`${heroPhoto960} 960w, ${heroPhoto1920} 1920w`}
-                            sizes="(min-width: 1024px) 42vw, 100vw"
-                            width="1920"
-                            height="1272"
-                            loading="eager"
-                            fetchPriority="high"
-                            decoding="async"
-                            alt="A technician's hands lifting the heatsink off an opened laptop mainboard at a repair bench, with removed screws sorted into labelled compartments behind."
-                            className="block h-56 w-full object-cover sm:h-64 lg:h-72"
-                        />
-                        {/* Ties the photograph into the ink panel instead of
-                            letting it sit on top as a pasted rectangle. */}
-                        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,transparent_45%,var(--ds-ink)_100%)] opacity-80" />
-                        <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-0.5 bg-ds-action" />
-                    </figure>
-
-                    <div className="p-5 sm:p-7">
-                        <p className="ds-label text-ds-ink-muted">Example repair journey</p>
-
-                        <div className="mt-4 rounded-ds-lg border border-ds-border bg-ds-card p-5 shadow-lg sm:p-6">
-                            <p className="text-subhead text-ds-foreground">Every repair moves through the same four stages.</p>
-                            <div className="mt-5">
-                                <ServiceSpine model={exampleModel} orientation="vertical" />
-                            </div>
-                        </div>
-
-                        <p className="mt-4 text-micro text-ds-ink-foreground/60">
-                            An illustration of the four stages, not a live repair. Your own request shows its real
-                            stage once you submit it.
-                        </p>
-                        {/* CC BY-SA 4.0 requires visible attribution wherever the
-                            photograph is shown. */}
-                        <p className="mt-3 border-t border-ds-ink-foreground/10 pt-3 text-micro text-ds-ink-foreground/40">
-                            Photograph: “Computer repair in progress” by Vintechcomputerservices, Wikimedia Commons, CC BY-SA 4.0.
-                        </p>
-                    </div>
+                    {/* No attribution line: the photograph currently in
+                        src/assets/hero-repair-1920.jpg is not the CC BY-SA
+                        image this hero originally shipped with, and crediting
+                        the previous photographer for it would be a false
+                        attribution. If the replacement's licence requires
+                        credit, put that credit back here. */}
                 </div>
             </div>
         </section>

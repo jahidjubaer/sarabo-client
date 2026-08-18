@@ -10,11 +10,16 @@ import FinalCTA from '../FinalCTA/FinalCTA';
 // Six sections, each answering one question, in the order a visitor asks them:
 //
 //   Hero              what is this, and what do I do next?
-//   HowItWorks        what happens after I submit?      (#how-it-works)
 //   ServiceCatalogue  can you fix my kind of device?
+//   HowItWorks        what happens after I submit?      (#how-it-works)
 //   QuoteExplainer    how does pricing work?
 //   FAQ               the remaining doubts
 //   FinalCTA          the one action again
+//
+// The catalogue comes before HowItWorks deliberately: a visitor who cannot see
+// their own device listed has no reason to care how the process runs. The
+// hero's "How it works" button is an anchor (#how-it-works), so it still lands
+// on the right section from wherever that section sits.
 //
 // Weight is deliberately uneven: the hero is the strongest thing on the page
 // and carries the only marigold action above the fold, HowItWorks and FAQ sit
@@ -30,8 +35,8 @@ const Home = () => {
     return (
         <div>
             <Hero />
-            <HowItWorks />
             <ServiceCatalogue />
+            <HowItWorks />
             <QuoteExplainer />
             <FAQ />
             <FinalCTA />
