@@ -74,9 +74,16 @@ const Services = () => {
         <div>
             <section className="px-4 pb-12 pt-12 sm:px-6 lg:px-8 lg:pt-16">
                 <div className="mx-auto max-w-6xl">
-                    <p className="ds-label text-ds-primary">What we repair</p>
+                    {/* Deliberately NOT the homepage's "What we repair / Every
+                        service, with an honest range." Both pages used to open
+                        on that exact string, so following "All services" from
+                        the homepage landed on a first screen that read as the
+                        one you just left. The homepage spans a whole category;
+                        this page lists the individual repairs underneath it,
+                        and the heading now says so. */}
+                    <p className="ds-label text-ds-primary">Full catalogue</p>
                     <h1 className="mt-4 max-w-[20ch] text-3xl font-extrabold tracking-tight text-ds-foreground sm:text-4xl lg:text-display">
-                        Every service, with an honest range.
+                        The whole list, device by device.
                     </h1>
                     <p className="mt-5 max-w-2xl text-body text-ds-muted-foreground">
                         These are the repairs Sarabo currently handles, straight from the service catalogue.

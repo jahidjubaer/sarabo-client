@@ -132,24 +132,34 @@ const ServiceCatalogue = () => {
                                         )}
 
                                         <div className="flex flex-1 flex-col p-5">
-                                            <h3 className="flex items-center gap-2 text-subhead text-ds-foreground">
-                                                <Icon aria-hidden="true" className="size-4 shrink-0 text-ds-primary" />
-                                                <span className="min-w-0 truncate">{category.label}</span>
+                                            {/* The device name is the largest thing in
+                                                the card. This grid answers "do you fix my
+                                                TV?", so the answer has to lead - and the
+                                                icon sits above the title rather than
+                                                beside it, because at heading size it
+                                                crowded the word instead of labelling it. */}
+                                            <Icon aria-hidden="true" className="size-5 shrink-0 text-ds-primary" />
+                                            <h3 className="mt-2.5 text-heading text-ds-foreground">
+                                                <span className="block min-w-0 truncate">{category.label}</span>
                                             </h3>
 
                                             {/* The binding number is the quote. A
                                                 catalogue range is shown only when the
                                                 server actually stated one, and never as
-                                                a "from" price. */}
+                                                a "from" price - which is also why the
+                                                label sits ABOVE the figure. Read in
+                                                order it says "estimated range: X",
+                                                never a bare number that could be taken
+                                                for the price. */}
                                             {range ? (
                                                 <>
-                                                    <p className="ds-numeric mt-3 text-body font-semibold text-ds-foreground">{range}</p>
-                                                    <p className="ds-label mt-1 text-ds-muted-foreground">Estimated range</p>
+                                                    <p className="ds-label mt-3 text-ds-muted-foreground">Estimated range</p>
+                                                    <p className="ds-numeric mt-1 text-body-sm font-semibold text-ds-foreground">{range}</p>
                                                 </>
                                             ) : (
                                                 <>
-                                                    <p className="mt-3 text-body font-semibold text-ds-foreground">Quote after inspection</p>
-                                                    <p className="ds-label mt-1 text-ds-muted-foreground">No catalogue range yet</p>
+                                                    <p className="ds-label mt-3 text-ds-muted-foreground">No catalogue range yet</p>
+                                                    <p className="mt-1 text-body-sm font-semibold text-ds-foreground">Quote after inspection</p>
                                                 </>
                                             )}
 

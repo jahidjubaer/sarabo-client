@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLoaderData } from 'react-router';
 import { Search, MapPin, X } from 'lucide-react';
 import { EmptyState } from '../../components/common/EmptyState';
@@ -14,6 +14,55 @@ import { cn } from '../../lib/utils';
 // keyed on - never by an index, which search would shuffle.
 const areaKey = (area) => `${area.region}::${area.district}`;
 const ALL_REGIONS = 'all';
+
+// Reports whether a scroll container still has content below the fold.
+//
+// The list is capped at 32rem, so whichever row straddles that boundary gets
+// sliced through the middle of its text. With no affordance that slice reads as
+// a rendering fault rather than "there is more below". This drives a bottom
+// fade - but the fade has to be conditional in BOTH directions: shown when the
+// list overflows, it says "continues"; shown when the list fits, it would veil
+// the last row for no reason, and shown at the end of a scroll it would promise
+// content that is not there.
+//
+// Measured rather than assumed, because the cap is in rems and the row height
+// depends on how many covered areas a district lists - there is no row count at
+// which overflow reliably begins.
+function useHasMoreBelow(dependency) {
+    const ref = useRef(null);
+    const [hasMore, setHasMore] = useState(false);
+
+    useEffect(() => {
+        // Null only in the empty-results branch, which renders neither the list
+        // nor the fade - so leaving the previous value in place is harmless,
+        // and nothing reads it until a list exists again.
+        const element = ref.current;
+        if (!element) return;
+
+        const measure = () => {
+            // 1px tolerance: fractional layout heights can leave scrollTop a
+            // hair short of its true maximum at the very bottom, which would
+            // otherwise keep the fade up permanently.
+            setHasMore(element.scrollHeight - element.clientHeight - element.scrollTop > 1);
+        };
+
+        element.addEventListener('scroll', measure, { passive: true });
+        // Catches viewport resizes and font-size changes, neither of which
+        // fires a scroll event but both of which change what fits. This also
+        // performs the FIRST measurement: ResizeObserver invokes its callback
+        // once on observe(), so the initial state arrives through the
+        // subscription rather than from a synchronous setState in the effect
+        // body (which cascades a render, and which the lint rule rejects).
+        const observer = new ResizeObserver(measure);
+        observer.observe(element);
+        return () => {
+            element.removeEventListener('scroll', measure);
+            observer.disconnect();
+        };
+    }, [dependency]);
+
+    return [ref, hasMore];
+}
 
 // Public Service Areas page.
 //
@@ -51,6 +100,10 @@ const ServiceAreas = () => {
         if (clicked && hasServiceAreaCoordinates(clicked)) return clicked;
         return findSearchTarget(matches, query);
     }, [matches, selectedKey, query]);
+
+    // Re-measured whenever the filtered list changes length, since that is what
+    // decides whether the 32rem cap is reached at all.
+    const [listRef, hasMoreBelow] = useHasMoreBelow(matches.length);
 
     const hasFilters = query.trim() !== '' || region !== ALL_REGIONS;
     const resetFilters = () => { setQuery(''); setRegion(ALL_REGIONS); setSelectedKey(null); };
@@ -163,7 +216,8 @@ const ServiceAreas = () => {
                                 />
                             </div>
                         ) : (
-                            <ul className="mt-4 max-h-[32rem] overflow-y-auto rounded-ds-lg border border-ds-border bg-ds-card p-2">
+                            <div className="relative mt-4">
+                            <ul ref={listRef} className="max-h-[32rem] overflow-y-auto rounded-ds-lg border border-ds-border bg-ds-card p-2">
                                 {matches.map((area) => {
                                     const key = areaKey(area);
                                     const isFocus = focus && areaKey(focus) === key;
@@ -209,6 +263,20 @@ const ServiceAreas = () => {
                                     );
                                 })}
                             </ul>
+                            {/* Inset by a pixel on three sides so the fade sits
+                                inside the container's border instead of over
+                                it, and built from the card token so it resolves
+                                against the right ground in both themes. Purely
+                                decorative: the list is still fully reachable by
+                                keyboard and screen reader whether or not this
+                                is drawn. */}
+                            {hasMoreBelow && (
+                                <div
+                                    aria-hidden="true"
+                                    className="pointer-events-none absolute inset-x-px bottom-px h-14 rounded-b-ds-lg bg-gradient-to-t from-ds-card via-ds-card/80 to-transparent"
+                                />
+                            )}
+                            </div>
                         )}
                     </div>
                 </div>
