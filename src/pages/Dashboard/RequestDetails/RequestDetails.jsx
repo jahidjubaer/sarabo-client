@@ -320,12 +320,13 @@ const RequestDetails = () => {
                             Self-guards on deliveryStatus === 'repair_completed', so it
                             renders nothing until the repair is done. */}
                         <ReceiptConfirmationSection requestId={request._id} request={request} isOwner={isOwner} />
-                        {/* Phase 8.11: admin-only technician-earning settlement.
+                        {/* Legacy technician earning, read-only since Phase 9 - the
+                            per-repair payout control is retired and payouts now run
+                            through the wallet withdrawal queue. Kept so pre-Phase-9
+                            repairs still show what was recorded against them.
                             request.technicianEarning is returned by the server only
                             to admins; the component self-guards on its presence. */}
-                        {isAdminContext && request.deliveryStatus === 'repair_completed' && (
-                            <TechnicianEarningSettlement requestId={request._id} earning={request.technicianEarning} />
-                        )}
+                        {isAdminContext && <TechnicianEarningSettlement earning={request.technicianEarning} />}
 
                         {!isV2Request && (
                             <SectionCard title="Repair request">

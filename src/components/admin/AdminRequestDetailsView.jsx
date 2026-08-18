@@ -26,9 +26,6 @@ const ATTENTION_STYLES = {
 
 function getAdminAttention(request) {
     const presentation = getStatusPresentation(request?.deliveryStatus);
-    const settlementPending = request?.deliveryStatus === 'repair_completed'
-        && request?.technicianEarning
-        && request.technicianEarning.status !== 'paid';
 
     if (request?.deliveryStatus === 'pending-pickup') {
         return {
@@ -39,15 +36,12 @@ function getAdminAttention(request) {
             action: { kind: 'route', label: 'Find technicians', to: `/dashboard/assign-technicians?request=${request._id}`, Icon: UserCog },
         };
     }
-    if (settlementPending) {
-        return {
-            tone: 'action',
-            eyebrow: 'Admin action required',
-            title: 'Record Technician settlement',
-            description: 'Repair work is complete and the recorded Technician earning is still pending settlement.',
-            action: { kind: 'settlement' },
-        };
-    }
+    // RETIRED (Phase 9): the "Record Technician settlement" attention state.
+    // A completed repair no longer asks an admin to settle anything here -
+    // the technician's 90% is snapshotted automatically at payment and paid
+    // out from /dashboard/withdrawal-requests when they request it. Keeping
+    // this as an action item would have pointed at a control that no longer
+    // exists and an endpoint that no longer answers.
     if (request?.deliveryStatus === 'cancelled' || request?.deliveryStatus === 'quote_rejected') {
         return {
             tone: 'terminal',
@@ -61,9 +55,7 @@ function getAdminAttention(request) {
             tone: 'done',
             eyebrow: 'Workflow update',
             title: presentation.label,
-            description: request?.technicianEarning?.status === 'paid'
-                ? 'Repair work is complete and the recorded Technician earning is marked as paid.'
-                : presentation.customerDescription,
+            description: presentation.customerDescription,
         };
     }
     return {
@@ -96,11 +88,6 @@ function AdminAttentionPanel({ request }) {
                             <ActionIcon aria-hidden="true" /> {attention.action.label}
                         </Link>
                     )}
-                    {attention.action?.kind === 'settlement' && (
-                        <div className="mt-4">
-                            <TechnicianEarningSettlement requestId={request._id} earning={request.technicianEarning} />
-                        </div>
-                    )}
                 </div>
             </div>
         </section>
@@ -123,8 +110,10 @@ function SectionCard({ id, eyebrow, title, children }) {
 
 function AdminRequestDetailsView({ request, sections, isV2Request }) {
     const handover = getHandoverState(request);
-    const settlementVisible = request.deliveryStatus === 'repair_completed' && request.technicianEarning;
-    const settlementPending = settlementVisible && request.technicianEarning.status !== 'paid';
+    // Shown for any repair that carries a legacy earning, paid or not - it is a
+    // historical record now, not a queue, so hiding the unsettled ones would
+    // hide exactly the rows an admin is most likely to be asked about.
+    const hasLegacyEarning = !!request.technicianEarning;
 
     return (
         <Motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-6">
@@ -176,9 +165,9 @@ function AdminRequestDetailsView({ request, sections, isV2Request }) {
                         </SectionCard>
                     )}
 
-                    {settlementVisible && !settlementPending && (
+                    {hasLegacyEarning && (
                         <SectionCard id="admin-settlement" eyebrow="Internal accounting" title="Technician settlement">
-                            <TechnicianEarningSettlement requestId={request._id} earning={request.technicianEarning} />
+                            <TechnicianEarningSettlement earning={request.technicianEarning} />
                         </SectionCard>
                     )}
 

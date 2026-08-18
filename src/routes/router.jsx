@@ -31,6 +31,8 @@ import RequestDetails from "../pages/Dashboard/RequestDetails/RequestDetails";
 import Profile from "../pages/Dashboard/Profile/Profile";
 import ManageRepairRequests from "../pages/Dashboard/ManageRepairRequests/ManageRepairRequests";
 import NotificationsPage from "../pages/Dashboard/Notifications/NotificationsPage";
+import Wallet from "../pages/Dashboard/Wallet/Wallet";
+import WithdrawalRequests from "../pages/Dashboard/WithdrawalRequests/WithdrawalRequests";
 
 export const router = createBrowserRouter([
   {
@@ -162,6 +164,13 @@ export const router = createBrowserRouter([
         path: 'completed-jobs',
         element: <TechnicianRoute><CompletedJobs></CompletedJobs></TechnicianRoute>
       },
+      {
+        // Technician wallet (Phase 9). Technician-only: the server derives whose
+        // wallet this is from the verified token, so the guard here is UX - it
+        // keeps a customer or admin from landing on a page that would 403.
+        path: 'wallet',
+        element: <TechnicianRoute><Wallet></Wallet></TechnicianRoute>
+      },
 
       // admin only routes
       {
@@ -183,6 +192,13 @@ export const router = createBrowserRouter([
       {
         path: 'manage-repair-requests/:id',
         element: <AdminRoute><RequestDetails></RequestDetails></AdminRoute>
+      },
+      {
+        // Admin withdrawal queue (Phase 9) - the single place technician payouts
+        // are marked paid or rejected, replacing the retired per-repair
+        // technician-earning control on the request detail view.
+        path: 'withdrawal-requests',
+        element: <AdminRoute><WithdrawalRequests></WithdrawalRequests></AdminRoute>
       }
     ]
   }
