@@ -33,12 +33,16 @@ import ManageRepairRequests from "../pages/Dashboard/ManageRepairRequests/Manage
 import NotificationsPage from "../pages/Dashboard/Notifications/NotificationsPage";
 import Wallet from "../pages/Dashboard/Wallet/Wallet";
 import WithdrawalRequests from "../pages/Dashboard/WithdrawalRequests/WithdrawalRequests";
+import ApplicationLayout from "../layouts/ApplicationLayout";
 
 export const router = createBrowserRouter([
   {
-    path: "/",
-    Component: RootLayout,
+    Component: ApplicationLayout,
     children: [
+      {
+        path: "/",
+        Component: RootLayout,
+        children: [
       {
         index: true,
         Component: Home
@@ -78,11 +82,11 @@ export const router = createBrowserRouter([
         Component: TrackRequest
       }
     ]
-  },
-  {
-    path: '/',
-    Component: AuthLayout,
-    children: [
+      },
+      {
+        path: '/',
+        Component: AuthLayout,
+        children: [
       {
         path: 'login',
         Component: Login
@@ -92,11 +96,11 @@ export const router = createBrowserRouter([
         Component: Register
       }
     ]
-  },
-  {
-    path: 'dashboard',
-    element: <PrivateRoute><DashboardLayout></DashboardLayout></PrivateRoute>,
-    children: [
+      },
+      {
+        path: 'dashboard',
+        element: <PrivateRoute><DashboardLayout></DashboardLayout></PrivateRoute>,
+        children: [
       {
         index: true,
         Component: DashboardHome
@@ -199,6 +203,8 @@ export const router = createBrowserRouter([
         // technician-earning control on the request detail view.
         path: 'withdrawal-requests',
         element: <AdminRoute><WithdrawalRequests></WithdrawalRequests></AdminRoute>
+      }
+    ]
       }
     ]
   }
