@@ -34,6 +34,7 @@ import NotificationsPage from "../pages/Dashboard/Notifications/NotificationsPag
 import Wallet from "../pages/Dashboard/Wallet/Wallet";
 import WithdrawalRequests from "../pages/Dashboard/WithdrawalRequests/WithdrawalRequests";
 import ApplicationLayout from "../layouts/ApplicationLayout";
+import AdminFeedbackPage from "../pages/Dashboard/TechnicianFeedback/AdminFeedbackPage";
 
 export const router = createBrowserRouter([
   {
@@ -177,6 +178,14 @@ export const router = createBrowserRouter([
       },
 
       // admin only routes
+      {
+        path: 'technician-reports',
+        element: <AdminRoute><AdminFeedbackPage kind="reports" /></AdminRoute>
+      },
+      {
+        path: 'technician-reviews',
+        element: <AdminRoute><AdminFeedbackPage kind="reviews" /></AdminRoute>
+      },
       {
         path: 'approve-technicians',
         element: <AdminRoute><ApproveTechnicians></ApproveTechnicians></AdminRoute>

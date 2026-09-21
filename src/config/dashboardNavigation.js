@@ -1,6 +1,6 @@
 import {
     LayoutDashboard, PlusCircle, Wrench, CreditCard, ClipboardList, CheckCheck,
-    UserCog, UserCheck, Users, Bell, User, Home, Wallet, Banknote,
+    UserCog, UserCheck, Users, Bell, User, Home, Wallet, Banknote, MessageSquare, ClipboardCheck,
 } from 'lucide-react';
 
 // Canonical, role-aware dashboard navigation (Phase 7.2). Single source of
@@ -52,6 +52,13 @@ const ADMIN_SECTIONS = [
             { label: 'Approve Technicians', to: '/dashboard/approve-technicians', icon: UserCheck },
             { label: 'Withdrawal Requests', to: '/dashboard/withdrawal-requests', icon: Banknote },
             { label: 'Users', to: '/dashboard/users-management', icon: Users },
+        ],
+    },
+    {
+        heading: 'Feedback & reports',
+        items: [
+            { label: 'Technician reports', to: '/dashboard/technician-reports', icon: ClipboardCheck },
+            { label: 'Technician reviews', to: '/dashboard/technician-reviews', icon: MessageSquare },
         ],
     },
 ];
@@ -110,6 +117,8 @@ export const SEGMENT_LABELS = {
     'users-management': 'Users',
     wallet: 'Wallet',
     'withdrawal-requests': 'Withdrawal Requests',
+    'technician-reports': 'Technician reports',
+    'technician-reviews': 'Technician reviews',
     notifications: 'Notifications',
     profile: 'Profile',
     payment: 'Payment',

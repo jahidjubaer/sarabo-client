@@ -3,6 +3,9 @@ import useAxiosSecure from './useAxiosSecure';
 import { repairKeys } from './repairKeys';
 import { walletKeys } from './walletKeys';
 import { startRepair, addProgress, completeRepair, confirmReceipt } from '../api/repairs';
+import useAuth from './useAuth';
+import { auth } from '../firebase/firebase.init';
+import { repairFeedbackKeys, repairFeedbackGeneration } from './repairFeedbackKeys';
 
 // Shared invalidation: after any repair write, refresh the repair query (so the
 // timeline/summary re-render), the request-detail query (deliveryStatus
@@ -58,6 +61,9 @@ export function useCompleteRepair(requestId) {
 // "Confirm Device Received" action is replaced by the confirmed state.
 export function useConfirmReceipt(requestId) {
     const axiosSecure = useAxiosSecure();
+    const { user } = useAuth();
+    const queryClient = useQueryClient();
+    const feedbackGeneration = repairFeedbackGeneration(queryClient);
     const invalidate = useRepairInvalidation(requestId, [
         ['my-requests'],
         ['completedRepairs'],
@@ -68,6 +74,11 @@ export function useConfirmReceipt(requestId) {
     ]);
     return useMutation({
         mutationFn: () => confirmReceipt(axiosSecure, requestId),
+        onSuccess: () => {
+            if (user?.uid && auth.currentUser?.uid === user.uid && repairFeedbackGeneration(queryClient) === feedbackGeneration) {
+                queryClient.invalidateQueries({ queryKey: repairFeedbackKeys.request(user.uid, requestId), exact: true });
+            }
+        },
         onSettled: invalidate,
     });
 }

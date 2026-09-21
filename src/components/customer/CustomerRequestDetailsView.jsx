@@ -9,6 +9,7 @@ import QuoteSection from '../quote/QuoteSection';
 import V2PaymentSection from '../payment/V2PaymentSection';
 import RepairSection from '../repair/RepairSection';
 import ReceiptConfirmationSection from '../repair/ReceiptConfirmationSection';
+import CustomerTechnicianFeedback from '../feedback/customer/CustomerTechnicianFeedback';
 import { WorkspaceContextPanels } from '../workspace/WorkspaceContextPanels';
 import { getStatusPresentation } from '../../config/statusPresentation';
 import { getRequestAction, getRequestGroup } from '../../utils/customerRequestPresentation';
@@ -141,6 +142,7 @@ function CustomerRequestDetailsView({ request, sections, isV2Request, damageImag
             <ReceiptConfirmationSection requestId={request._id} request={request} isOwner />
         </SectionCard>
     );
+    const feedbackSection = <CustomerTechnicianFeedback requestId={request._id} />;
 
     return (
         <Motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-6">
@@ -150,7 +152,7 @@ function CustomerRequestDetailsView({ request, sections, isV2Request, damageImag
 
             {quoteIsFocused && <Motion.div variants={staggerItem}>{quoteSection}</Motion.div>}
             {paymentIsFocused && <Motion.div variants={staggerItem}>{paymentSection}</Motion.div>}
-            {handoverIsFocused && <Motion.div variants={staggerItem}>{handoverSection}</Motion.div>}
+            {handoverIsFocused && <Motion.div variants={staggerItem} className="space-y-6">{handoverSection}{feedbackSection}</Motion.div>}
 
             <Motion.div variants={staggerItem}>
                 <Card>
@@ -188,6 +190,7 @@ function CustomerRequestDetailsView({ request, sections, isV2Request, damageImag
                         </SectionCard>
                     )}
                     {!handoverIsFocused && handover && handoverSection}
+                    {!handoverIsFocused && feedbackSection}
                     {sections.showDamage && (
                         <SectionCard id="repair-photos" title="Damage photos">
                             <DamageImageManager requestId={request._id} canEdit={damageImagesEditable} />

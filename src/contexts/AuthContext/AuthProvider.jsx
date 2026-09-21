@@ -10,6 +10,8 @@ import { inspectionKeys } from '../../hooks/inspectionKeys';
 import { quoteKeys } from '../../hooks/quoteKeys';
 import { paymentKeys } from '../../hooks/paymentKeys';
 import { repairKeys } from '../../hooks/repairKeys';
+import { clearAdminFeedbackCache, clearTechnicianReviewCache, watchFeedbackRole } from '../../hooks/technicianFeedbackKeys';
+import { clearRepairFeedbackCache, watchRepairFeedbackRole } from '../../hooks/repairFeedbackKeys';
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -44,6 +46,9 @@ const AuthProvider = ({ children }) => {
     }
 
     const logOut = () => {
+        clearAdminFeedbackCache(queryClient);
+        clearTechnicianReviewCache(queryClient);
+        clearRepairFeedbackCache(queryClient);
         setLoading(true);
         return signOut(auth);
     }
@@ -75,6 +80,9 @@ const AuthProvider = ({ children }) => {
     // Returns the fresh verified boolean. Never persists a token manually.
     const refreshCurrentUser = async () => {
         if (!auth.currentUser) return false;
+        clearAdminFeedbackCache(queryClient);
+        clearTechnicianReviewCache(queryClient);
+        clearRepairFeedbackCache(queryClient);
         await auth.currentUser.reload();
         try {
             await auth.currentUser.getIdToken(true);
@@ -86,6 +94,11 @@ const AuthProvider = ({ children }) => {
         setAuthVersion((v) => v + 1);
         return auth.currentUser.emailVerified === true;
     }
+
+    // Private feedback caches are also cleared when the stored role is removed
+    // or changes away from the role authorized to read that cache namespace.
+    useEffect(() => watchFeedbackRole(queryClient, roleKeys.current()), [queryClient]);
+    useEffect(() => watchRepairFeedbackRole(queryClient, roleKeys.current()), [queryClient]);
 
     // observe user state
     useEffect(() => {
@@ -106,6 +119,9 @@ const AuthProvider = ({ children }) => {
             // already-settled cache, it doesn't stop a pending request from
             // writing its result in later.
             if (previousUid !== undefined && previousUid !== nextUid) {
+                clearAdminFeedbackCache(queryClient);
+                clearTechnicianReviewCache(queryClient);
+                clearRepairFeedbackCache(queryClient);
                 queryClient.cancelQueries({ queryKey: notificationKeys.all });
                 queryClient.removeQueries({ queryKey: notificationKeys.all });
                 queryClient.cancelQueries({ queryKey: roleKeys.current() });
