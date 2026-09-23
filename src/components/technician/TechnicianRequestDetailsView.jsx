@@ -11,7 +11,7 @@ import QuoteRejectedActions from '../quote/QuoteRejectedActions';
 import RepairSection from '../repair/RepairSection';
 import ReceiptConfirmationSection from '../repair/ReceiptConfirmationSection';
 import TechnicianSettlementSummary from '../repair/TechnicianSettlementSummary';
-import { getTechnicianAttention } from '../../utils/technicianJobPresentation';
+import { getTechnicianAttention, getJobGroup } from '../../utils/technicianJobPresentation';
 import { getHandoverState } from '../../utils/repairStage';
 import { staggerContainer, staggerItem } from '../../theme/motion';
 
@@ -56,7 +56,7 @@ function TechnicianRequestDetailsView({
             ? '#technician-quote'
             : quoteDeclined
                 ? '#technician-quote-decision'
-                : (attention.kind === 'action' && sections.showRepair ? '#technician-repair' : null);
+                : ((attention.kind === 'action' || getJobGroup(request) === 'in-repair') && sections.showRepair ? '#technician-repair' : null);
     const actionLabel = actionTarget ? attention.action?.label : null;
 
     return (

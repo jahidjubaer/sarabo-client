@@ -12,7 +12,7 @@ import { CardSkeleton } from '../common/Skeletons';
 import { buttonVariants } from '../ui/button-variants';
 import { TechnicianActiveJob } from './TechnicianActiveJob';
 import { TechnicianRecentJobs } from './TechnicianRecentJobs';
-import { summarizeJobs, selectActiveJob, getRecentJobs } from '../../utils/technicianJobPresentation';
+import { summarizeJobs, selectActiveJob, getPriorityJobs } from '../../utils/technicianJobPresentation';
 import { getStatusPresentation } from '../../config/statusPresentation';
 import { getRepairStatusActionErrorMessage } from '../../utils/repairStatusActionErrorMessage';
 import { notify } from '../../lib/notify';
@@ -94,7 +94,7 @@ function TechnicianOverview() {
 
     const summary = summarizeJobs(jobs);
     const activeJob = selectActiveJob(jobs);
-    const recent = getRecentJobs(jobs.filter((job) => job._id !== activeJob?._id), 4);
+    const recent = getPriorityJobs(jobs.filter((job) => job._id !== activeJob?._id), 4);
     const allJobsAction = summary.total > 0 ? (
         <Link to="/dashboard/assigned-jobs" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
             All assigned jobs

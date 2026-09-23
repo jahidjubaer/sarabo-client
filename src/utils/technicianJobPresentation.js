@@ -120,9 +120,20 @@ export function getTechnicianAttention(job) {
     const action = getTechnicianAction(job);
     const group = getJobGroup(job);
     const spine = getSpineModel(job);
-    const actionRequired = group === 'needs-attention' || group === 'in-repair';
+    // Only jobs waiting on the technician read as "Action required". A repair
+    // already under way keeps its Continue link but is labelled as in
+    // progress - a permanent alert on it trained technicians to ignore alerts.
+    if (group === 'in-repair') {
+        return {
+            kind: 'waiting',
+            eyebrow: 'In repair',
+            title: presentation.label,
+            description: presentation.technicianNextStep || presentation.technicianDescription,
+            action,
+        };
+    }
 
-    if (actionRequired) {
+    if (group === 'needs-attention') {
         return {
             kind: 'action',
             eyebrow: 'Action required',
@@ -174,6 +185,26 @@ function byNewest(a, b) {
     return new Date(b?.createdAt || 0) - new Date(a?.createdAt || 0);
 }
 
+function byOldest(a, b) {
+    return new Date(a?.createdAt || 0) - new Date(b?.createdAt || 0);
+}
+
+// Priority order: needs-attention, in-repair, waiting, completed. Within
+// needs-attention, new assignment offers come first (they are time-sensitive
+// and hold the request until answered), then the rest oldest first, so work
+// is handled in the order it arrived. Every other group is newest first.
+function comparePriority(a, b) {
+    const rank = PRIORITY_RANK[getJobGroup(a)] - PRIORITY_RANK[getJobGroup(b)];
+    if (rank !== 0) return rank;
+    if (getJobGroup(a) === 'needs-attention') {
+        const offerA = getRequestStatus(a) === 'assignment_pending';
+        const offerB = getRequestStatus(b) === 'assignment_pending';
+        if (offerA !== offerB) return offerA ? -1 : 1;
+        return byOldest(a, b);
+    }
+    return byNewest(a, b);
+}
+
 export function summarizeJobs(jobs) {
     const list = Array.isArray(jobs) ? jobs : [];
     let needsAttention = 0;
@@ -188,22 +219,17 @@ export function summarizeJobs(jobs) {
     return { total: list.length, needsAttention, inRepair, completed };
 }
 
-// Deterministic "current/next" job: newest needs-attention, else newest
-// in-repair, else newest waiting, else the newest of whatever remains.
+// Deterministic "current/next" job: the first job in priority order.
 export function selectActiveJob(jobs) {
     const list = Array.isArray(jobs) ? jobs : [];
-    const pick = (predicate) => list.filter(predicate).sort(byNewest)[0];
-    return (
-        pick((job) => getJobGroup(job) === 'needs-attention')
-        || pick((job) => getJobGroup(job) === 'in-repair')
-        || pick((job) => getJobGroup(job) === 'waiting')
-        || pick(() => true)
-        || null
-    );
+    return [...list].sort(comparePriority)[0] || null;
 }
 
-export function getRecentJobs(jobs, count = 4) {
-    return [...(Array.isArray(jobs) ? jobs : [])].sort(byNewest).slice(0, count);
+// The next few jobs after the featured one, in the same priority order, so a
+// job that needs the technician is never pushed off the list by newer
+// completed or cancelled jobs.
+export function getPriorityJobs(jobs, count = 4) {
+    return [...(Array.isArray(jobs) ? jobs : [])].sort(comparePriority).slice(0, count);
 }
 
 export function jobMatchesSearch(job, query) {
@@ -218,9 +244,8 @@ export function jobMatchesSearch(job, query) {
     return haystack.includes(needle);
 }
 
-// Pure filter + sort pipeline over already-loaded jobs. Priority (default) ranks
-// action-needed first, then in-repair, then waiting, then completed; within a
-// rank, newest first.
+// Pure filter + sort pipeline over already-loaded jobs. Priority (default)
+// follows comparePriority above.
 export function applyJobView(jobs, { search = '', group = 'all', sort = 'priority' } = {}) {
     let list = (Array.isArray(jobs) ? jobs : []).filter((job) => jobMatchesSearch(job, search));
     if (group !== 'all') {
@@ -229,9 +254,9 @@ export function applyJobView(jobs, { search = '', group = 'all', sort = 'priorit
     if (sort === 'newest') {
         list = [...list].sort(byNewest);
     } else if (sort === 'oldest') {
-        list = [...list].sort((a, b) => new Date(a?.createdAt || 0) - new Date(b?.createdAt || 0));
+        list = [...list].sort(byOldest);
     } else {
-        list = [...list].sort((a, b) => (PRIORITY_RANK[getJobGroup(a)] - PRIORITY_RANK[getJobGroup(b)]) || byNewest(a, b));
+        list = [...list].sort(comparePriority);
     }
     return list;
 }
