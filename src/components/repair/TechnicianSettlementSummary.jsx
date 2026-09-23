@@ -32,7 +32,9 @@ function TechnicianSettlementSummary({ settlement, compact = false }) {
         description: 'See Wallet for the current accounting state.',
     };
     const commissionPercent = Number.isFinite(Number(settlement.commissionRate))
-        ? `${Number(settlement.commissionRate) * 100}%`
+        // Rounded to at most two decimals: 0.07 * 100 is 7.000000000000001 in
+        // floating point. Number() drops trailing zeros (7, 12.5).
+        ? `${Number((Number(settlement.commissionRate) * 100).toFixed(2))}%`
         : null;
 
     return (
