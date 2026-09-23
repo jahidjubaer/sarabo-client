@@ -21,6 +21,7 @@ import { deleteRepairRequest } from '../../../api/repairRequests';
 import { removeDeletedRequestCaches } from '../../../utils/removeDeletedRequestCaches';
 import { applyRequestView } from '../../../utils/customerRequestPresentation';
 import { isUserEmailVerified } from '../../../utils/emailVerification';
+import { createV2Checkout } from '../../../api/payments';
 
 // Phase 7.3: My Requests redesigned onto the design system (no DaisyUI here).
 // Deletion / cancellation / payment BUSINESS behaviour is unchanged - the same
@@ -156,12 +157,17 @@ const MyRequests = () => {
     );
 
     // Only the request id is sent - amount and identity are resolved server-side.
+    // canOfferPayment only offers Pay for a v2 request whose quote is approved,
+    // so this uses the v2 approved-quote checkout - the same call the request
+    // details page makes. (It previously posted to the legacy
+    // /payment-checkout-session, which rejects every v2 request.)
     const handlePayment = async (request) => {
         if (payingId) return;
         setPayingId(request._id);
         try {
-            const res = await axiosSecure.post('/payment-checkout-session', { requestId: request._id });
-            window.location.assign(res.data.url);
+            const { url } = await createV2Checkout(axiosSecure, request._id);
+            if (!url) throw new Error('missing checkout url');
+            window.location.assign(url);
         } catch (error) {
             if (import.meta.env.DEV) console.error('Checkout session creation failed:', error);
             notify.error(getPaymentErrorMessage(error));
