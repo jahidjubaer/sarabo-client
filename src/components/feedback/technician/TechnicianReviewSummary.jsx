@@ -16,10 +16,18 @@ export function ReviewStars({ rating }) {
 }
 
 export default function TechnicianReviewSummary({ averageRating, reviewCount }) {
-    if (reviewCount === 0 && averageRating === null) return (
+    if (reviewCount === 0 && (averageRating === null || averageRating === undefined)) return (
         <div className="space-y-1 rounded-ds border border-ds-border bg-ds-muted/30 p-4">
             <h3 className="text-sm font-semibold">No reviews yet</h3>
             <p className="text-sm text-ds-muted-foreground">There are no visible customer reviews for your account.</p>
+        </div>
+    );
+    // The server may report reviews without a usable average (e.g. a null
+    // aggregate); calling toFixed on that would crash the whole profile page.
+    if (typeof averageRating !== 'number' || !Number.isFinite(averageRating)) return (
+        <div className="space-y-1 rounded-ds border border-ds-border bg-ds-muted/30 p-4">
+            <h3 className="text-sm font-semibold">Rating unavailable</h3>
+            <p className="text-sm text-ds-muted-foreground">Your average rating could not be shown right now.</p>
         </div>
     );
     // Formatting the server aggregate is not a client-side average calculation.
