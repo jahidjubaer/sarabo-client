@@ -19,15 +19,22 @@ import { formatAbsoluteDateTime } from '../../../utils/relativeTime';
 import { getManageRepairRequestsErrorMessage } from '../../../utils/manageRepairRequestsErrorMessage';
 import { cn } from '../../../lib/utils';
 import { Select } from '../../../components/ui/select';
+import { getStatusLabel } from '../../../config/status';
 
+// Exactly the statuses GET /admin/repair-requests can filter on (the server's
+// ADMIN_LIST_VALID_STATUSES). The server ignores any other value and returns
+// every row, so offering a status outside this list would show a wrong result.
+// Labels come from the status registry so they match the badges in the table
+// (this list previously called a collected device "Repair In Progress").
+// parcel_delivered shares the "Repair Completed" badge with repair_completed,
+// which the server cannot filter, so its option says what it actually selects.
+const FILTERABLE_STATUSES = ['pending-pickup', 'driver_assigned', 'rider_arriving', 'parcel_picked_up', 'parcel_delivered', 'cancelled'];
 const STATUS_OPTIONS = [
     { value: 'all', label: 'All statuses' },
-    { value: 'pending-pickup', label: 'Request Submitted' },
-    { value: 'driver_assigned', label: 'Technician Assigned' },
-    { value: 'rider_arriving', label: 'Technician On The Way' },
-    { value: 'parcel_picked_up', label: 'Repair In Progress' },
-    { value: 'parcel_delivered', label: 'Repair Completed' },
-    { value: 'cancelled', label: 'Request Cancelled' },
+    ...FILTERABLE_STATUSES.map((value) => ({
+        value,
+        label: value === 'parcel_delivered' ? 'Received by customer' : getStatusLabel('repair', value),
+    })),
 ];
 const PAYMENT_OPTIONS = [
     { value: 'all', label: 'All payments' },
