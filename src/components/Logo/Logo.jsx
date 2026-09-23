@@ -1,8 +1,8 @@
-import { Link } from 'react-router';
-import logoLockup from '../../assets/logo.png';
-import logoMark from '../../assets/logo-mark.png';
-import logoLockupOnInk from '../../assets/logo-on-ink.png';
-import logoMarkOnInk from '../../assets/logo-mark-on-ink.png';
+import { Link } from "react-router";
+import logoMarkOnInk from "../../assets/logo-mark-on-ink.png";
+import logoMark from "../../assets/logo-mark.png";
+import logoLockupOnInk from "../../assets/logo-on-ink.png";
+import logoLockup from "../../assets/logo.png";
 
 // Brand lockup (Phase 8.9/8.10; adaptive brand-lockup integration). Four
 // transparent RGBA assets, one component - two axes:
@@ -40,34 +40,47 @@ import logoMarkOnInk from '../../assets/logo-mark-on-ink.png';
 // own alt would announce the brand twice - or, on the adaptive surfaces, four
 // times - on a single control.
 const ASSETS = {
-    paper: { lockup: logoLockup, mark: logoMark },
-    ink: { lockup: logoLockupOnInk, mark: logoMarkOnInk },
+  paper: { lockup: logoLockup, mark: logoMark },
+  ink: { lockup: logoLockupOnInk, mark: logoMarkOnInk },
 };
 
 const Logo = ({
-    className = '',
-    imgClassName = 'h-8',
-    to = '/',
-    ariaLabel = 'Sarabo home',
-    showWordmark = true,
-    surface = 'adaptive',
-    onClick,
+  className = "",
+  imgClassName = "h-8",
+  to = "/",
+  ariaLabel = "Sarabo home",
+  showWordmark = true,
+  surface = "adaptive",
+  onClick,
 }) => {
-    const key = showWordmark ? 'lockup' : 'mark';
-    const imgBase = `${imgClassName} w-auto rounded-ds object-contain`;
+  const key = showWordmark ? "lockup" : "mark";
+  const imgBase = `${imgClassName} w-auto rounded-ds object-contain`;
 
-    return (
-        <Link to={to} aria-label={ariaLabel} onClick={onClick} className={`focus-ring inline-flex items-center rounded-ds ${className}`}>
-            {surface === 'ink' ? (
-                <img src={ASSETS.ink[key]} alt="" className={imgBase} />
-            ) : (
-                <>
-                    <img src={ASSETS.paper[key]} alt="" className={`${imgBase} in-[.dark]:hidden`} />
-                    <img src={ASSETS.ink[key]} alt="" className={`hidden ${imgBase} in-[.dark]:block`} />
-                </>
-            )}
-        </Link>
-    );
+  return (
+    <Link
+      to={to}
+      aria-label={ariaLabel}
+      onClick={onClick}
+      className={`focus-ring inline-flex items-center rounded-ds ${className}`}
+    >
+      {surface === "ink" ? (
+        <img src={ASSETS.ink[key]} alt="" className={imgBase} />
+      ) : (
+        <>
+          <img
+            src={ASSETS.paper[key]}
+            alt=""
+            className={`${imgBase} in-[.dark]:hidden`}
+          />
+          <img
+            src={ASSETS.ink[key]}
+            alt=""
+            className={`hidden ${imgBase} in-[.dark]:block`}
+          />
+        </>
+      )}
+    </Link>
+  );
 };
 
 export default Logo;

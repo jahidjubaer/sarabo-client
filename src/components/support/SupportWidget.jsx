@@ -198,6 +198,7 @@ function SupportWidget() {
         <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
                 <Button
+                    data-tour="ai-support"
                     variant="ink"
                     size="lg"
                     className="fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-40 h-12 rounded-full px-4 shadow-lg sm:right-6 sm:bottom-6"

@@ -86,9 +86,8 @@ const Services = () => {
                         The whole list, device by device.
                     </h1>
                     <p className="mt-5 max-w-2xl text-body text-ds-muted-foreground">
-                        These are the repairs Sarabo currently handles, straight from the service catalogue.
-                        Each range is an estimate — the price you actually pay is the quote your technician
-                        prepares after inspecting the device, and you approve it before any work begins.
+                        Browse repairs and indicative estimates by device. After inspection, review your
+                        Technician's itemised quote before approving the repair.
                     </p>
                 </div>
             </section>
@@ -104,7 +103,7 @@ const Services = () => {
                     )}
 
                     {!loading && !unavailable && (
-                        <div className="flex flex-col gap-6">
+                        <div className="flex flex-col gap-8">
                             {categories.map((category) => {
                                 const Icon = getProductCategoryIcon(category.slug);
                                 const services = getServicesForProduct(definitions, category.slug);
@@ -115,8 +114,8 @@ const Services = () => {
                                 return (
                                     <section key={category.slug} className="overflow-hidden rounded-ds-lg border border-ds-border bg-ds-card">
                                         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-ds-border bg-ds-muted/50 px-5 py-4 sm:px-6">
-                                            <h2 className="flex items-center gap-3 text-subhead text-ds-foreground">
-                                                <span className="flex size-10 items-center justify-center rounded-ds border border-ds-border bg-ds-card">
+                                            <h2 className="flex min-w-0 items-center gap-3 text-heading text-ds-foreground">
+                                                <span className="flex size-10 shrink-0 items-center justify-center text-ds-primary">
                                                     <Icon aria-hidden="true" className="size-5" />
                                                 </span>
                                                 {category.label}
@@ -166,12 +165,12 @@ const Services = () => {
                                                         {to ? (
                                                             <Link
                                                                 to={to}
-                                                                className="focus-ring group flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-ds-muted/50 sm:px-6"
+                                                                className="focus-ring group flex flex-col items-start justify-between gap-3 px-5 py-4 transition-colors hover:bg-ds-muted/50 sm:flex-row sm:items-center sm:px-6"
                                                             >
                                                                 {row}
                                                             </Link>
                                                         ) : (
-                                                            <div className="flex items-center justify-between gap-4 px-5 py-4 sm:px-6">{row}</div>
+                                                            <div className="flex flex-col items-start justify-between gap-3 px-5 py-4 sm:flex-row sm:items-center sm:px-6">{row}</div>
                                                         )}
                                                     </li>
                                                 );

@@ -23,13 +23,12 @@ const footerLink = 'focus-ring inline-flex min-h-9 items-center rounded-ds text-
 
 const Footer = () => (
     <footer className="border-t border-ds-border bg-ds-ink text-ds-ink-foreground">
-        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="lg:col-span-2">
                     <Logo surface="ink" />
                     <p className="mt-4 max-w-sm text-body-sm text-ds-ink-foreground/70">
-                        Sarabo manages electronics and appliance repairs end to end &mdash; request, technician
-                        assignment, inspection, an agreed quote, and tracked completion.
+                        Electronics and appliance repairs, with clear quotes and trackable progress.
                     </p>
                 </div>
 
@@ -51,7 +50,10 @@ const Footer = () => (
                 <p className="text-micro text-ds-ink-foreground/50">
                     &copy; {new Date().getFullYear()} Sarabo. All rights reserved.
                 </p>
-                <p className="ds-label text-ds-ink-foreground/40">Prices in BDT</p>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                    <Link to="/?tour=start" className={footerLink}>Take a tour</Link>
+                    <p className="ds-label text-ds-ink-foreground/40">Prices in BDT</p>
+                </div>
             </div>
         </div>
     </footer>

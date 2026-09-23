@@ -21,23 +21,22 @@ const FinalCTA = () => {
     const requestAction = getRequestRepairAction();
 
     return (
-        <section className="px-4 pb-16 sm:px-6 lg:px-8 lg:pb-20">
-            <div className="mx-auto max-w-6xl rounded-ds-lg border border-ds-ink-foreground/15 bg-ds-ink px-6 py-12 text-ds-ink-foreground sm:px-10 lg:px-14 lg:py-16">
-                <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-                    <div className="max-w-xl">
-                        <p className="ds-label text-ds-ink-muted">Ready when you are</p>
-                        <h2 className="mt-3 text-title text-ds-ink-foreground">
-                            Start a repair, and see every stage of it.
+        <section aria-labelledby="home-final-cta-heading" className="px-4 pb-12 sm:px-6 lg:px-8 lg:pb-20">
+            <div className="mx-auto max-w-6xl rounded-ds-lg border border-ds-ink-foreground/15 bg-ds-ink px-6 py-8 text-ds-ink-foreground sm:px-8 sm:py-10 lg:px-10">
+                <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
+                    <div className="min-w-0 max-w-lg">
+                        <h2 id="home-final-cta-heading" className="text-title text-ds-ink-foreground">
+                            Ready to get your device repaired?
                         </h2>
-                        <p className="mt-4 text-body-sm text-ds-ink-foreground/70">
-                            Submitting a request is free, and nothing is repaired until you approve the quote.
+                        <p className="mt-3 text-body-sm text-ds-ink-foreground/80">
+                            Start a request and follow the repair from inspection to completion.
                         </p>
                     </div>
 
-                    <div className="flex shrink-0 flex-col gap-3 sm:flex-row">
+                    <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:flex-wrap lg:max-w-sm">
                         {showRequestCta ? (
                             <Link to={requestAction.to} className={cn(buttonVariants({ variant: 'action', size: 'lg' }), 'w-full sm:w-auto')}>
-                                {requestAction.label}
+                                Request a repair
                                 <ArrowRight aria-hidden="true" />
                             </Link>
                         ) : (
@@ -46,7 +45,7 @@ const FinalCTA = () => {
                                 Open your dashboard
                             </Link>
                         )}
-                        <Link to={TRACK_REPAIR_ROUTE} className={cn(buttonVariants({ variant: 'onInk', size: 'lg' }), 'w-full sm:w-auto')}>
+                        <Link data-tour="track-repair" to={TRACK_REPAIR_ROUTE} className={cn(buttonVariants({ variant: 'onInk', size: 'lg' }), 'w-full sm:w-auto')}>
                             Track a repair
                         </Link>
                     </div>

@@ -1,292 +1,113 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useLoaderData } from 'react-router';
-import { Search, MapPin, X } from 'lucide-react';
-import { EmptyState } from '../../components/common/EmptyState';
-import CTABand from '../../components/public/CTABand';
+import { useMemo, useState } from 'react';
+import { Link, useLoaderData } from 'react-router';
+import { MapPin, ArrowRight } from 'lucide-react';
 import ServiceAreaMap from '../../components/public/ServiceAreaMap';
-import {
-    filterServiceAreas, countServiceAreas, hasServiceAreaCoordinates,
-    listServiceRegions, findSearchTarget,
-} from '../../utils/serviceAreaPresentation';
+import { filterServiceAreas, listServiceRegions, findSearchTarget } from '../../utils/serviceAreaPresentation';
+import useAuth from '../../hooks/useAuth';
+import useRole from '../../hooks/useRole';
+import { shouldShowCreateRequestLink, getRequestRepairAction } from '../../utils/publicContent';
+import { buttonVariants } from '../../components/ui/button-variants';
 import { cn } from '../../lib/utils';
 
-// A district is identified by region + district, the pair the file itself is
-// keyed on - never by an index, which search would shuffle.
 const areaKey = (area) => `${area.region}::${area.district}`;
-const ALL_REGIONS = 'all';
+const controlClass = 'focus-ring mt-2 min-h-11 w-full min-w-0 rounded-ds border border-ds-border bg-ds-card px-3 text-body-sm text-ds-foreground';
 
-// Reports whether a scroll container still has content below the fold.
-//
-// The list is capped at 32rem, so whichever row straddles that boundary gets
-// sliced through the middle of its text. With no affordance that slice reads as
-// a rendering fault rather than "there is more below". This drives a bottom
-// fade - but the fade has to be conditional in BOTH directions: shown when the
-// list overflows, it says "continues"; shown when the list fits, it would veil
-// the last row for no reason, and shown at the end of a scroll it would promise
-// content that is not there.
-//
-// Measured rather than assumed, because the cap is in rems and the row height
-// depends on how many covered areas a district lists - there is no row count at
-// which overflow reliably begins.
-function useHasMoreBelow(dependency) {
-    const ref = useRef(null);
-    const [hasMore, setHasMore] = useState(false);
-
-    useEffect(() => {
-        // Null only in the empty-results branch, which renders neither the list
-        // nor the fade - so leaving the previous value in place is harmless,
-        // and nothing reads it until a list exists again.
-        const element = ref.current;
-        if (!element) return;
-
-        const measure = () => {
-            // 1px tolerance: fractional layout heights can leave scrollTop a
-            // hair short of its true maximum at the very bottom, which would
-            // otherwise keep the fade up permanently.
-            setHasMore(element.scrollHeight - element.clientHeight - element.scrollTop > 1);
-        };
-
-        element.addEventListener('scroll', measure, { passive: true });
-        // Catches viewport resizes and font-size changes, neither of which
-        // fires a scroll event but both of which change what fits. This also
-        // performs the FIRST measurement: ResizeObserver invokes its callback
-        // once on observe(), so the initial state arrives through the
-        // subscription rather than from a synchronous setState in the effect
-        // body (which cascades a render, and which the lint rule rejects).
-        const observer = new ResizeObserver(measure);
-        observer.observe(element);
-        return () => {
-            element.removeEventListener('scroll', measure);
-            observer.disconnect();
-        };
-    }, [dependency]);
-
-    return [ref, hasMore];
-}
-
-// Public Service Areas page.
-//
-// DATA UNCHANGED. Still driven entirely by the existing serviceAreas.json
-// route-loader data - the same file that powers the create-request selectors.
-// No backend endpoint, no invented coverage, no live-availability claim, and no
-// "nationwide" wording: the page states exactly what the source file lists.
-//
-// MAP-LED. Every listed area is a marker on the map, and the search box now
-// moves the map as well as filtering the list: type a district and the map
-// flies to it. Selection is derived rather than stored, so the map can never
-// point at something the list has filtered away.
-//
-// The counts are computed from the data at render time, so they cannot drift
-// from it. They are descriptive, not a marketing figure.
 const ServiceAreas = () => {
     const serviceAreas = useLoaderData();
+    const { user } = useAuth();
+    const { role } = useRole();
     const [query, setQuery] = useState('');
-    const [region, setRegion] = useState(ALL_REGIONS);
+    const [region, setRegion] = useState('all');
     const [selectedKey, setSelectedKey] = useState(null);
-
-    const total = useMemo(() => countServiceAreas(serviceAreas), [serviceAreas]);
     const regions = useMemo(() => listServiceRegions(serviceAreas), [serviceAreas]);
+    const matches = useMemo(() => filterServiceAreas(serviceAreas, query)
+        .filter((area) => region === 'all' || area.region === region)
+        .sort((a, b) => a.district.localeCompare(b.district)), [serviceAreas, query, region]);
+    const selected = matches.find((area) => areaKey(area) === selectedKey) || null;
+    const showRequest = shouldShowCreateRequestLink({ user, role });
+    const requestAction = getRequestRepairAction();
 
-    const matches = useMemo(() => {
-        const searched = filterServiceAreas(serviceAreas, query);
-        return region === ALL_REGIONS ? searched : searched.filter((area) => area.region === region);
-    }, [serviceAreas, query, region]);
-
-    // What the map points at. An explicit click wins; otherwise a search picks
-    // its own best match. Both are re-derived from the visible list, so a
-    // selection that has been filtered out simply stops being the focus.
-    const focus = useMemo(() => {
-        const clicked = matches.find((area) => areaKey(area) === selectedKey);
-        if (clicked && hasServiceAreaCoordinates(clicked)) return clicked;
-        return findSearchTarget(matches, query);
-    }, [matches, selectedKey, query]);
-
-    // Re-measured whenever the filtered list changes length, since that is what
-    // decides whether the 32rem cap is reached at all.
-    const [listRef, hasMoreBelow] = useHasMoreBelow(matches.length);
-
-    const hasFilters = query.trim() !== '' || region !== ALL_REGIONS;
-    const resetFilters = () => { setQuery(''); setRegion(ALL_REGIONS); setSelectedKey(null); };
+    const search = (value) => {
+        setQuery(value);
+        const results = filterServiceAreas(serviceAreas, value).filter((area) => region === 'all' || area.region === region);
+        const target = findSearchTarget(results, value) || (value.trim() ? results[0] : null);
+        setSelectedKey(target ? areaKey(target) : null);
+    };
+    const changeRegion = (value) => {
+        setRegion(value);
+        const results = filterServiceAreas(serviceAreas, query).filter((area) => value === 'all' || area.region === value);
+        const target = value !== 'all' ? results[0] : findSearchTarget(results, query);
+        setSelectedKey(target ? areaKey(target) : null);
+    };
+    const reset = () => { setQuery(''); setRegion('all'); setSelectedKey(null); };
 
     return (
-        <div>
-            <div className="mx-auto w-full max-w-6xl px-0 sm:px-6 sm:pt-8 lg:px-8">
-                <header className="tech-grid-pattern border border-ds-ink-foreground/15 bg-ds-ink px-6 py-12 text-ds-ink-foreground sm:rounded-ds-xl sm:px-10 lg:px-14">
-                    <p className="ds-label text-ds-action">Coverage</p>
-                    <h1 className="mt-4 text-title text-ds-ink-foreground">Where Sarabo currently operates</h1>
-                    <p className="mt-3 max-w-lg text-body-sm text-ds-ink-foreground/70">
-                        <span className="ds-numeric">{total}</span> service {total === 1 ? 'area' : 'areas'} listed
-                        across <span className="ds-numeric">{regions.length}</span>{' '}
-                        {regions.length === 1 ? 'region' : 'regions'}. Search for your district and the map will go
-                        straight to it.
-                    </p>
-                </header>
-            </div>
+        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+            <header className="max-w-2xl">
+                <p className="ds-label text-ds-primary">Service areas</p>
+                <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-ds-foreground sm:text-4xl">Find your district.</h1>
+                <p className="mt-4 text-body text-ds-muted-foreground">Explore listed coverage and the areas within each district. Coverage listings do not indicate live Technician availability.</p>
+            </header>
 
-            <section className="px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
-                {/* Map-led. DOM order is search, map, then results - the reading
-                    order asked for on a phone. On lg the map and the results sit
-                    side by side, so nothing is read out of sequence at a width
-                    where only one of them is visible. */}
-                <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-8">
-                    <div className="min-w-0 lg:order-2 lg:sticky lg:top-24">
-                        <ServiceAreaMap
-                            areas={matches}
-                            focus={focus}
-                            onSelect={(area) => setSelectedKey(areaKey(area))}
-                        />
-                        <p className="mt-2 text-micro text-ds-muted-foreground">
-                            {focus
-                                ? `Pin shows the listed centre of ${focus.district}, not a branch address.`
-                                : 'Every marker is a listed service area. Search or pick a district to zoom to it.'}
-                        </p>
+            <section aria-label="Explore service coverage" className="mt-8">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1.5fr)]">
+                    <div className="min-w-0">
+                        <label htmlFor="area-search" className="text-body-sm font-semibold text-ds-foreground">Search locations</label>
+                        <input id="area-search" type="search" value={query} onChange={(event) => search(event.target.value)} placeholder="District, city or covered area" className={controlClass} />
                     </div>
-
-                    <div className="min-w-0 lg:order-1">
-                        <div className="flex h-12 items-center gap-3 rounded-ds border border-ds-border bg-ds-card px-4 focus-within:border-ds-primary">
-                            <Search aria-hidden="true" className="size-4 shrink-0 text-ds-muted-foreground" />
-                            <label htmlFor="area-search" className="sr-only">Search service areas</label>
-                            <input
-                                id="area-search"
-                                type="search"
-                                value={query}
-                                onChange={(e) => { setQuery(e.target.value); setSelectedKey(null); }}
-                                placeholder="Search by region, district, or area"
-                                className="w-full bg-transparent text-body-sm text-ds-foreground placeholder:text-ds-muted-foreground focus:outline-none"
-                            />
-                        </div>
-
-                        {/* Region filter, derived from the data rather than a
-                            hardcoded list. */}
-                        <div role="group" aria-label="Filter by region" className="mt-4 flex flex-wrap gap-2">
-                            <button
-                                type="button"
-                                aria-pressed={region === ALL_REGIONS}
-                                onClick={() => { setRegion(ALL_REGIONS); setSelectedKey(null); }}
-                                className={cn(
-                                    'focus-ring min-h-8 rounded-full border px-3.5 text-body-sm transition-colors',
-                                    region === ALL_REGIONS
-                                        ? 'border-ds-primary bg-ds-primary font-semibold text-ds-primary-foreground'
-                                        : 'border-ds-border text-ds-muted-foreground hover:text-ds-foreground'
-                                )}
-                            >
-                                All regions
-                            </button>
-                            {regions.map((name) => (
-                                <button
-                                    key={name}
-                                    type="button"
-                                    aria-pressed={region === name}
-                                    onClick={() => { setRegion(region === name ? ALL_REGIONS : name); setSelectedKey(null); }}
-                                    className={cn(
-                                        'focus-ring min-h-8 rounded-full border px-3.5 text-body-sm transition-colors',
-                                        region === name
-                                            ? 'border-ds-primary bg-ds-primary font-semibold text-ds-primary-foreground'
-                                            : 'border-ds-border text-ds-muted-foreground hover:text-ds-foreground'
-                                    )}
-                                >
-                                    {name}
-                                </button>
-                            ))}
-                        </div>
-
-                        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-                            <p className="ds-label text-ds-muted-foreground" aria-live="polite">
-                                {hasFilters
-                                    ? `${matches.length} ${matches.length === 1 ? 'area' : 'areas'} matching`
-                                    : `All ${total} service ${total === 1 ? 'area' : 'areas'}`}
-                            </p>
-                            {hasFilters && (
-                                <button
-                                    type="button"
-                                    onClick={resetFilters}
-                                    className="focus-ring inline-flex min-h-6 items-center gap-1.5 rounded-ds text-body-sm font-semibold text-ds-primary hover:underline"
-                                >
-                                    <X aria-hidden="true" className="size-3.5" /> Clear
-                                </button>
-                            )}
-                        </div>
-
-                        {matches.length === 0 ? (
-                            <div className="mt-4">
-                                <EmptyState
-                                    icon={MapPin}
-                                    title="No matching service area found"
-                                    description="We could not find a listed service area matching your search. Try a different district or area name."
-                                />
-                            </div>
-                        ) : (
-                            <div className="relative mt-4">
-                            <ul ref={listRef} className="max-h-[32rem] overflow-y-auto rounded-ds-lg border border-ds-border bg-ds-card p-2">
-                                {matches.map((area) => {
-                                    const key = areaKey(area);
-                                    const isFocus = focus && areaKey(focus) === key;
-                                    const mappable = hasServiceAreaCoordinates(area);
-                                    const body = (
-                                        <>
-                                            <span className="flex min-w-0 flex-col">
-                                                <span className="truncate text-body-sm font-semibold text-ds-foreground">{area.district}</span>
-                                                {Array.isArray(area.covered_area) && area.covered_area.length > 0 && (
-                                                    <span className="truncate text-micro text-ds-muted-foreground">
-                                                        {area.covered_area.join(' · ')}
-                                                    </span>
-                                                )}
-                                            </span>
-                                            <span className="ds-label shrink-0 text-ds-muted-foreground">{area.region}</span>
-                                        </>
-                                    );
-                                    return (
-                                        <li key={key}>
-                                            {mappable ? (
-                                                // Only a district that actually carries a
-                                                // coordinate is offered as a map control.
-                                                <button
-                                                    type="button"
-                                                    aria-pressed={!!isFocus}
-                                                    aria-label={`Show ${area.district}, ${area.region} on the map`}
-                                                    onClick={() => setSelectedKey(isFocus ? null : key)}
-                                                    className={cn(
-                                                        'focus-ring flex w-full items-center justify-between gap-3 rounded-ds border-l-2 px-3 py-2.5 text-left transition-colors',
-                                                        isFocus
-                                                            ? 'border-l-ds-action bg-ds-muted'
-                                                            : 'border-l-transparent hover:bg-ds-muted/60'
-                                                    )}
-                                                >
-                                                    {body}
-                                                </button>
-                                            ) : (
-                                                <div className="flex items-center justify-between gap-3 border-l-2 border-l-transparent px-3 py-2.5">
-                                                    {body}
-                                                </div>
-                                            )}
-                                        </li>
-                                    );
-                                })}
-                            </ul>
-                            {/* Inset by a pixel on three sides so the fade sits
-                                inside the container's border instead of over
-                                it, and built from the card token so it resolves
-                                against the right ground in both themes. Purely
-                                decorative: the list is still fully reachable by
-                                keyboard and screen reader whether or not this
-                                is drawn. */}
-                            {hasMoreBelow && (
-                                <div
-                                    aria-hidden="true"
-                                    className="pointer-events-none absolute inset-x-px bottom-px h-14 rounded-b-ds-lg bg-gradient-to-t from-ds-card via-ds-card/80 to-transparent"
-                                />
-                            )}
-                            </div>
-                        )}
+                    <div className="min-w-0">
+                        <label htmlFor="area-region" className="text-body-sm font-semibold text-ds-foreground">Region</label>
+                        <select id="area-region" value={region} onChange={(event) => changeRegion(event.target.value)} className={controlClass}>
+                            <option value="all">All regions</option>
+                            {regions.map((name) => <option key={name} value={name}>{name}</option>)}
+                        </select>
+                    </div>
+                    <div className="min-w-0 sm:col-span-2 lg:col-span-1">
+                        <label htmlFor="area-district" className="text-body-sm font-semibold text-ds-foreground">Select a district</label>
+                        <select id="area-district" value={selected ? areaKey(selected) : ''} onChange={(event) => setSelectedKey(event.target.value || null)} className={controlClass}>
+                            <option value="">Choose a location</option>
+                            {matches.map((area) => <option key={areaKey(area)} value={areaKey(area)}>{area.district} — {area.region}</option>)}
+                        </select>
                     </div>
                 </div>
+                <div className="my-4 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-body-sm text-ds-muted-foreground" role="status">{matches.length ? `${matches.length} listed districts match your controls.` : 'No matching locations. Try another search or show all areas.'}</p>
+                    <button type="button" onClick={reset} className={buttonVariants({ variant: 'outline', size: 'sm' })}>Show all areas</button>
+                </div>
+                <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+                    <div className="min-w-0">
+                        <ServiceAreaMap areas={matches} focus={selected} onSelect={(area) => setSelectedKey(areaKey(area))} />
+                        <p className="mt-3 text-micro text-ds-muted-foreground">Pins show listed district centres, not branches or exact coverage boundaries. Use the district selector without interacting with the map.</p>
+                    </div>
+                    <aside aria-labelledby="selected-area-heading" className="min-w-0 rounded-ds-lg border border-ds-border bg-ds-card p-5 sm:p-6">
+                        <p className="ds-label text-ds-primary">Listed coverage</p>
+                        <div aria-live="polite" aria-atomic="true" className="break-words">
+                            <h2 id="selected-area-heading" className="mt-3 text-heading text-ds-foreground">{selected ? selected.district : 'Explore a location'}</h2>
+                            {selected ? (
+                                <>
+                                    <dl className="mt-4 space-y-3 text-body-sm">
+                                        <div><dt className="text-ds-muted-foreground">Region</dt><dd className="mt-1 text-ds-foreground">{selected.region}</dd></div>
+                                        {selected.city && selected.city !== selected.district && <div><dt className="text-ds-muted-foreground">City</dt><dd className="mt-1 text-ds-foreground">{selected.city}</dd></div>}
+                                        <div><dt className="text-ds-muted-foreground">Coverage status</dt><dd className="mt-1 text-ds-foreground">{selected.status === 'active' ? 'Active listing' : selected.status || 'Not specified'}</dd></div>
+                                    </dl>
+                                    <h3 className="mt-5 text-body-sm font-semibold text-ds-foreground">Covered areas</h3>
+                                    {Array.isArray(selected.covered_area) && selected.covered_area.length ? (
+                                        <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-body-sm text-ds-muted-foreground">{selected.covered_area.map((name) => <li key={name}>{name}</li>)}</ul>
+                                    ) : <p className="mt-2 text-body-sm text-ds-muted-foreground">No specific areas listed.</p>}
+                                </>
+                            ) : (
+                                <p className="mt-3 text-body-sm text-ds-muted-foreground"><MapPin aria-hidden="true" className="mb-3 size-6 text-ds-primary" />Search, choose a district or tap a map marker to see its listed coverage.</p>
+                            )}
+                        </div>
+                        <div className="mt-6 border-t border-ds-border pt-5">
+                            <p className="text-body-sm text-ds-muted-foreground">Select your region and district in the repair request form.</p>
+                            <Link to={showRequest ? requestAction.to : '/dashboard'} className={cn(buttonVariants({ variant: 'action' }), 'mt-4 h-auto min-h-11 w-full whitespace-normal text-center')}>
+                                {showRequest ? 'Request a repair' : 'Open your dashboard'}<ArrowRight aria-hidden="true" className="shrink-0" />
+                            </Link>
+                        </div>
+                    </aside>
+                </div>
             </section>
-
-            <CTABand
-                eyebrow="In a listed area?"
-                heading="Submit a repair request from your district."
-                description="Pick your region and district in the request form, and an approved technician covering that area is assigned."
-            />
         </div>
     );
 };

@@ -19,8 +19,8 @@ import { hasServiceAreaCoordinates } from '../../utils/serviceAreaPresentation';
 //
 // KEYBOARD. Markers are deliberately NOT focusable (`keyboard: false`). Sixty-
 // four focusable pins would bury the rest of the page under tab stops, and the
-// district list beside the map is the operable equivalent - every marker has a
-// list button that selects the same area.
+// labelled district selector is the operable equivalent. It selects the same
+// location and detail panel without requiring a map interaction.
 const DEFAULT_ZOOM = 11;
 const FIT_PADDING = [28, 28];
 
@@ -116,6 +116,8 @@ function ServiceAreaMap({ areas, focus, onSelect, className = '' }) {
                 L.latLngBounds(plottable.map((area) => [area.latitude, area.longitude])),
                 { padding: FIT_PADDING, animate, duration: 0.8, maxZoom: 12 }
             );
+        } else {
+            map.setView([23.685, 90.356], 7, { animate: false });
         }
     }, [areas, focus]);
 
@@ -126,11 +128,11 @@ function ServiceAreaMap({ areas, focus, onSelect, className = '' }) {
     return (
         <div
             ref={containerRef}
-            role="application"
+            role="region"
             aria-label={focus
                 ? `Map showing the ${focus.district} service area`
                 : 'Map showing every listed Sarabo service area'}
-            className={`z-0 h-[22rem] w-full rounded-ds-lg border border-ds-border bg-ds-muted! sm:h-[26rem] lg:h-[32rem] ${className}`}
+            className={`z-0 h-[22rem] w-full rounded-ds-lg border border-ds-border bg-ds-muted! sm:h-[28rem] lg:h-[34rem] ${className}`}
         />
     );
 }

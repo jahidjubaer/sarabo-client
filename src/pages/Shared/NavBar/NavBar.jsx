@@ -33,7 +33,7 @@ import { cn } from '../../../lib/utils';
 // alone: heavier weight, the marigold rail, and aria-current="page".
 function desktopLink(active) {
     return cn(
-        'focus-ring relative inline-flex h-16 items-center px-3 text-body-sm transition-colors',
+        'focus-ring relative inline-flex h-16 items-center whitespace-nowrap px-2 text-body-sm transition-colors',
         'after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:content-[""]',
         active
             ? 'font-semibold text-ds-foreground after:bg-ds-action'
@@ -76,13 +76,13 @@ const NavBar = () => {
 
     return (
         <header className="sticky top-0 z-50 border-b border-ds-border bg-ds-background/95 backdrop-blur supports-[backdrop-filter]:bg-ds-background/80">
-            <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-4 sm:px-6 lg:px-8">
+            <div className="mx-auto flex h-16 max-w-6xl items-center gap-2 px-4 sm:px-6 lg:px-8">
                 {/* Mobile trigger + brand */}
                 <div className="flex items-center gap-1">
                     <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
                         <SheetTrigger
                             aria-label="Open main menu"
-                            className="focus-ring inline-flex size-10 items-center justify-center rounded-ds text-ds-foreground hover:bg-ds-muted lg:hidden"
+                            className="focus-ring inline-flex size-10 items-center justify-center rounded-ds text-ds-foreground hover:bg-ds-muted xl:hidden"
                         >
                             <Menu aria-hidden="true" className="size-5" />
                         </SheetTrigger>
@@ -160,7 +160,7 @@ const NavBar = () => {
                 </div>
 
                 {/* Desktop primary navigation */}
-                <nav aria-label="Primary" className="ml-4 hidden lg:block">
+                <nav aria-label="Primary" className="ml-2 hidden xl:block">
                     <ul className="flex items-center">
                         {navLinks.map((link) => {
                             const active = isPublicNavLinkActive(location.pathname, link);
@@ -182,10 +182,10 @@ const NavBar = () => {
                 {/* Right cluster - one action, everything else quiet */}
                 <div className="ml-auto flex items-center gap-2">
                     {user && <NotificationBell />}
-                    <div className="hidden lg:block"><ThemeToggle /></div>
+                    <div className="hidden xl:block"><ThemeToggle /></div>
 
                     {!user && (
-                        <div className="hidden items-center gap-2 lg:flex">
+                        <div className="hidden items-center gap-1 xl:flex">
                             {/* Register is the wider control, so it appears from
                                 xl where there is room; below that it lives in
                                 the mobile sheet and on the Log in page. */}

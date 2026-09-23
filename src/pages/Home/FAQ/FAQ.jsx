@@ -1,34 +1,41 @@
 import { Plus } from 'lucide-react';
-import { FAQS } from '../../../utils/publicContent';
 
-// Public FAQ (Phase 3). Native <details>/<summary>: no JS state, no new
-// dependency, and keyboard-operable by default in every evergreen browser -
-// Enter/Space toggles, and the summary carries the question as its accessible
-// name, so no per-question heading is needed. Only one real heading (the h2)
-// exists in the section.
-//
-// Answers come from the shared content module and describe how the platform
-// actually behaves. No refund, warranty or turnaround promises, because the
-// product makes none.
+// Home-only copy: keep these answers short without changing shared content.
+const QUESTIONS = [
+    {
+        question: 'How much will my repair cost?',
+        answer: 'The catalogue shows indicative estimates. Your Technician provides an itemised quote after inspection.',
+    },
+    {
+        question: 'Can I decline a quote?',
+        answer: 'Yes. You can decline the quote; the repair does not go ahead.',
+    },
+    {
+        question: 'How do I track my repair?',
+        answer: 'Enter your tracking code on Track a repair without signing in. Your dashboard shows the full details of your own requests.',
+    },
+    {
+        question: 'How is a Technician assigned?',
+        answer: 'An Admin assigns an approved Technician whose expertise and service area match your request.',
+    },
+    {
+        question: 'What happens when repair is complete?',
+        answer: 'Once the Technician marks the repair complete and you have your device back, confirm receipt in your request details.',
+    },
+];
+
 const FAQ = () => (
-    <section className="border-t border-ds-border bg-ds-muted/50 px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
-        <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
-            <div>
-                <p className="ds-label text-ds-primary">Questions</p>
-                <h2 className="mt-3 text-title text-ds-foreground">Before you hand over your device.</h2>
-            </div>
-
-            <div className="flex flex-col">
-                {FAQS.map((faq) => (
+    <section aria-labelledby="home-faq-heading" className="border-t border-ds-border px-4 py-12 sm:px-6 lg:px-8 lg:py-20">
+        <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:gap-12">
+            <h2 id="home-faq-heading" className="text-title text-ds-foreground">A few useful answers</h2>
+            <div className="min-w-0">
+                {QUESTIONS.map((faq) => (
                     <details key={faq.question} className="group border-b border-ds-border first:border-t">
-                        <summary className="focus-ring flex cursor-pointer list-none items-center justify-between gap-6 py-4 text-body font-semibold text-ds-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+                        <summary className="focus-ring flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 rounded-ds py-4 text-body font-semibold text-ds-foreground marker:hidden [&::-webkit-details-marker]:hidden">
                             {faq.question}
-                            <Plus
-                                aria-hidden="true"
-                                className="size-4 shrink-0 text-ds-primary transition-transform group-open:rotate-45 motion-reduce:transition-none"
-                            />
+                            <Plus aria-hidden="true" className="size-4 shrink-0 text-ds-primary transition-transform group-open:rotate-45 motion-reduce:transition-none" />
                         </summary>
-                        <p className="max-w-2xl pb-5 text-body-sm text-ds-muted-foreground">{faq.answer}</p>
+                        <p className="max-w-2xl pb-5 pr-6 text-body text-ds-muted-foreground">{faq.answer}</p>
                     </details>
                 ))}
             </div>
