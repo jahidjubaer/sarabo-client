@@ -49,11 +49,14 @@ function TechnicianRequestDetailsView({
 }) {
     const attention = getTechnicianAttention(request);
     const handover = getHandoverState(request);
+    const quoteDeclined = isAssignedTechnicianView && request.deliveryStatus === 'quote_rejected';
     const actionTarget = canInspect
         ? '#technician-inspection'
         : canSubmitQuote
             ? '#technician-quote'
-            : (attention.kind === 'action' && sections.showRepair ? '#technician-repair' : null);
+            : quoteDeclined
+                ? '#technician-quote-decision'
+                : (attention.kind === 'action' && sections.showRepair ? '#technician-repair' : null);
     const actionLabel = actionTarget ? attention.action?.label : null;
 
     return (
@@ -97,8 +100,8 @@ function TechnicianRequestDetailsView({
                 at quote_rejected - the server re-checks both. Placed directly
                 under the spine so it reads as the current task, the same
                 position the stage action panel occupies at other stages. */}
-            {isAssignedTechnicianView && request.deliveryStatus === 'quote_rejected' && (
-                <Motion.div variants={staggerItem}>
+            {quoteDeclined && (
+                <Motion.div id="technician-quote-decision" variants={staggerItem} className="scroll-mt-24">
                     <QuoteRejectedActions requestId={request._id} />
                 </Motion.div>
             )}

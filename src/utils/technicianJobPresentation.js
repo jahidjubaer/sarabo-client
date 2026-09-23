@@ -11,13 +11,16 @@ import { getSpineModel } from './repairStage';
 // Statuses where the TECHNICIAN has a direct next action. Deliberately excludes
 // quote_submitted / quote_approved (the customer must decide / pay - the
 // technician is only waiting). repair_in_progress lives in its own "In Repair"
-// group rather than here, so the groups never overlap.
+// group rather than here, so the groups never overlap. quote_rejected is here
+// because the technician must revise the quote or cancel the job - it is the
+// only way out of that state, and the job keeps their active-assignment slot.
 const NEEDS_ATTENTION_STATUSES = new Set([
     'assignment_pending',
     'driver_assigned',
     'rider_arriving',
     'parcel_picked_up',
     'inspection_completed',
+    'quote_rejected',
     'payment_completed',
 ]);
 
@@ -33,7 +36,7 @@ const STATUS_GROUP = {
     'payment_completed': 'needs-attention',
     'quote_submitted': 'waiting',
     'quote_approved': 'waiting',
-    'quote_rejected': 'waiting',
+    'quote_rejected': 'needs-attention',
     'pending-pickup': 'waiting',
     'repair_in_progress': 'in-repair',
     'repair_completed': 'completed',
@@ -90,6 +93,9 @@ export function getTechnicianAction(job) {
                 : { kind: 'advance', label: 'Complete repair', nextStatus: 'parcel_delivered', variant: 'default' };
         case 'inspection_completed':
             return { kind: 'navigate', label: 'Prepare quote', to, variant: 'default' };
+        case 'quote_rejected':
+            // Revise / cancel lives in the details workspace.
+            return { kind: 'navigate', label: 'Revise or cancel', to, variant: 'default' };
         case 'quote_submitted':
         case 'quote_approved':
             return { kind: 'navigate', label: 'View job', to, variant: 'outline' };
