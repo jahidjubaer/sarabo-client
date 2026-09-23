@@ -6,11 +6,16 @@ import { formatAbsoluteDateTime } from '../../utils/relativeTime';
 // Read-only quote render (Phase 6.4 Unit 5) redesigned in 7.6A as a compact
 // invoice-like breakdown. All amounts come straight from the server-owned quote
 // (BDT, server-computed total). No payment control is ever rendered here.
+// `audience` is who is looking (customer | technician | admin). Only the
+// customer decides a submitted quote, so only they see "Awaiting your
+// decision" in the action tone and the note about payment; everyone else sees
+// that the customer is deciding.
 const STATUS = {
-    submitted: { label: 'Awaiting your decision', tone: 'warning' },
+    submitted: { label: 'Awaiting customer decision', tone: 'waiting' },
     approved: { label: 'Approved', tone: 'success' },
     rejected: { label: 'Declined', tone: 'danger' },
 };
+const CUSTOMER_SUBMITTED = { label: 'Awaiting your decision', tone: 'attention' };
 
 function money(amount, currency) {
     if (typeof amount !== 'number') return '—';
@@ -26,10 +31,11 @@ function Line({ label, value, strong }) {
     );
 }
 
-const QuoteSummary = ({ quote }) => {
+const QuoteSummary = ({ quote, audience }) => {
     if (!quote || !quote.status || quote.status === 'not_submitted') return null;
     const { currency } = quote;
-    const status = STATUS[quote.status] || { label: quote.status, tone: 'neutral' };
+    const customerDeciding = audience === 'customer' && quote.status === 'submitted';
+    const status = customerDeciding ? CUSTOMER_SUBMITTED : (STATUS[quote.status] || { label: 'Quote', tone: 'neutral' });
 
     return (
         <div className="space-y-3">
@@ -62,7 +68,7 @@ const QuoteSummary = ({ quote }) => {
                     {quote.status === 'rejected' && quote.decisionReason ? ` — ${quote.decisionReason}` : ''}
                 </p>
             )}
-            <p className="text-xs text-ds-muted-foreground">Payment becomes available after the quote is approved.</p>
+            {customerDeciding && <p className="text-xs text-ds-muted-foreground">Payment becomes available after you approve the quote.</p>}
         </div>
     );
 };

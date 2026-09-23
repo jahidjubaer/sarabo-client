@@ -10,6 +10,7 @@ import QuoteDecisionActions from './QuoteDecisionActions';
 // Server truth decides which of form / summary (+ owner decision) / hint shows;
 // the server always re-authorizes. Redesigned to ds-* copy in 7.6A.
 const QuoteSection = ({ requestId, isOwner, canSubmitQuote, isAssignedTechnicianView }) => {
+    const audience = isOwner ? 'customer' : isAssignedTechnicianView ? 'technician' : 'admin';
     const queryClient = useQueryClient();
     const { data: quote, isLoading, isPaused, isError } = useQuote(requestId);
     const hasUsableQuote = quote !== undefined && quote !== null;
@@ -35,13 +36,13 @@ const QuoteSection = ({ requestId, isOwner, canSubmitQuote, isAssignedTechnician
     if (quote.status === 'submitted') {
         return (
             <div>
-                <QuoteSummary quote={quote} />
+                <QuoteSummary quote={quote} audience={audience} />
                 {isOwner && <QuoteDecisionActions requestId={requestId} />}
             </div>
         );
     }
     if (quote.status === 'approved' || quote.status === 'rejected') {
-        return <QuoteSummary quote={quote} />;
+        return <QuoteSummary quote={quote} audience={audience} />;
     }
     if (canSubmitQuote) {
         return <QuoteForm requestId={requestId} />;
