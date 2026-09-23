@@ -8,7 +8,7 @@ import { formatAbsoluteDateTime } from '../../utils/relativeTime';
 // status + request date + tracking id (already user-visible) + an optional
 // role-relevant primary action slot. Never shows schemaVersion / Mongo ids /
 // technician ids / storage keys.
-function RepairWorkspaceHeader({ request, backTo, backLabel, action }) {
+function RepairWorkspaceHeader({ request, backTo, backLabel, action, audience }) {
     const { device, category, brandModel } = getProductSummary(request);
     return (
         <div className="space-y-4">
@@ -23,7 +23,7 @@ function RepairWorkspaceHeader({ request, backTo, backLabel, action }) {
                             <Package aria-hidden="true" className="size-5 shrink-0 text-ds-primary" />
                             <span className="truncate">{device}</span>
                         </h1>
-                        <StatusBadge status={request.deliveryStatus || 'pending-pickup'} />
+                        <StatusBadge status={request.deliveryStatus || 'pending-pickup'} audience={audience} />
                     </div>
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ds-muted-foreground">
                         {(category || brandModel) && <span className="truncate">{[category, brandModel].filter(Boolean).join(' · ')}</span>}

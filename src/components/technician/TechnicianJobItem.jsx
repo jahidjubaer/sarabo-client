@@ -50,7 +50,7 @@ function TechnicianJobItem({ job, onAdvance, pendingAction }) {
                 <div className="space-y-4 p-4 sm:p-5">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0 space-y-2">
-                            <StatusBadge status={status} />
+                            <StatusBadge audience="technician" status={status} />
                             <div>
                                 <h3 id={headingId} className="break-words text-base font-semibold text-ds-foreground">{device}</h3>
                                 {(category || brandModel) && (

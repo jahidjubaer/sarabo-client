@@ -7,10 +7,14 @@ import { Label } from '../../ui/label';
 import { ErrorState } from '../../common/ErrorState';
 import { REPORT_STATUSES, REVIEW_VISIBILITY, validFeedbackId } from '../../../utils/technicianFeedback';
 import { formatAbsoluteDateTime } from '../../../utils/relativeTime';
+import { StatusBadge } from '../../common/StatusBadge';
+import { Select } from '../../ui/select';
 
+// Report status or review visibility, resolved through the status registry.
 export function FeedbackBadge({ value }) {
-    const tone = { open: 'info', under_review: 'accent', resolved: 'success', dismissed: 'neutral', visible: 'success', hidden: 'neutral' }[value] ?? 'neutral';
-    return <Badge tone={tone}>{REPORT_STATUSES[value] ?? REVIEW_VISIBILITY[value] ?? 'Unknown state'}</Badge>;
+    const domain = value in REPORT_STATUSES ? 'report' : value in REVIEW_VISIBILITY ? 'reviewVisibility' : null;
+    if (!domain) return <Badge tone="neutral">Unknown state</Badge>;
+    return <StatusBadge domain={domain} status={value} audience="admin" />;
 }
 
 export function FeedbackReference({ value }) {
@@ -55,11 +59,11 @@ export function FeedbackFilters({ kind, filters, onChange }) {
             }}>
             <div className="space-y-1.5">
                 <Label htmlFor={`${id}-state`}>{kind === 'reports' ? 'Report status' : 'Review visibility'}</Label>
-                <select id={`${id}-state`} value={filters[field] ?? ''} className="focus-ring h-10 w-full rounded-ds border border-ds-input bg-ds-background px-3 text-sm"
+                <Select id={`${id}-state`} value={filters[field] ?? ''}
                     onChange={(event) => onChange({ ...filters, page: 1, [field]: event.target.value || undefined })}>
                     <option value="">All</option>
                     {Object.entries(labels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                </select>
+                </Select>
             </div>
             <div className="min-w-0 space-y-1.5">
                 <Label htmlFor={`${id}-technician`}>Exact Technician ID (optional)</Label>

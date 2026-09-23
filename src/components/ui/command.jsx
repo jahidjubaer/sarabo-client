@@ -41,7 +41,7 @@ function CommandInput({ className, ...props }) {
             <Search className="size-4 shrink-0 text-ds-muted-foreground" aria-hidden="true" />
             <CommandPrimitive.Input
                 data-slot="command-input"
-                className={cn("flex h-11 w-full bg-transparent py-3 text-sm text-ds-foreground outline-none placeholder:text-ds-muted-foreground disabled:cursor-not-allowed disabled:opacity-50", className)}
+                className={cn("flex h-11 w-full bg-transparent py-3 text-body-sm text-ds-foreground outline-none placeholder:text-ds-muted-foreground disabled:cursor-not-allowed disabled:opacity-50", className)}
                 {...props}
             />
         </div>
@@ -53,7 +53,7 @@ function CommandList({ className, ...props }) {
 }
 
 function CommandEmpty(props) {
-    return <CommandPrimitive.Empty data-slot="command-empty" className="py-6 text-center text-sm text-ds-muted-foreground" {...props} />;
+    return <CommandPrimitive.Empty data-slot="command-empty" className="py-6 text-center text-body-sm text-ds-muted-foreground" {...props} />;
 }
 
 function CommandGroup({ className, ...props }) {
@@ -65,7 +65,7 @@ function CommandItem({ className, ...props }) {
         <CommandPrimitive.Item
             data-slot="command-item"
             className={cn(
-                "relative flex cursor-pointer select-none items-center gap-2 rounded-ds-sm px-2 py-2 text-sm outline-none data-[selected=true]:bg-ds-accent data-[selected=true]:text-ds-accent-foreground data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-ds-muted-foreground",
+                "relative flex cursor-pointer select-none items-center gap-2 rounded-ds-sm px-2 py-2 text-body-sm outline-none data-[selected=true]:bg-ds-accent data-[selected=true]:text-ds-accent-foreground data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-ds-muted-foreground",
                 className
             )}
             {...props}

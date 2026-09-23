@@ -28,7 +28,7 @@ function SheetOverlay({ className, ...props }) {
         <SheetPrimitive.Overlay
             data-slot="sheet-overlay"
             className={cn(
-                "fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-[ds-fade-in_200ms_ease-out] data-[state=closed]:animate-[ds-fade-out_200ms_ease-in]",
+                "fixed inset-0 z-50 bg-[rgb(6_13_16/0.55)] data-[state=open]:animate-[ds-fade-in_200ms_ease-out] data-[state=closed]:animate-[ds-fade-out_200ms_ease-in]",
                 className
             )}
             {...props}
@@ -83,7 +83,7 @@ function SheetTitle({ className, ...props }) {
 }
 
 function SheetDescription({ className, ...props }) {
-    return <SheetPrimitive.Description data-slot="sheet-description" className={cn("text-sm text-ds-muted-foreground", className)} {...props} />;
+    return <SheetPrimitive.Description data-slot="sheet-description" className={cn("text-body-sm text-ds-muted-foreground", className)} {...props} />;
 }
 
 export { Sheet, SheetTrigger, SheetClose, SheetContent, SheetHeader, SheetFooter, SheetTitle, SheetDescription };

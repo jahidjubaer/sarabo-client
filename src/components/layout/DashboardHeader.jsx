@@ -17,7 +17,7 @@ import useAuth from '../../hooks/useAuth';
 function DashboardHeader({ role, onOpenMobileNav, onOpenCommand, mobileNavOpen = false }) {
     const { user } = useAuth();
     return (
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-ds-border bg-ds-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-ds-background/80 sm:px-4">
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-ds-border bg-ds-card/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-ds-card/85 sm:px-6 lg:px-8">
             {/* Phase 13A-2: measured at 375px with the sheet genuinely open, this
                 trigger reported aria-expanded = null. The public navbar's trigger
                 is a Radix SheetTrigger, which sets the attribute itself; this one
@@ -42,7 +42,7 @@ function DashboardHeader({ role, onOpenMobileNav, onOpenCommand, mobileNavOpen =
                 >
                     <Search className="size-4" aria-hidden="true" />
                     <span className="text-body-sm">Search</span>
-                    <kbd className="ds-numeric ml-1 rounded-ds-sm border border-ds-border px-1 text-micro leading-4">⌘K</kbd>
+                    <kbd className="ds-numeric ml-1 rounded-ds-sm border border-ds-border px-1 text-micro leading-4">Ctrl K</kbd>
                 </Button>
                 <Button variant="ghost" size="icon" onClick={onOpenCommand} className="sm:hidden" aria-label="Open command menu">
                     <Search className="size-5" aria-hidden="true" />

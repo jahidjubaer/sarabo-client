@@ -10,6 +10,8 @@ import { Card } from '../../../components/ui/card';
 import { Badge } from '../../../components/ui/badge';
 import { formatMoney } from '../../../utils/currency';
 import { formatAbsoluteDateTime } from '../../../utils/relativeTime';
+import { StatusBadge } from '../../../components/common/StatusBadge';
+import { getStatus } from '../../../config/status';
 
 // Payment History (Phase 12). A supporting account surface: it records what was
 // already paid, so it stays quiet - no marigold, no totals, no trends. Every
@@ -21,9 +23,6 @@ import { formatAbsoluteDateTime } from '../../../utils/relativeTime';
 // A raw status string is never shown. Only statuses this map knows are
 // rendered as a badge; an unknown/absent one simply shows no badge rather than
 // leaking an internal value or inventing a label.
-const PAYMENT_STATUS_PRESENTATION = {
-    paid: { label: 'Paid', tone: 'success' },
-};
 
 function DetailRow({ icon: Icon, label, children }) {
     return (
@@ -38,7 +37,7 @@ function DetailRow({ icon: Icon, label, children }) {
 }
 
 function PaymentRecord({ payment }) {
-    const status = PAYMENT_STATUS_PRESENTATION[payment.paymentStatus];
+    const status = getStatus('payment', payment.paymentStatus, 'customer');
     // formatMoney returns '' for a non-finite amount and never converts between
     // currencies - each record formats in its OWN persisted currency (canonical
     // V2 = BDT, legacy V1 = USD).
@@ -49,7 +48,7 @@ function PaymentRecord({ payment }) {
         <Card className="p-4 sm:p-5">
             <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
                 {status
-                    ? <Badge tone={status.tone}>{status.label}</Badge>
+                    ? <StatusBadge domain="payment" status={payment.paymentStatus} audience="customer" />
                     : <span className="text-body-sm text-ds-muted-foreground">Payment record</span>}
                 <p className="ds-numeric min-w-0 break-all text-heading text-ds-foreground">{amount || '—'}</p>
             </div>
@@ -99,7 +98,6 @@ const PaymentHistory = () => {
     // one h1 (PageHeader owns it) - loading and error states included.
     const header = (
         <PageHeader
-            eyebrow="Account"
             title="Payment History"
             description={
                 hasUsablePayments

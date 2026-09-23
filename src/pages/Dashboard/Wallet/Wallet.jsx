@@ -17,6 +17,7 @@ import { Card } from '../../../components/ui/card';
 import { Input } from '../../../components/ui/input';
 import { Badge } from '../../../components/ui/badge';
 import { Skeleton } from '../../../components/ui/skeleton';
+import { StatusBadge } from '../../../components/common/StatusBadge';
 
 // Technician wallet (Phase 9).
 //
@@ -46,10 +47,6 @@ function withdrawalErrorMessage(error) {
     return WITHDRAWAL_ERROR_COPY[data?.code] || data?.message || 'Could not request the withdrawal. Please try again.';
 }
 
-const SETTLEMENT_TONE = { available: 'success', pending: 'info' };
-const SETTLEMENT_LABEL = { available: 'Available', pending: 'Awaiting confirmation' };
-const WITHDRAWAL_TONE = { requested: 'info', paid: 'success', rejected: 'danger' };
-const WITHDRAWAL_LABEL = { requested: 'Requested', paid: 'Paid', rejected: 'Rejected' };
 
 const Wallet = () => {
     const axiosSecure = useAxiosSecure();
@@ -87,7 +84,7 @@ const Wallet = () => {
     if (loading) {
         return (
             <div className="space-y-6">
-                <PageHeader eyebrow="Earnings" title="Wallet" description="What you have earned, what is ready to withdraw, and what has been paid out." />
+                <PageHeader title="Wallet" description="What you have earned, what is ready to withdraw, and what has been paid out." />
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-busy="true" aria-label="Loading wallet">
                     {Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-28 rounded-ds-lg" />)}
                 </div>
@@ -99,7 +96,7 @@ const Wallet = () => {
     if (unavailable) {
         return (
             <div className="space-y-6">
-                <PageHeader eyebrow="Earnings" title="Wallet" />
+                <PageHeader title="Wallet" />
                 <ErrorState
                     title="Wallet could not be loaded"
                     description="This looks temporary. Your balances are safe on the server — nothing here is stored on this device."
@@ -169,9 +166,7 @@ const Wallet = () => {
             key: 'status',
             header: 'State',
             cell: (row) => (
-                <Badge tone={SETTLEMENT_TONE[row.status] || 'neutral'}>
-                    {SETTLEMENT_LABEL[row.status] || row.status}
-                </Badge>
+                <StatusBadge domain="settlement" status={row.status} audience="technician" />
             ),
         },
     ];
@@ -191,9 +186,7 @@ const Wallet = () => {
             key: 'status',
             header: 'Status',
             cell: (row) => (
-                <Badge tone={WITHDRAWAL_TONE[row.status] || 'neutral'}>
-                    {WITHDRAWAL_LABEL[row.status] || row.status}
-                </Badge>
+                <StatusBadge domain="withdrawal" status={row.status} audience="technician" />
             ),
         },
         {
@@ -208,7 +201,6 @@ const Wallet = () => {
     return (
         <div className="space-y-6">
             <PageHeader
-                eyebrow="Earnings"
                 title="Wallet"
                 description="What you have earned, what is ready to withdraw, and what has already been paid out."
             />

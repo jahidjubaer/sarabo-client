@@ -16,6 +16,8 @@ import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Label } from '../../../components/ui/label';
 import { cn } from '../../../lib/utils';
+import { StatusBadge } from '../../../components/common/StatusBadge';
+import { Select } from '../../../components/ui/select';
 
 // Admin withdrawal queue (Phase 9).
 //
@@ -38,8 +40,6 @@ const STATUS_OPTIONS = [
     { value: 'all', label: 'All statuses' },
 ];
 
-const STATUS_TONE = { requested: 'warning', paid: 'success', rejected: 'danger' };
-const STATUS_LABEL = { requested: 'Awaiting processing', paid: 'Paid', rejected: 'Rejected' };
 
 // Server codes surfaced as sentences. WITHDRAWAL_ALREADY_PROCESSED is the one
 // that matters most: it is what a second admin sees when someone else has
@@ -54,7 +54,6 @@ const PROCESS_ERROR_COPY = {
 
 const PAGE_LIMIT = 20;
 const NOTE_MAX = 500;
-const selectClass = "h-10 rounded-ds border border-ds-input bg-ds-background px-3 text-sm text-ds-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-ring";
 
 function processErrorMessage(error) {
     const data = error?.response?.data;
@@ -153,9 +152,7 @@ const WithdrawalRequests = () => {
         {
             id: 'status', header: 'Status', enableSorting: false, enableHiding: false,
             cell: ({ row }) => (
-                <Badge tone={STATUS_TONE[row.original.status] || 'neutral'}>
-                    {STATUS_LABEL[row.original.status] || row.original.status}
-                </Badge>
+                <StatusBadge domain="withdrawal" status={row.original.status} audience="admin" />
             ),
             meta: { label: 'Status' },
         },
@@ -205,7 +202,7 @@ const WithdrawalRequests = () => {
     if (isUnavailableBeforeData) {
         return (
             <div className="space-y-6">
-                <PageHeader eyebrow="Admin" title="Withdrawal Requests" />
+                <PageHeader title="Withdrawal Requests" />
                 <ErrorState
                     title="Couldn't load withdrawal requests"
                     description={error?.response?.data?.message || "We couldn't load the withdrawal queue right now. Please try again."}
@@ -227,9 +224,7 @@ const WithdrawalRequests = () => {
                     <p className="truncate text-sm font-semibold text-ds-foreground">{withdrawal.technicianName || 'Unnamed technician'}</p>
                     <p className="truncate text-xs text-ds-muted-foreground">{withdrawal.technicianEmail}</p>
                 </div>
-                <Badge tone={STATUS_TONE[withdrawal.status] || 'neutral'} className="shrink-0">
-                    {STATUS_LABEL[withdrawal.status] || withdrawal.status}
-                </Badge>
+                <StatusBadge domain="withdrawal" status={withdrawal.status} audience="admin" className="shrink-0" />
             </div>
             <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
                 <div>
@@ -259,14 +254,13 @@ const WithdrawalRequests = () => {
     const toolbar = (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Label htmlFor="withdrawal-status" className="sr-only">Filter by status</Label>
-            <select
+            <Select
                 id="withdrawal-status"
                 value={status}
-                onChange={(event) => { setStatus(event.target.value); setPage(1); }}
-                className={selectClass}
+                onChange={(event) => { setStatus(event.target.value); setPage(1); }} size="sm" wrapperClassName="sm:w-52"
             >
                 {STATUS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-            </select>
+            </Select>
         </div>
     );
 
@@ -275,7 +269,6 @@ const WithdrawalRequests = () => {
     return (
         <div className="space-y-6">
             <PageHeader
-                eyebrow="Admin"
                 title="Withdrawal Requests"
                 description={isInitialLoading ? 'Loading withdrawal requests...' : `${total} withdrawal${total === 1 ? '' : 's'} in this view`}
             />
@@ -291,6 +284,9 @@ const WithdrawalRequests = () => {
                 Updating results…
             </p>
             <AdminDataTable
+                caption="Technician withdrawal requests"
+                pageSize={PAGE_LIMIT}
+                totalRows={total}
                 columns={columns}
                 data={withdrawals}
                 isLoading={isInitialLoading}

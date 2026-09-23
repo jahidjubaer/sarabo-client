@@ -86,7 +86,7 @@ const AssignedJobs = () => {
     if (isInitialLoading) {
         return (
             <div className="space-y-6">
-                <PageHeader eyebrow="Technician" title="Assigned Jobs" />
+                <PageHeader title="Assigned Jobs" />
                 <div className="space-y-3">
                     {[0, 1, 2, 3].map((key) => <CardSkeleton key={key} className="h-24" />)}
                 </div>
@@ -97,7 +97,7 @@ const AssignedJobs = () => {
     if (isReadErrorBeforeData || isUnavailableBeforeData) {
         return (
             <div className="space-y-6">
-                <PageHeader eyebrow="Technician" title="Assigned Jobs" />
+                <PageHeader title="Assigned Jobs" />
                 <ErrorState
                     title="Couldn't load your jobs"
                     description="We couldn't load your assigned jobs right now. Please try again."
@@ -113,7 +113,7 @@ const AssignedJobs = () => {
     return (
         <MotionConfig reducedMotion="user">
             <div className="space-y-6">
-                <PageHeader eyebrow="Technician" title="Assigned Jobs" description={description} />
+                <PageHeader title="Assigned Jobs" description={description} />
 
                 {total === 0 ? (
                     <EmptyState

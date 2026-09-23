@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { ShieldCheck, ShieldX, Search, UsersRound } from 'lucide-react';
-import Swal from 'sweetalert2';
+import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { EmptyState } from '../../../components/common/EmptyState';
@@ -16,8 +16,8 @@ import { Label } from '../../../components/ui/label';
 import { notify } from '../../../lib/notify';
 import { getRoleLabel, getRoleTone, ROLE_FILTER_OPTIONS } from '../../../utils/adminPresentation';
 import { getUserRoleUpdateErrorMessage } from '../../../utils/userRoleUpdateErrorMessage';
+import { Select } from '../../../components/ui/select';
 
-const selectClass = "h-10 rounded-ds border border-ds-input bg-ds-background px-3 text-sm text-ds-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-ring";
 const EMPTY_USERS = [];
 
 function initials(name) {
@@ -36,6 +36,7 @@ const UsersManagement = () => {
     const [search, setSearch] = useState('');
     const [roleFilter, setRoleFilter] = useState('all');
     const [pendingUserId, setPendingUserId] = useState(null);
+    const [roleChange, setRoleChange] = useState(null);
 
     useEffect(() => {
         const handle = setTimeout(() => setSearch(searchInput.trim()), 350);
@@ -71,25 +72,35 @@ const UsersManagement = () => {
                 notify.error(getUserRoleUpdateErrorMessage(error));
                 refetch();
             })
-            .finally(() => setPendingUserId(null));
+            .finally(() => {
+                setPendingUserId(null);
+                setRoleChange(null);
+            });
     };
 
     const confirmRoleChange = (user, role) => {
         if (pendingUserId) return;
-        const makingAdmin = role === 'admin';
-        Swal.fire({
-            title: makingAdmin ? `Make ${user.displayName || 'this user'} an admin?` : `Remove admin access from ${user.displayName || 'this user'}?`,
-            text: makingAdmin ? 'Admins have full management access to Sarabo.' : 'This user will return to a customer account.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: makingAdmin ? '#2478A6' : '#d33',
-            cancelButtonColor: '#64748b',
-            confirmButtonText: makingAdmin ? 'Yes, make admin' : 'Yes, remove admin',
-        }).then((result) => {
-            if (!result.isConfirmed) return;
-            applyRoleUpdate(user, role, makingAdmin ? `${user.displayName} is now an admin` : `${user.displayName} is no longer an admin`);
-        });
+        setRoleChange({ user, role });
     };
+
+    const roleChangeName = roleChange?.user.displayName || 'this user';
+    const makingAdmin = roleChange?.role === 'admin';
+    const roleChangeDialog = (
+        <ConfirmDialog
+            open={Boolean(roleChange)}
+            onOpenChange={(open) => { if (!open) setRoleChange(null); }}
+            title={makingAdmin ? `Make ${roleChangeName} an admin?` : `Remove admin access from ${roleChangeName}?`}
+            description={makingAdmin ? 'Admins have full management access to Sarabo.' : 'This user will return to a customer account.'}
+            confirmLabel={makingAdmin ? 'Make admin' : 'Remove admin'}
+            destructive={!makingAdmin}
+            busy={Boolean(pendingUserId)}
+            onConfirm={() => applyRoleUpdate(
+                roleChange.user,
+                roleChange.role,
+                makingAdmin ? `${roleChange.user.displayName} is now an admin` : `${roleChange.user.displayName} is no longer an admin`
+            )}
+        />
+    );
 
     const columns = useMemo(() => [
         {
@@ -144,7 +155,7 @@ const UsersManagement = () => {
     if (isUnavailableBeforeData) {
         return (
             <div className="space-y-6">
-                <PageHeader eyebrow="Admin" title="Users" />
+                <PageHeader title="Users" />
                 <ErrorState title="Couldn't load users" description="We couldn't load the user list right now. Please try again." onRetry={retryUsers} />
             </div>
         );
@@ -188,15 +199,15 @@ const UsersManagement = () => {
                 <Input id="users-search" type="search" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} placeholder="Search users" className="pl-9" />
             </div>
             <Label htmlFor="users-role" className="sr-only">Filter by role</Label>
-            <select id="users-role" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className={selectClass}>
+            <Select id="users-role" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} size="sm" wrapperClassName="sm:w-52">
                 {ROLE_FILTER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
+            </Select>
         </div>
     );
 
     return (
         <div className="space-y-6">
-            <PageHeader eyebrow="Admin" title="Users" description={isInitialLoading ? 'Loading users...' : `${users.length} user${users.length === 1 ? '' : 's'}`} />
+            <PageHeader title="Users" description={isInitialLoading ? 'Loading users...' : `${users.length} user${users.length === 1 ? '' : 's'}`} />
             <AdminPageLead
                 eyebrow="Access management"
                 title="Manage account roles"
@@ -206,6 +217,7 @@ const UsersManagement = () => {
                 metricLabel="users returned"
             />
             <AdminDataTable
+                caption="User accounts"
                 columns={columns}
                 data={filteredUsers}
                 isLoading={isInitialLoading}
@@ -220,6 +232,7 @@ const UsersManagement = () => {
                     />
                 }
             />
+            {roleChangeDialog}
         </div>
     );
 };

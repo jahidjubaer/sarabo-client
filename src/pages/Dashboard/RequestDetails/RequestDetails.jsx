@@ -250,7 +250,7 @@ const RequestDetails = () => {
     return (
         <MotionConfig reducedMotion="user">
             <div className="space-y-6">
-                <RepairWorkspaceHeader request={request} backTo={backTo} backLabel={backLabel} action={headerAction} />
+                <RepairWorkspaceHeader request={request} backTo={backTo} backLabel={backLabel} action={headerAction} audience={viewerRole} />
 
                 {viewerRole === 'customer' ? (
                     <CustomerRequestDetailsView

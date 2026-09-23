@@ -16,13 +16,13 @@ import { notify } from '../../../lib/notify';
 import { humanizeSlug } from '../../../utils/serviceDefinitionCatalog';
 import { getWorkStatusLabel, getWorkStatusTone, getExpertiseBadges, isTechnicianMatchable } from '../../../utils/adminPresentation';
 import { getTechnicianApprovalErrorMessage } from '../../../utils/technicianApprovalErrorMessage';
+import { StatusBadge } from '../../../components/common/StatusBadge';
+import { Select } from '../../../components/ui/select';
 
-const selectClass = "h-10 rounded-ds border border-ds-input bg-ds-background px-3 text-sm text-ds-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-ring";
 const EMPTY_TECHNICIANS = [];
 
-const APPLICATION_TONE = { pending: 'warning', approved: 'success', rejected: 'danger' };
 function ApplicationBadge({ status }) {
-    return <Badge tone={APPLICATION_TONE[status] || 'neutral'}>{status ? humanizeSlug(status) : 'Unknown'}</Badge>;
+    return <StatusBadge domain="application" status={status} audience="admin" />;
 }
 function ExpertiseBadges({ technician }) {
     const badges = getExpertiseBadges(technician);
@@ -173,7 +173,7 @@ const ApproveTechnicians = () => {
     if (isUnavailableBeforeData) {
         return (
             <div className="space-y-6">
-                <PageHeader eyebrow="Admin" title="Technicians" />
+                <PageHeader title="Technicians" />
                 <ErrorState title="Couldn't load technicians" description="We couldn't load the technician list right now. Please try again." onRetry={retryTechnicians} />
             </div>
         );
@@ -216,16 +216,16 @@ const ApproveTechnicians = () => {
                 <Input id="tech-search" type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or email" className="pl-9" />
             </div>
             <Label htmlFor="tech-status" className="sr-only">Filter by application status</Label>
-            <select id="tech-status" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={selectClass}>
+            <Select id="tech-status" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} size="sm" wrapperClassName="sm:w-52">
                 <option value="all">All applications</option>
                 {statusOptions.map((s) => <option key={s} value={s}>{humanizeSlug(s)}</option>)}
-            </select>
+            </Select>
         </div>
     );
 
     return (
         <div className="space-y-6">
-            <PageHeader eyebrow="Admin" title="Technicians" description={isInitialLoading ? 'Loading technician applications...' : `${technicians.length} technician application${technicians.length === 1 ? '' : 's'}`} />
+            <PageHeader title="Technicians" description={isInitialLoading ? 'Loading technician applications...' : `${technicians.length} technician application${technicians.length === 1 ? '' : 's'}`} />
             <AdminPageLead
                 eyebrow="Application decisions"
                 title={isInitialLoading ? 'Checking the application queue' : pendingApplicationCount > 0 ? `${pendingApplicationCount} application${pendingApplicationCount === 1 ? '' : 's'} need review` : 'No applications need review'}
@@ -236,6 +236,7 @@ const ApproveTechnicians = () => {
                 metricLabel="pending"
             />
             <AdminDataTable
+                caption="Technicians and their applications"
                 columns={columns}
                 data={filtered}
                 isLoading={isInitialLoading}

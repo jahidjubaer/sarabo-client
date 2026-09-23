@@ -2,7 +2,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useParams } from 'react-router';
 import { CreditCard, Lock } from 'lucide-react';
-import Swal from 'sweetalert2';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import Loading from '../../../components/Loading/Loading';
 import { getPaymentErrorMessage } from '../../../utils/paymentErrorMessage';
@@ -10,6 +9,7 @@ import { formatCurrency } from '../../../utils/formatCurrency';
 import { ErrorState } from '../../../components/common/ErrorState';
 import { Card } from '../../../components/ui/card';
 import { LoadingButton } from '../../../components/common/LoadingButton';
+import { notify } from '../../../lib/notify';
 
 // Legacy (v1) checkout for a pre-quote repair request - reached only from
 // Request Details, and only for a non-v2, unpaid, non-cancelled request the
@@ -52,7 +52,7 @@ const Payment = () => {
             window.location.href = res.data.url;
         } catch (error) {
             if (import.meta.env.DEV) console.error('Checkout session creation failed:', error);
-            Swal.fire({ icon: 'error', title: 'Could not start payment', text: getPaymentErrorMessage(error) });
+            notify.error(`Could not start payment. ${getPaymentErrorMessage(error)}`);
             setSubmitting(false);
         }
     }

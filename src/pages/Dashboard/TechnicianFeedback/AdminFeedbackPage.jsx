@@ -57,7 +57,7 @@ function FeedbackWorkspace({ kind }) {
     const selectedFilter = reports ? REPORT_STATUSES[filters.status] : REVIEW_VISIBILITY[filters.visibility];
     return (
         <div className="min-w-0 space-y-6">
-            <PageHeader eyebrow="Admin · Feedback & reports" title={reports ? 'Technician reports' : 'Technician reviews'}
+            <PageHeader title={reports ? 'Technician reports' : 'Technician reviews'}
                 description={reports ? 'Private reports for Admin review. Handling a report does not change assignments, accounts, payments, or earnings.' : 'Review customer feedback and moderate visibility. Original ratings and comments remain unchanged.'} />
             <FeedbackFilters kind={kind} filters={filters} onChange={(next) => { setSelectedId(null); setFilters(next); }} />
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -68,7 +68,7 @@ function FeedbackWorkspace({ kind }) {
             {state === 'unavailable' ? <FeedbackUnavailable query={query} /> : <>
                 {page && <FeedbackRefreshState query={query} />}
                 {state === 'loading' && <p role="status" className="sr-only">Loading technician {kind}…</p>}
-                <AdminDataTable columns={columns} data={items} isLoading={state === 'loading'} getRowId={(row) => row._id} renderCard={renderCard}
+                <AdminDataTable caption={reports ? 'Technician reports' : 'Technician reviews'} totalRows={page?.total} columns={columns} data={items} isLoading={state === 'loading'} getRowId={(row) => row._id} renderCard={renderCard}
                     manualPagination pageSize={20} pageIndex={filters.page - 1} pageCount={page ? Math.max(1, Math.ceil(page.total / page.limit)) : 1}
                     onPageChange={(index) => { setSelectedId(null); setFilters({ ...filters, page: index + 1 }); }}
                     emptyState={<EmptyState title={filters.page > 1 ? 'No records on this page' : `No ${selectedFilter ? `${selectedFilter.toLowerCase()} ` : ''}technician ${kind}`}

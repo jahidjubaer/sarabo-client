@@ -19,6 +19,12 @@ import { HERO } from '../utils/publicContent';
 // with a compact brand header above it, so nothing is squeezed at 320px.
 const AuthLayout = () => (
     <div className="min-h-dvh bg-ds-background text-ds-foreground lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+        <a
+            href="#main-content"
+            className="focus-ring sr-only z-[60] focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:inline-flex focus:h-10 focus:items-center focus:rounded-ds focus:bg-ds-action focus:px-4 focus:text-body-sm focus:font-semibold focus:text-ds-action-foreground"
+        >
+            Skip to content
+        </a>
         {/* Brand panel - always ink, in both themes, like the footer. */}
         <aside className="tech-grid-pattern hidden border-r border-ds-ink-foreground/15 bg-ds-ink px-10 py-14 text-ds-ink-foreground lg:flex lg:flex-col lg:justify-between xl:px-14">
             <Logo to="/" className="text-ds-ink-foreground" surface="ink" />
@@ -59,7 +65,7 @@ const AuthLayout = () => (
                 <Logo to="/" />
             </div>
 
-            <main className="flex flex-1 items-center justify-center py-10">
+            <main id="main-content" tabIndex={-1} className="flex flex-1 items-center justify-center py-10 outline-none">
                 <div className="w-full max-w-md">
                     <Outlet />
                 </div>

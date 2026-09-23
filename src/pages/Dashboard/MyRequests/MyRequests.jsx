@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { MotionConfig } from 'motion/react';
 import { Plus } from 'lucide-react';
-import Swal from 'sweetalert2';
+import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
 import useAuth from '../../../hooks/useAuth';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import { PageHeader } from '../../../components/common/PageHeader';
@@ -55,6 +55,7 @@ const MyRequests = () => {
     const [payingId, setPayingId] = useState(null);
     const [cancellingId, setCancellingId] = useState(null);
     const [deletingId, setDeletingId] = useState(null);
+    const [confirmAction, setConfirmAction] = useState(null);
     const requestsQueryKey = ['my-requests', user?.email];
 
     const { data: requestsData, refetch, isPending, isPaused, isError } = useQuery({
@@ -86,62 +87,73 @@ const MyRequests = () => {
     const handleCancelRequest = (request) => {
         if (cancellingId) return;
         if (guardVerified()) return;
-        Swal.fire({
-            title: 'Cancel this repair request?',
-            text: "This is final - once cancelled, this request cannot be reopened. Assigned or in-progress repairs can no longer be cancelled here, and paid requests require support for cancellation or a refund.",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Yes, cancel request',
-        }).then((result) => {
-            if (!result.isConfirmed) return;
-            setCancellingId(request._id);
-            axiosSecure.patch(`/repair-requests/${request._id}/cancel`)
-                .then(() => {
-                    queryClient.invalidateQueries({ queryKey: ['my-requests', user?.email] });
-                    queryClient.invalidateQueries({ queryKey: ['repair-requests', request._id] });
-                    refetch();
-                    notify.success('Your repair request has been cancelled.');
-                })
-                .catch((error) => {
-                    if (import.meta.env.DEV) console.error('Cancellation failed:', error);
-                    notify.error(getCancellationErrorMessage(error));
-                })
-                .finally(() => setCancellingId(null));
-        });
+        setConfirmAction({ kind: 'cancel', request });
+    };
+
+    const runCancelRequest = (request) => {
+        setCancellingId(request._id);
+        axiosSecure.patch(`/repair-requests/${request._id}/cancel`)
+            .then(() => {
+                queryClient.invalidateQueries({ queryKey: ['my-requests', user?.email] });
+                queryClient.invalidateQueries({ queryKey: ['repair-requests', request._id] });
+                refetch();
+                notify.success('Your repair request has been cancelled.');
+            })
+            .catch((error) => {
+                if (import.meta.env.DEV) console.error('Cancellation failed:', error);
+                notify.error(getCancellationErrorMessage(error));
+            })
+            .finally(() => {
+                setCancellingId(null);
+                setConfirmAction(null);
+            });
     };
 
     const handleDeleteRequest = (request) => {
         if (deletingId) return;
         if (guardVerified()) return;
-        Swal.fire({
-            title: 'Delete repair request?',
-            text: 'This permanently removes the request and its photos. This cannot be undone. Once a technician, inspection, quote, or payment exists, a request can no longer be deleted - cancel it instead.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Yes, delete it',
-        }).then((result) => {
-            if (!result.isConfirmed) return;
-            setDeletingId(request._id);
-            deleteRepairRequest(axiosSecure, request._id)
-                .then(() => {
-                    // The request is gone server-side - drop every request-specific
-                    // private cache branch (incl. signed image URLs) from memory now.
-                    removeDeletedRequestCaches(queryClient, request._id);
-                    queryClient.invalidateQueries({ queryKey: ['my-requests', user?.email] });
-                    refetch();
-                    notify.success('Your repair request has been deleted.');
-                })
-                .catch((error) => {
-                    if (import.meta.env.DEV) console.error('Deletion failed:', error);
-                    notify.error(getDeletionErrorMessage(error));
-                })
-                .finally(() => setDeletingId(null));
-        });
+        setConfirmAction({ kind: 'delete', request });
     };
+
+    const runDeleteRequest = (request) => {
+        setDeletingId(request._id);
+        deleteRepairRequest(axiosSecure, request._id)
+            .then(() => {
+                // The request is gone server-side - drop every request-specific
+                // private cache branch (incl. signed image URLs) from memory now.
+                removeDeletedRequestCaches(queryClient, request._id);
+                queryClient.invalidateQueries({ queryKey: ['my-requests', user?.email] });
+                refetch();
+                notify.success('Your repair request has been deleted.');
+            })
+            .catch((error) => {
+                if (import.meta.env.DEV) console.error('Deletion failed:', error);
+                notify.error(getDeletionErrorMessage(error));
+            })
+            .finally(() => {
+                setDeletingId(null);
+                setConfirmAction(null);
+            });
+    };
+
+    const confirmDialog = (
+        <ConfirmDialog
+            open={Boolean(confirmAction)}
+            onOpenChange={(open) => { if (!open) setConfirmAction(null); }}
+            title={confirmAction?.kind === 'delete' ? 'Delete this repair request?' : 'Cancel this repair request?'}
+            description={confirmAction?.kind === 'delete'
+                ? 'This permanently removes the request and its photos. It cannot be undone. Once a technician, inspection, quote or payment exists, a request can no longer be deleted - cancel it instead.'
+                : 'This is final - a cancelled request cannot be reopened. Assigned or in-progress repairs can no longer be cancelled here, and paid requests need support for cancellation or a refund.'}
+            confirmLabel={confirmAction?.kind === 'delete' ? 'Delete request' : 'Cancel request'}
+            cancelLabel="Keep request"
+            destructive
+            busy={Boolean(cancellingId || deletingId)}
+            onConfirm={() => {
+                if (confirmAction?.kind === 'delete') runDeleteRequest(confirmAction.request);
+                else if (confirmAction) runCancelRequest(confirmAction.request);
+            }}
+        />
+    );
 
     // Only the request id is sent - amount and identity are resolved server-side.
     const handlePayment = async (request) => {
@@ -167,7 +179,7 @@ const MyRequests = () => {
     if (isInitialLoading) {
         return (
             <div className="space-y-6">
-                <PageHeader eyebrow="Customer" title="My Requests" actions={newRequestAction} />
+                <PageHeader title="My Requests" actions={newRequestAction} />
                 <div className="space-y-3">
                     {[0, 1, 2, 3].map((key) => <CardSkeleton key={key} className="h-24" />)}
                 </div>
@@ -178,7 +190,7 @@ const MyRequests = () => {
     if (isError || isUnavailableBeforeData) {
         return (
             <div className="space-y-6">
-                <PageHeader eyebrow="Customer" title="My Requests" actions={newRequestAction} />
+                <PageHeader title="My Requests" actions={newRequestAction} />
                 <ErrorState
                     title="Couldn't load your requests"
                     description="We couldn't load your repair requests right now. Please try again."
@@ -196,7 +208,7 @@ const MyRequests = () => {
     return (
         <MotionConfig reducedMotion="user">
             <div className="space-y-6">
-                <PageHeader eyebrow="Customer" title="My Requests" description={description} actions={newRequestAction} />
+                <PageHeader title="My Requests" description={description} actions={newRequestAction} />
 
                 {total === 0 ? (
                     <EmptyState
@@ -233,6 +245,7 @@ const MyRequests = () => {
                     </>
                 )}
             </div>
+            {confirmDialog}
         </MotionConfig>
     );
 };

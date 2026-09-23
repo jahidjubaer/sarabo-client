@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useLocation, useNavigate } from 'react-router';
-import Swal from 'sweetalert2';
+import { FormAlert } from '../../../components/common/FormAlert';
 import useAuth from '../../../hooks/useAuth';
 import SocialLogin from '../SocialLogin/SocialLogin';
 import { getAuthErrorMessage } from '../../../utils/authErrorMessage';
@@ -15,7 +15,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // Login (Phase 6 - presentation migration only).
 //
 // Every behaviour below is the pre-existing one: the same react-hook-form
-// rules, the same signInUser/resetPassword calls, the same Swal error surfaces,
+// rules, the same signInUser/resetPassword calls, inline FormAlert error surfaces,
 // the same unverified-user routing to /verify-email, and the same
 // `location.state` handling - both for the post-login navigate and for the
 // Register link, which is what preserves a deep link's pathname + search
@@ -29,10 +29,12 @@ const Login = () => {
     const navigate = useNavigate();
     const [submitting, setSubmitting] = useState(false);
     const [resetting, setResetting] = useState(false);
+    const [formAlert, setFormAlert] = useState(null);
 
     const handleLogin = async (data) => {
         if (submitting) return;
         setSubmitting(true);
+        setFormAlert(null);
         try {
             const result = await signInUser(data.email, data.password);
             // Unverified email/password users are routed to verification rather
@@ -47,7 +49,7 @@ const Login = () => {
             }
         } catch (error) {
             if (import.meta.env.DEV) console.error('Login failed:', error);
-            Swal.fire({ icon: 'error', title: 'Login failed', text: getAuthErrorMessage(error) });
+            setFormAlert({ tone: 'danger', title: 'Login failed', text: getAuthErrorMessage(error) });
             setSubmitting(false);
         }
     }
@@ -56,24 +58,25 @@ const Login = () => {
         if (resetting) return;
         const email = getValues('email');
         if (!email || !EMAIL_PATTERN.test(email)) {
-            Swal.fire({
-                icon: 'warning',
+            setFormAlert({
+                tone: 'warning',
                 title: 'Enter your email first',
-                text: 'Type a valid email address above, then click "Forgot password?" again.'
+                text: 'Type a valid email address above, then choose "Forgot password?" again.'
             });
             return;
         }
         setResetting(true);
+        setFormAlert(null);
         try {
             await resetPassword(email);
-            Swal.fire({
-                icon: 'success',
+            setFormAlert({
+                tone: 'success',
                 title: 'Check your inbox',
                 text: 'If an account exists for this email, a password reset link has been sent.'
             });
         } catch (error) {
             if (import.meta.env.DEV) console.error('Password reset failed:', error);
-            Swal.fire({ icon: 'error', title: 'Could not send reset email', text: getAuthErrorMessage(error) });
+            setFormAlert({ tone: 'danger', title: 'Could not send reset email', text: getAuthErrorMessage(error) });
         } finally {
             setResetting(false);
         }
@@ -93,6 +96,8 @@ const Login = () => {
 
             {/* No `noValidate`: native constraint validation on type="email" is
                 part of the current behaviour and is deliberately left in place. */}
+            <FormAlert alert={formAlert} className="mt-6" />
+
             <form onSubmit={handleSubmit(handleLogin)} className="mt-8 flex flex-col gap-5">
                 <FormField id="login-email" label="Email" required error={emailError}>
                     <Input

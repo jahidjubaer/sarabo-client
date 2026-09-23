@@ -8,9 +8,9 @@ import { toast } from 'react-toastify';
 // at the app root (see main.jsx); callers pass only the message and, if needed,
 // per-toast overrides.
 //
-// Division of labour for the redesign: react-toastify = non-blocking feedback;
-// Dialog/AlertDialog = new redesigned confirmations; SweetAlert = legacy
-// confirmation flows until migrated page-by-page.
+// Division of labour: react-toastify (via notify) = non-blocking feedback;
+// components/common/ConfirmDialog = confirmations; components/common/FormAlert
+// = form-level errors that must stay next to the form.
 const notify = {
     success: (message, options) => toast.success(message, options),
     error: (message, options) => toast.error(message, options),

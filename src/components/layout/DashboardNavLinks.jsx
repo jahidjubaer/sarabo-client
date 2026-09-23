@@ -39,7 +39,7 @@ function NavCount() {
     );
 }
 
-function NavItem({ item, collapsed, onNavigate }) {
+function NavItem({ item, collapsed, onNavigate, touch }) {
     const Icon = item.icon;
     const link = (
         <NavLink
@@ -53,11 +53,12 @@ function NavItem({ item, collapsed, onNavigate }) {
             aria-label={collapsed ? item.label : undefined}
             className={({ isActive }) =>
                 cn(
-                    'group relative flex items-center gap-3 rounded-ds px-3 py-2 text-body-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ds-ring',
+                    'group relative flex items-center gap-3 rounded-ds px-3 text-body-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ds-ring',
+                    touch ? 'min-h-12' : 'min-h-10',
                     collapsed && 'justify-center px-0',
                     isActive
                         ? 'bg-ds-ink-foreground/10 font-semibold text-ds-ink-foreground'
-                        : 'font-medium text-ds-ink-foreground/65 hover:bg-ds-ink-foreground/5 hover:text-ds-ink-foreground'
+                        : 'font-medium text-ds-ink-foreground/75 hover:bg-ds-ink-foreground/5 hover:text-ds-ink-foreground'
                 )
             }
         >
@@ -73,7 +74,7 @@ function NavItem({ item, collapsed, onNavigate }) {
                             isActive ? 'h-5 bg-ds-action opacity-100' : 'h-0 opacity-0'
                         )}
                     />
-                    {Icon ? <Icon className="size-4 shrink-0" aria-hidden="true" /> : null}
+                    {Icon ? <Icon className="size-5 shrink-0" aria-hidden="true" /> : null}
                     {!collapsed && <span className="truncate">{item.label}</span>}
                     {!collapsed && item.badge === 'notifications' ? <NavCount /> : null}
                 </>
@@ -91,18 +92,18 @@ function NavItem({ item, collapsed, onNavigate }) {
     );
 }
 
-function DashboardNavLinks({ sections, collapsed = false, onNavigate }) {
+function DashboardNavLinks({ sections, collapsed = false, onNavigate, touch = false }) {
     return (
         <nav className="flex flex-col gap-6" aria-label="Dashboard sections">
             {sections.map((section) => (
                 <div key={section.heading}>
                     {!collapsed && (
-                        <p className="ds-label px-3 pb-2 text-ds-ink-foreground/45">{section.heading}</p>
+                        <p className="ds-label px-3 pb-2 text-ds-ink-muted">{section.heading}</p>
                     )}
                     <ul className="flex flex-col gap-0.5">
                         {section.items.map((item) => (
                             <li key={item.to}>
-                                <NavItem item={item} collapsed={collapsed} onNavigate={onNavigate} />
+                                <NavItem item={item} collapsed={collapsed} onNavigate={onNavigate} touch={touch} />
                             </li>
                         ))}
                     </ul>

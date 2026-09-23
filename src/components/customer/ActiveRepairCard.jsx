@@ -40,7 +40,7 @@ function ActiveRepairCard({ request, className }) {
                                 {actionDescription && <p className="mt-1 max-w-2xl text-sm text-ds-muted-foreground">{actionDescription}</p>}
                             </div>
                         </div>
-                        <StatusBadge status={request.deliveryStatus} className="self-start" />
+                        <StatusBadge audience="customer" status={request.deliveryStatus} className="self-start" />
                     </div>
 
                     <div className="mt-4 flex flex-col gap-2 min-[390px]:flex-row min-[390px]:items-center">

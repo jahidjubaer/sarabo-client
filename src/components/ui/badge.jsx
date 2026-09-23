@@ -6,8 +6,8 @@ import { badgeVariants } from './badge-variants';
 // `ds-` semantic scale and adapt to dark mode. Consumed by the design-system
 // StatusBadge (components/common/StatusBadge.jsx), which resolves a raw status
 // into { label, tone } via config/statusPresentation.js.
-function Badge({ className, tone, ...props }) {
-    return <span className={cn(badgeVariants({ tone }), className)} {...props} />;
+function Badge({ className, tone, size, ...props }) {
+    return <span className={cn(badgeVariants({ tone, size }), className)} {...props} />;
 }
 
 export { Badge };

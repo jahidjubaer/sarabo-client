@@ -6,8 +6,8 @@ import { Button } from '../ui/button';
 import {
     SEVERITY_OPTIONS, ISSUE_LABEL_MIN, ISSUE_LABEL_MAX, ISSUE_NOTES_MAX, MAX_DETECTED_ISSUES,
 } from '../../utils/inspectionForm';
+import { Select } from '../ui/select';
 
-const selectClass = "flex h-10 w-full rounded-ds border border-ds-input bg-ds-background px-3 text-sm text-ds-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-ring aria-[invalid=true]:border-ds-destructive";
 
 // Repeatable detected-issue rows (Phase 6.4 Unit 4) redesigned in 7.6A. The
 // parent's react-hook-form field array + all validation rules are unchanged;
@@ -51,17 +51,16 @@ const DetectedIssuesEditor = ({ fields, register, errors, append, remove }) => {
 
                         <div className="space-y-1.5">
                             <Label htmlFor={`issue-severity-${index}`}>Severity</Label>
-                            <select
+                            <Select
                                 id={`issue-severity-${index}`}
                                 defaultValue=""
-                                className={selectClass}
                                 aria-invalid={issueErrors[index]?.severity ? 'true' : 'false'}
                                 aria-describedby={issueErrors[index]?.severity ? `issue-severity-${index}-error` : undefined}
                                 {...register(`detectedIssues.${index}.severity`, { required: 'Select a severity.' })}
                             >
                                 <option value="" disabled>Select severity</option>
                                 {SEVERITY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                            </select>
+                            </Select>
                             {issueErrors[index]?.severity && <p id={`issue-severity-${index}-error`} role="alert" className="text-xs font-medium text-ds-destructive">{issueErrors[index].severity.message}</p>}
                         </div>
 

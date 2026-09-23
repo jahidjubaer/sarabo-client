@@ -18,6 +18,7 @@ import { getProductSummary, getDeviceLabel } from '../../../utils/customerReques
 import { formatAbsoluteDateTime } from '../../../utils/relativeTime';
 import { getManageRepairRequestsErrorMessage } from '../../../utils/manageRepairRequestsErrorMessage';
 import { cn } from '../../../lib/utils';
+import { Select } from '../../../components/ui/select';
 
 const STATUS_OPTIONS = [
     { value: 'all', label: 'All statuses' },
@@ -35,10 +36,9 @@ const PAYMENT_OPTIONS = [
 ];
 const SEARCH_DEBOUNCE_MS = 400;
 const PAGE_LIMIT = 10;
-const selectClass = "h-10 rounded-ds border border-ds-input bg-ds-background px-3 text-sm text-ds-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-ring";
 
 function PaymentBadge({ paid }) {
-    return <Badge tone={paid ? 'success' : 'warning'}>{paid ? 'Paid' : 'Unpaid'}</Badge>;
+    return <StatusBadge domain="payment" status={paid ? 'paid' : 'unpaid'} audience="admin" />;
 }
 
 // Phase 7.5: admin repair-request management on the design-system data table.
@@ -97,7 +97,7 @@ const ManageRepairRequests = () => {
     const columns = useMemo(() => [
         {
             id: 'status', header: 'Status', enableSorting: false, enableHiding: false,
-            cell: ({ row }) => <StatusBadge status={row.original.deliveryStatus || 'pending-pickup'} />,
+            cell: ({ row }) => <StatusBadge audience="admin" status={row.original.deliveryStatus || 'pending-pickup'} />,
             meta: { label: 'Status' },
         },
         {
@@ -157,7 +157,7 @@ const ManageRepairRequests = () => {
     if (isUnavailableBeforeData) {
         return (
             <div className="space-y-6">
-                <PageHeader eyebrow="Admin" title="Repair Requests" />
+                <PageHeader title="Repair Requests" />
                 <ErrorState
                     title="Couldn't load repair requests"
                     description={isError ? getManageRepairRequestsErrorMessage(error) : "We couldn't load repair requests right now. Please try again."}
@@ -179,7 +179,7 @@ const ManageRepairRequests = () => {
                         <p className="truncate text-sm font-semibold text-ds-foreground">{device}</p>
                         <p className="break-all font-mono text-xs text-ds-muted-foreground">{request.trackingId}</p>
                     </div>
-                    <StatusBadge status={request.deliveryStatus || 'pending-pickup'} className="shrink-0" />
+                    <StatusBadge audience="admin" status={request.deliveryStatus || 'pending-pickup'} className="shrink-0" />
                 </div>
                 <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
                     <div><dt className="text-ds-muted-foreground">Customer</dt><dd className="truncate text-ds-foreground">{request.senderName}</dd></div>
@@ -203,13 +203,13 @@ const ManageRepairRequests = () => {
                 <Input id="manage-search" type="search" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} placeholder="Search tracking, customer, device" className="pl-9" />
             </div>
             <Label htmlFor="manage-status" className="sr-only">Filter by status</Label>
-            <select id="manage-status" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} className={selectClass}>
+            <Select id="manage-status" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} size="sm" wrapperClassName="sm:w-52">
                 {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
+            </Select>
             <Label htmlFor="manage-payment" className="sr-only">Filter by payment</Label>
-            <select id="manage-payment" value={paymentStatus} onChange={(e) => { setPaymentStatus(e.target.value); setPage(1); }} className={selectClass}>
+            <Select id="manage-payment" value={paymentStatus} onChange={(e) => { setPaymentStatus(e.target.value); setPage(1); }} size="sm" wrapperClassName="sm:w-52">
                 {PAYMENT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
+            </Select>
             {hasActiveFilters && (
                 <Button variant="ghost" size="sm" onClick={handleResetFilters}><X aria-hidden="true" />Reset</Button>
             )}
@@ -218,7 +218,7 @@ const ManageRepairRequests = () => {
 
     return (
         <div className="space-y-6">
-            <PageHeader eyebrow="Admin" title="Repair Requests" description={isInitialLoading ? 'Loading repair requests...' : `${pagination.totalItems} request${pagination.totalItems === 1 ? '' : 's'} across every stage`} />
+            <PageHeader title="Repair Requests" description={isInitialLoading ? 'Loading repair requests...' : `${pagination.totalItems} request${pagination.totalItems === 1 ? '' : 's'} across every stage`} />
             <AdminPageLead
                 eyebrow="Repair operations"
                 title="Scan workflow state before intervening"
@@ -229,6 +229,9 @@ const ManageRepairRequests = () => {
             />
             <p className={cn("text-sm text-ds-muted-foreground transition-opacity", isFetching ? "opacity-100" : "opacity-0")} role="status" aria-live="polite">Updating results…</p>
             <AdminDataTable
+                caption="Repair requests"
+                pageSize={PAGE_LIMIT}
+                totalRows={pagination.totalItems}
                 columns={columns}
                 data={requests}
                 isLoading={isInitialLoading}

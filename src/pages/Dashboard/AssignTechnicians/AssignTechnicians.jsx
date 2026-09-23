@@ -143,7 +143,7 @@ const AssignTechnicians = () => {
     if (isUnavailableBeforeData) {
         return (
             <div className="space-y-6">
-                <PageHeader eyebrow="Admin" title="Assign Technicians" />
+                <PageHeader title="Assign Technicians" />
                 <ErrorState title="Couldn't load requests" description="We couldn't load requests awaiting assignment right now. Please try again." onRetry={retryPendingRequests} />
             </div>
         );
@@ -181,7 +181,7 @@ const AssignTechnicians = () => {
 
     return (
         <div className="space-y-6">
-            <PageHeader eyebrow="Admin" title="Assign Technicians" description={isInitialLoading ? 'Loading requests awaiting assignment...' : `${requests.length} request${requests.length === 1 ? '' : 's'} awaiting assignment`} />
+            <PageHeader title="Assign Technicians" description={isInitialLoading ? 'Loading requests awaiting assignment...' : `${requests.length} request${requests.length === 1 ? '' : 's'} awaiting assignment`} />
             <AdminPageLead
                 eyebrow="Assignment queue"
                 title={isInitialLoading ? 'Checking requests awaiting assignment' : requests.length > 0 ? `${requests.length} request${requests.length === 1 ? '' : 's'} need a Technician` : 'No requests need assignment'}
@@ -192,6 +192,7 @@ const AssignTechnicians = () => {
                 metricLabel="awaiting assignment"
             />
             <AdminDataTable
+                caption="Repair requests awaiting a technician"
                 columns={columns}
                 data={filtered}
                 isLoading={isInitialLoading}

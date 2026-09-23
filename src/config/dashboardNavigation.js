@@ -2,6 +2,7 @@ import {
     LayoutDashboard, PlusCircle, Wrench, CreditCard, ClipboardList, CheckCheck,
     UserCog, UserCheck, Users, Bell, User, Home, Wallet, Banknote, MessageSquare, ClipboardCheck,
 } from 'lucide-react';
+import { matchPath } from 'react-router';
 
 // Canonical, role-aware dashboard navigation (Phase 7.2). Single source of
 // truth for the sidebar, the mobile sheet, and the command palette - no menu
@@ -81,7 +82,7 @@ export const ACCOUNT_SECTION = {
 };
 
 // Link back to the public site, offered for all roles.
-export const HOME_ITEM = { label: 'Home page', to: '/', icon: Home, end: true };
+export const HOME_ITEM = { label: 'Back to Sarabo', to: '/', icon: Home, end: true };
 
 // Role sections + the shared account section. An unknown/loading role yields
 // just the account section (mirrors the old shell hiding role links until the
@@ -109,7 +110,7 @@ export const SEGMENT_LABELS = {
     'create-request': 'Create Request',
     'my-requests': 'My Requests',
     'payment-history': 'Payment History',
-    'assigned-jobs': 'Assigned Jobs',
+    'assigned-jobs': 'Assigned Repairs',
     'completed-jobs': 'Completed Repairs',
     'manage-repair-requests': 'Repair Requests',
     'assign-technicians': 'Assign Technicians',
@@ -127,3 +128,67 @@ export const SEGMENT_LABELS = {
 };
 
 export const DYNAMIC_SEGMENT_LABEL = 'Details';
+
+// ---- Mobile tab bar ----
+// Below lg, customers and technicians get a bottom tab bar for the few places
+// they go most; everything else stays in the menu sheet. Admin work is
+// desk-based, so admins keep the sheet only (null). `emphasis` marks the one
+// centre "create" tab. Same visibility-only rule as the sections above.
+const CUSTOMER_TABS = [
+    { label: 'Home', to: '/dashboard', icon: LayoutDashboard, end: true },
+    { label: 'Repairs', to: '/dashboard/my-requests', icon: Wrench },
+    { label: 'New request', to: '/dashboard/create-request', icon: PlusCircle, emphasis: true },
+    { label: 'Alerts', to: '/dashboard/notifications', icon: Bell, badge: 'notifications' },
+    { label: 'Account', to: '/dashboard/profile', icon: User },
+];
+
+const TECHNICIAN_TABS = [
+    { label: 'Home', to: '/dashboard', icon: LayoutDashboard, end: true },
+    { label: 'Jobs', to: '/dashboard/assigned-jobs', icon: ClipboardList },
+    { label: 'Wallet', to: '/dashboard/wallet', icon: Wallet },
+    { label: 'Alerts', to: '/dashboard/notifications', icon: Bell, badge: 'notifications' },
+    { label: 'Account', to: '/dashboard/profile', icon: User },
+];
+
+export function getMobileTabs(role) {
+    if (role === 'user') return CUSTOMER_TABS;
+    if (role === 'rider') return TECHNICIAN_TABS;
+    return null;
+}
+
+// ---- Document titles ----
+// Every route gets a document title ("<page> · Sarabo") so browser tabs,
+// history and screen-reader page announcements say where you are.
+const PUBLIC_TITLES = [
+    ['/', 'Electronics repair'],
+    ['/services', 'Services'],
+    ['/service-areas', 'Service areas'],
+    ['/about', 'About'],
+    ['/track-request', 'Track a repair'],
+    ['/track-request/:requestId', 'Track a repair'],
+    ['/login', 'Sign in'],
+    ['/register', 'Create account'],
+    ['/become-technician', 'Become a technician'],
+    ['/verify-email', 'Verify your email'],
+    ['/design-preview', 'Design system'],
+];
+
+// Title for a dynamic child route, keyed by its parent segment.
+const DYNAMIC_TITLES = {
+    'my-requests': 'Repair details',
+    'assigned-jobs': 'Repair details',
+    'manage-repair-requests': 'Repair details',
+    payment: 'Payment',
+};
+
+export function getRouteTitle(pathname) {
+    for (const [pattern, title] of PUBLIC_TITLES) {
+        if (matchPath({ path: pattern, end: true }, pathname)) return title;
+    }
+    const segments = pathname.split('/').filter(Boolean);
+    if (segments[0] !== 'dashboard') return null;
+    if (segments.length === 1) return 'Dashboard';
+    const last = segments[segments.length - 1];
+    if (SEGMENT_LABELS[last]) return SEGMENT_LABELS[last];
+    return DYNAMIC_TITLES[segments[segments.length - 2]] || 'Dashboard';
+}

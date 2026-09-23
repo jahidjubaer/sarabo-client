@@ -32,7 +32,7 @@ function RecentRequests({ requests }) {
                                     <div className="min-w-0 flex-1 space-y-1.5">
                                         <div className="flex flex-col items-start gap-1.5 sm:flex-row sm:items-center">
                                             <p className="break-words text-sm font-semibold text-ds-foreground">{device}</p>
-                                            <StatusBadge status={request.deliveryStatus} showIcon={false} />
+                                            <StatusBadge audience="customer" status={request.deliveryStatus} showIcon={false} />
                                         </div>
                                         <p className="text-xs text-ds-muted-foreground">
                                             {category && <span>{category} · </span>}

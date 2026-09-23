@@ -12,6 +12,7 @@ import {
     REPAIRABILITY_OPTIONS, DIAGNOSIS_SUMMARY_MIN, DIAGNOSIS_SUMMARY_MAX, REASON_MIN, REASON_MAX,
     INTERNAL_NOTES_MAX, MAX_ESTIMATE_BDT, buildInspectionPayload, parseEstimate,
 } from '../../utils/inspectionForm';
+import { Select } from '../ui/select';
 
 const SUBMIT_ERROR_COPY = {
     INSPECTION_ALREADY_SUBMITTED: 'An inspection has already been submitted for this request.',
@@ -30,7 +31,6 @@ function submitErrorMessage(error) {
     return SUBMIT_ERROR_COPY[error?.response?.data?.code] || 'Could not submit the inspection. Please try again.';
 }
 
-const selectClass = "flex h-10 w-full rounded-ds border border-ds-input bg-ds-background px-3 text-sm text-ds-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-ring aria-[invalid=true]:border-ds-destructive";
 
 // Inspection form (Phase 6.4 Unit 4) redesigned in 7.6A: same react-hook-form
 // fields, same validation rules, same buildInspectionPayload contract and
@@ -89,14 +89,14 @@ const InspectionForm = ({ requestId }) => {
                 <div className="space-y-3 rounded-ds-lg border border-ds-border p-4">
                     <div className="space-y-1.5">
                         <Label htmlFor="repairabilityDecision">Repairability</Label>
-                        <select
-                            id="repairabilityDecision" defaultValue="" className={selectClass}
+                        <Select
+                            id="repairabilityDecision" defaultValue=""
                             aria-invalid={errors.repairabilityDecision ? 'true' : 'false'} aria-describedby={errors.repairabilityDecision ? 'repairabilityDecision-error' : undefined}
                             {...register('repairabilityDecision', { required: 'Select a repairability decision.' })}
                         >
                             <option value="" disabled>Select a decision</option>
                             {REPAIRABILITY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                        </select>
+                        </Select>
                         {errors.repairabilityDecision && <p id="repairabilityDecision-error" role="alert" className="text-xs font-medium text-ds-destructive">{errors.repairabilityDecision.message}</p>}
                     </div>
                     <div className="space-y-1.5">

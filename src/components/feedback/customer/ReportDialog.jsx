@@ -7,6 +7,7 @@ import { useCustomerFeedbackMutation } from '../../../hooks/useCustomerTechnicia
 import { customerFeedbackError, feedbackFailureNeedsRefresh, validateCustomerFeedbackText } from '../../../utils/customerFeedback';
 import { REPORT_REASONS } from '../../../utils/technicianFeedback';
 import { notify } from '../../../lib/notify';
+import { Select } from '../../ui/select';
 
 const targetValue = (target) => target.assignmentId ?? 'current-assignment';
 
@@ -59,26 +60,24 @@ export default function ReportDialog({ requestId, targets, availableTargets, can
                     </DialogHeader>
                     {targets.length > 1 ? <div className="space-y-2">
                         <Label htmlFor={`${id}-target`}>Technician (required)</Label>
-                        <select id={`${id}-target`} required value={selection} disabled={busy || blocked}
+                        <Select id={`${id}-target`} required value={selection} disabled={busy || blocked}
                             onChange={(event) => { setSelection(event.target.value); setErrors({ ...errors, target: '' }); setError(''); }}
-                            className="focus-ring h-11 w-full min-w-0 rounded-ds border border-ds-input bg-ds-background px-3 text-sm"
                             aria-invalid={!!errors.target} aria-describedby={`${id}-target-error`}>
                             <option value="">Choose a technician</option>
                             {targets.map((item) => <option key={targetValue(item)} value={targetValue(item)} disabled={!availableTargets.some((current) => current.assignmentId === item.assignmentId)}>
                                 {item.technicianName}{targets.filter((other) => other.technicianName === item.technicianName).length > 1 && item.assignmentId ? ` — assignment …${item.assignmentId.slice(-6)}` : ''}
                             </option>)}
-                        </select>
+                        </Select>
                         <p id={`${id}-target-error`} role={errors.target ? 'alert' : undefined} className="text-sm text-ds-destructive">{errors.target}</p>
                     </div> : <p className="break-words text-sm [overflow-wrap:anywhere]">Technician: <span className="font-medium">{targets[0]?.technicianName}</span></p>}
                     <div className="space-y-2">
                         <Label htmlFor={`${id}-reason`}>Reason (required)</Label>
-                        <select id={`${id}-reason`} required value={reason} disabled={busy || blocked}
+                        <Select id={`${id}-reason`} required value={reason} disabled={busy || blocked}
                             onChange={(event) => { setReason(event.target.value); setErrors({ ...errors, reason: '' }); setError(''); }}
-                            className="focus-ring h-11 w-full min-w-0 rounded-ds border border-ds-input bg-ds-background px-3 text-sm"
                             aria-invalid={!!errors.reason} aria-describedby={`${id}-reason-error`}>
                             <option value="">Select a reason</option>
                             {Object.entries(REPORT_REASONS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                        </select>
+                        </Select>
                         <p id={`${id}-reason-error`} role={errors.reason ? 'alert' : undefined} className="text-sm text-ds-destructive">{errors.reason}</p>
                     </div>
                     <div className="space-y-2">

@@ -68,6 +68,9 @@ export function summarizeStatusStats(stats) {
 // theme-token colour per status tone (so it themes with light/dark).
 const TONE_COLOR_VAR = {
     neutral: 'var(--ds-muted-foreground)',
+    waiting: 'var(--ds-waiting-subtle-foreground)',
+    active: 'var(--ds-info)',
+    attention: 'var(--ds-attention)',
     info: 'var(--ds-info)',
     success: 'var(--ds-success)',
     warning: 'var(--ds-warning)',

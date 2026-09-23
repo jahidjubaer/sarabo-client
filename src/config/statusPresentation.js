@@ -10,15 +10,16 @@ import {
 // business meaning - the raw status strings and their workflow semantics are
 // untouched; this only decides presentation.
 //
-// Labels intentionally match the existing src/utils/repairStatus.js wording so
-// the redesigned surfaces read identically to the current ones during the
-// page-by-page migration. Legacy pages keep using repairStatus.js /
-// statusBadge.js until they are migrated; new surfaces consume this map via
-// components/common/StatusBadge.jsx.
+// This is the ONLY source of repair-status labels: utils/repairStatus.js (the
+// public tracking page) now reads its labels from here, so the dashboard and
+// the public page can no longer disagree.
 //
-// Tones (from the design-system scale): neutral | info | warning | success |
-// danger | accent. Meaning is always paired with the label text and an icon,
-// so status is never conveyed by colour alone.
+// Tones (redesign Phase 1): waiting | active | attention | success | danger |
+// neutral. `tone` is the audience-neutral tone (what an admin sees). Amber
+// `attention` means "the viewer has to act", so it depends on who is looking:
+// AUDIENCE_TONES below lifts a status to attention only for the role that owns
+// the next step. Use getStatusTone(status, audience). Meaning is always paired
+// with the label text and an icon, never colour alone.
 //
 // `customerDescription` / `customerNextStep` (Phase 7.3) are PRESENTATION-ONLY,
 // deterministic, plain-language copy for customer-facing surfaces - they never
@@ -34,20 +35,20 @@ import {
 // workflow rule. The actual per-status CTA (and whether it advances status or
 // navigates to the details screen) lives in utils/technicianJobPresentation.js.
 const STATUS_PRESENTATION = {
-    'pending-pickup': { label: 'Request Submitted', tone: 'warning', icon: Clock, customerDescription: "We've received your repair request and will assign a technician soon.", customerNextStep: null, technicianDescription: 'Awaiting technician assignment.', technicianNextStep: null },
+    'pending-pickup': { label: 'Request Submitted', tone: 'waiting', icon: Clock, customerDescription: "We've received your repair request and will assign a technician soon.", customerNextStep: null, technicianDescription: 'Awaiting technician assignment.', technicianNextStep: null },
     // Phase 8.2: an admin has offered the request to a technician who has not
     // yet accepted. Customer copy stays calm/neutral (never mentions a
     // rejection); the technician is prompted to decide.
-    'assignment_pending': { label: 'Confirming Technician', tone: 'warning', icon: UserRoundCheck, customerDescription: "We're confirming a technician for your repair. You'll be updated once it's accepted.", customerNextStep: null, technicianDescription: 'This assignment is awaiting your decision.', technicianNextStep: 'Accept or reject this assignment.' },
-    'driver_assigned': { label: 'Technician Assigned', tone: 'info', icon: UserCheck, customerDescription: 'A technician has been assigned and will arrange to collect your device.', customerNextStep: null, technicianDescription: 'Assigned to you.', technicianNextStep: 'Start the journey to collect the device.' },
-    'rider_arriving': { label: 'Technician On The Way', tone: 'accent', icon: Truck, customerDescription: 'Your technician is on the way to collect the device.', customerNextStep: null, technicianDescription: 'On the way to collect the device.', technicianNextStep: 'Mark the device as picked up to begin.' },
-    'parcel_picked_up': { label: 'Device Collected', tone: 'accent', icon: PackageCheck, customerDescription: "We've received your device and will begin inspection shortly.", customerNextStep: null, technicianDescription: 'Device received and ready for inspection.', technicianNextStep: 'Complete the inspection.' },
-    'inspection_completed': { label: 'Inspection Completed', tone: 'info', icon: ClipboardCheck, customerDescription: 'Inspection is complete. A repair quote will follow shortly.', customerNextStep: null, technicianDescription: 'Inspection submitted.', technicianNextStep: 'Prepare the repair quote.' },
-    'quote_submitted': { label: 'Quote Ready', tone: 'warning', icon: FileText, customerDescription: 'Your repair quote is ready to review.', customerNextStep: 'Review the quote and approve or decline it.', technicianDescription: 'Quote sent to the customer.', technicianNextStep: "Waiting for the customer's decision." },
-    'quote_approved': { label: 'Quote Approved', tone: 'success', icon: CircleCheckBig, customerDescription: "You've approved the quote for this repair.", customerNextStep: 'Complete payment to start the repair.', technicianDescription: 'Quote approved by the customer.', technicianNextStep: 'Waiting for payment.' },
-    'quote_rejected': { label: 'Quote Declined', tone: 'danger', icon: CircleX, customerDescription: 'You declined the repair quote for this request.', customerNextStep: null, technicianDescription: 'The customer declined the quote.', technicianNextStep: null },
-    'payment_completed': { label: 'Payment Completed', tone: 'info', icon: CreditCard, customerDescription: 'Payment received. Your repair will begin shortly.', customerNextStep: null, technicianDescription: 'Payment received.', technicianNextStep: 'Start the repair work.' },
-    'repair_in_progress': { label: 'Repair In Progress', tone: 'accent', icon: Wrench, customerDescription: 'Your device is currently being repaired.', customerNextStep: null, technicianDescription: 'Repair work is in progress.', technicianNextStep: 'Update progress or complete the repair.' },
+    'assignment_pending': { label: 'Confirming Technician', tone: 'waiting', icon: UserRoundCheck, customerDescription: "We're confirming a technician for your repair. You'll be updated once it's accepted.", customerNextStep: null, technicianDescription: 'This assignment is awaiting your decision.', technicianNextStep: 'Accept or reject this assignment.' },
+    'driver_assigned': { label: 'Technician Assigned', tone: 'active', icon: UserCheck, customerDescription: 'A technician has been assigned and will arrange to collect your device.', customerNextStep: null, technicianDescription: 'Assigned to you.', technicianNextStep: 'Start the journey to collect the device.' },
+    'rider_arriving': { label: 'Technician On The Way', tone: 'active', icon: Truck, customerDescription: 'Your technician is on the way to collect the device.', customerNextStep: null, technicianDescription: 'On the way to collect the device.', technicianNextStep: 'Mark the device as picked up to begin.' },
+    'parcel_picked_up': { label: 'Device Collected', tone: 'active', icon: PackageCheck, customerDescription: "We've received your device and will begin inspection shortly.", customerNextStep: null, technicianDescription: 'Device received and ready for inspection.', technicianNextStep: 'Complete the inspection.' },
+    'inspection_completed': { label: 'Inspection Completed', tone: 'active', icon: ClipboardCheck, customerDescription: 'Inspection is complete. A repair quote will follow shortly.', customerNextStep: null, technicianDescription: 'Inspection submitted.', technicianNextStep: 'Prepare the repair quote.' },
+    'quote_submitted': { label: 'Quote Ready', tone: 'waiting', icon: FileText, customerDescription: 'Your repair quote is ready to review.', customerNextStep: 'Review the quote and approve or decline it.', technicianDescription: 'Quote sent to the customer.', technicianNextStep: "Waiting for the customer's decision." },
+    'quote_approved': { label: 'Quote Approved', tone: 'waiting', icon: CircleCheckBig, customerDescription: "You've approved the quote for this repair.", customerNextStep: 'Complete payment to start the repair.', technicianDescription: 'Quote approved by the customer.', technicianNextStep: 'Waiting for payment.' },
+    'quote_rejected': { label: 'Quote Declined', tone: 'neutral', icon: CircleX, customerDescription: 'You declined the repair quote for this request.', customerNextStep: null, technicianDescription: 'The customer declined the quote.', technicianNextStep: null },
+    'payment_completed': { label: 'Payment Completed', tone: 'active', icon: CreditCard, customerDescription: 'Payment received. Your repair will begin shortly.', customerNextStep: null, technicianDescription: 'Payment received.', technicianNextStep: 'Start the repair work.' },
+    'repair_in_progress': { label: 'Repair In Progress', tone: 'active', icon: Wrench, customerDescription: 'Your device is currently being repaired.', customerNextStep: null, technicianDescription: 'Repair work is in progress.', technicianNextStep: 'Update progress or complete the repair.' },
     'repair_completed': { label: 'Repair Completed', tone: 'success', icon: BadgeCheck, customerDescription: 'Your repair is complete.', customerNextStep: null, technicianDescription: 'Repair completed.', technicianNextStep: null },
     'parcel_delivered': { label: 'Repair Completed', tone: 'success', icon: BadgeCheck, customerDescription: 'Your repair is complete.', customerNextStep: null, technicianDescription: 'Repair completed and delivered.', technicianNextStep: null },
     'cancelled': { label: 'Request Cancelled', tone: 'neutral', icon: Ban, customerDescription: 'This request was cancelled.', customerNextStep: null, technicianDescription: 'This request was cancelled.', technicianNextStep: null },
@@ -58,9 +59,36 @@ const STATUS_PRESENTATION = {
 // how the rest of the app defaults an absent deliveryStatus to pending-pickup.
 const FALLBACK_PRESENTATION = { label: 'Unknown Status', tone: 'neutral', icon: CircleHelp, customerDescription: '', customerNextStep: null, technicianDescription: '', technicianNextStep: null };
 
+// Statuses where a specific role owns the next step. Everything not listed
+// keeps the neutral tone for that audience.
+const AUDIENCE_TONES = {
+    customer: {
+        quote_submitted: 'attention',
+        quote_approved: 'attention',
+    },
+    technician: {
+        assignment_pending: 'attention',
+        driver_assigned: 'attention',
+        rider_arriving: 'attention',
+        parcel_picked_up: 'attention',
+        inspection_completed: 'attention',
+        quote_rejected: 'attention',
+        payment_completed: 'attention',
+    },
+    admin: {
+        'pending-pickup': 'attention',
+    },
+};
+
+export function getStatusTone(status, audience) {
+    const key = status || 'pending-pickup';
+    const override = audience ? AUDIENCE_TONES[audience]?.[key] : undefined;
+    return override || getStatusPresentation(key).tone;
+}
+
 export function getStatusPresentation(status) {
     if (!status) return STATUS_PRESENTATION['pending-pickup'];
     return STATUS_PRESENTATION[status] || FALLBACK_PRESENTATION;
 }
 
-export { STATUS_PRESENTATION, FALLBACK_PRESENTATION };
+export { STATUS_PRESENTATION, FALLBACK_PRESENTATION, AUDIENCE_TONES };

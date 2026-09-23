@@ -6,6 +6,9 @@ import { DashboardSidebar } from './DashboardSidebar';
 import { DashboardHeader } from './DashboardHeader';
 import { MobileDashboardNav } from './MobileDashboardNav';
 import { CommandMenu } from './CommandMenu';
+import { MobileTabBar } from './MobileTabBar';
+import { getMobileTabs } from '../../config/dashboardNavigation';
+import { cn } from '../../lib/utils';
 import DashboardVerificationBanner from './DashboardVerificationBanner';
 
 // UI-only, narrowly-namespaced storage for the sidebar collapse preference.
@@ -24,13 +27,16 @@ function readCollapsed() {
 // palette (transient) - and composes the sidebar, header, main content Outlet,
 // mobile nav, and command menu. Role comes from the server-derived useRole();
 // it only drives navigation VISIBILITY, never authorization (route guards
-// remain authoritative). Page content renders in a full-width, min-w-0 main
-// area with responsive padding - no marketing max-width is imposed.
+// remain authoritative). Page content sits on the paper canvas, centred and
+// capped at 80rem so tables and forms stop stretching on wide screens; pages
+// that need less (forms, detail views) narrow it themselves. Below lg,
+// customers and technicians also get the bottom MobileTabBar.
 function DashboardShell() {
     const { role } = useRole();
     const [collapsed, setCollapsed] = useState(readCollapsed);
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
     const [commandOpen, setCommandOpen] = useState(false);
+    const hasTabBar = Boolean(getMobileTabs(role));
 
     const toggleCollapse = useCallback(() => {
         setCollapsed((previous) => {
@@ -59,7 +65,7 @@ function DashboardShell() {
 
     return (
         <TooltipProvider>
-            <div className="flex min-h-svh bg-ds-background text-ds-foreground">
+            <div className="flex min-h-svh bg-ds-canvas text-ds-foreground">
                 {/* Phase 13A: the public shell has had a skip link since Phase 2;
                     the dashboard did not, so a keyboard user tabbed the entire
                     sidebar - up to fifteen nav items plus the collapse toggle -
@@ -82,12 +88,19 @@ function DashboardShell() {
                         mobileNavOpen={mobileNavOpen}
                         onOpenCommand={() => setCommandOpen(true)}
                     />
-                    <main id="dashboard-main" tabIndex={-1} className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
-                        <DashboardVerificationBanner />
-                        <Outlet />
+                    <main
+                        id="dashboard-main"
+                        tabIndex={-1}
+                        className={cn('min-w-0 flex-1 px-4 py-6 outline-none sm:px-6 lg:px-8 lg:py-8', hasTabBar && 'pb-28 lg:pb-8')}
+                    >
+                        <div className="mx-auto w-full max-w-[80rem]">
+                            <DashboardVerificationBanner />
+                            <Outlet />
+                        </div>
                     </main>
                 </div>
 
+                <MobileTabBar role={role} />
                 <MobileDashboardNav role={role} open={mobileNavOpen} onOpenChange={setMobileNavOpen} />
                 <CommandMenu role={role} open={commandOpen} onOpenChange={setCommandOpen} />
             </div>

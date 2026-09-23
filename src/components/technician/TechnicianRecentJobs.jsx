@@ -35,7 +35,7 @@ function TechnicianRecentJobs({ jobs }) {
                                     <div className="min-w-0 flex-1 space-y-1.5">
                                         <div className="flex flex-col items-start gap-1.5 sm:flex-row sm:items-center">
                                             <p className="break-words text-sm font-semibold text-ds-foreground">{device}</p>
-                                            <StatusBadge status={job.deliveryStatus} showIcon={false} />
+                                            <StatusBadge audience="technician" status={job.deliveryStatus} showIcon={false} />
                                         </div>
                                         <p className="text-xs font-medium text-ds-foreground">{attention.title}</p>
                                         <p className="flex flex-wrap gap-x-2 gap-y-1 text-xs text-ds-muted-foreground">

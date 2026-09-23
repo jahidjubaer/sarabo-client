@@ -14,6 +14,7 @@ import { Badge } from '../../ui/badge';
 import { buttonVariants } from '../../ui/button-variants';
 import ReviewDialog from './ReviewDialog';
 import ReportDialog from './ReportDialog';
+import { StatusBadge } from '../../common/StatusBadge';
 
 function FeedbackSection({ requestId }) {
     const id = useId();
@@ -68,7 +69,7 @@ function FeedbackSection({ requestId }) {
                         <p className="text-xs text-ds-muted-foreground">Resolved means Admin handling is complete. Dismissed means closed without further action. Neither status indicates a refund or a finding against a technician.</p>
                         <ul className="space-y-3">{data.reports.map((report) => <li key={report._id} className="space-y-2 rounded-ds border border-ds-border p-3">
                             <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-sm font-medium">{REPORT_REASONS[report.reason] ?? 'Reported issue'}</p>
-                                <Badge tone={report.status === 'under_review' ? 'info' : 'neutral'}>{REPORT_STATUSES[report.status] ?? 'Status unavailable'}</Badge>
+                                {report.status in REPORT_STATUSES ? <StatusBadge domain="report" status={report.status} audience="customer" /> : <Badge tone="neutral">Status unavailable</Badge>}
                             </div>
                             <dl className="space-y-1 text-xs text-ds-muted-foreground">
                                 {report.createdAt && <div className="flex flex-wrap gap-x-1"><dt>Submitted:</dt><dd><time dateTime={report.createdAt}>{formatAbsoluteDateTime(report.createdAt)}</time></dd></div>}

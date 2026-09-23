@@ -1,0 +1,257 @@
+/* ==========================================================================
+ * Sarabo design tokens (redesign Phase 1)
+ *
+ * Semantic, CSS-variable-driven tokens exposed to Tailwind under the `ds-`
+ * namespace (bg-ds-primary, text-ds-muted-foreground, rounded-ds-lg, ...).
+ * Raw hex lives ONLY in this file - components reference the semantic token,
+ * never a literal colour. `.dark` on <html> swaps every value at once.
+ *
+ * Surfaces, lightest to darkest in light mode:
+ *   background  white - public pages and form controls
+ *   card        white - raised panels, bordered, no shadow
+ *   canvas      paper - the dashboard ground cards sit on
+ *   muted       sunken - read-only summaries, collapsed past stages
+ *   ink         petrol - sidebar, footer, full-bleed bands
+ * In dark mode ink sits BELOW the canvas, so bands and the sidebar read as
+ * the floor rather than dissolving into the page.
+ *
+ * Status tones (see config/status): each has a solid colour, a subtle fill
+ * and a foreground for text on that fill. All subtle pairs measure >= 6:1.
+ *   waiting    someone else has to act
+ *   active     work is happening
+ *   attention  YOU have to act - the only amber meaning
+ *   success / danger / neutral
+ * ========================================================================== */
+
+:root {
+  color-scheme: light;
+
+  /* Controls 8px, cards 12px, dialogs 16px - see the radius scale below. */
+  --radius: 0.5rem;
+
+  --ds-background: #ffffff;
+  --ds-foreground: #0f2430;
+  --ds-canvas: #f5f6f3;
+
+  --ds-card: #ffffff;
+  --ds-card-foreground: #0f2430;
+
+  --ds-popover: #ffffff;
+  --ds-popover-foreground: #0f2430;
+
+  /* Verdigris: links, focus, ordinary primary buttons. 5.99:1 on white. */
+  --ds-primary: #1e6f63;
+  --ds-primary-foreground: #ffffff;
+
+  /* Marigold: THE next step, one control per view. Always ink text (8.47:1). */
+  --ds-action: #f2b138;
+  --ds-action-foreground: #0f2430;
+
+  --ds-ink: #0f2430;
+  --ds-ink-foreground: #e8ede9;
+  --ds-ink-muted: #93a5ad;
+
+  --ds-secondary: #eef1ee;
+  --ds-secondary-foreground: #0f2430;
+
+  --ds-muted: #eef1ee;
+  --ds-muted-foreground: #5c6b73;
+
+  --ds-accent: #e6f2ef;
+  --ds-accent-foreground: #14544b;
+
+  /* Decorative dividers stay quiet; control outlines meet 3:1 (WCAG 1.4.11). */
+  --ds-border: #e2e5e1;
+  --ds-input: #8a968f;
+  --ds-ring: #1e6f63;
+
+  --ds-destructive: #b3261e;
+  --ds-destructive-foreground: #ffffff;
+
+  --ds-success: #1e6f63;
+  --ds-success-foreground: #ffffff;
+  --ds-warning: #9a6a10;
+  --ds-warning-foreground: #ffffff;
+  --ds-info: #1d5b8f;
+  --ds-info-foreground: #ffffff;
+
+  --ds-attention: #d9971a;
+  --ds-attention-subtle: #fdf1d6;
+  --ds-attention-subtle-foreground: #6e4a06;
+  --ds-waiting-subtle: #eef1f4;
+  --ds-waiting-subtle-foreground: #465664;
+  --ds-active-subtle: #e6eff8;
+  --ds-active-subtle-foreground: #1d5b8f;
+  --ds-success-subtle: #e3f1ec;
+  --ds-success-subtle-foreground: #14544b;
+  --ds-danger-subtle: #fbe9e7;
+  --ds-danger-subtle-foreground: #a3231b;
+  --ds-neutral-subtle: #eff0ee;
+  --ds-neutral-subtle-foreground: #5c6b73;
+}
+
+.dark {
+  color-scheme: dark;
+
+  --ds-background: #0b1519;
+  --ds-foreground: #e8ede9;
+  --ds-canvas: #0b1519;
+
+  --ds-card: #13212a;
+  --ds-card-foreground: #e8ede9;
+
+  --ds-popover: #13212a;
+  --ds-popover-foreground: #e8ede9;
+
+  --ds-primary: #5fbfae;
+  --ds-primary-foreground: #06231f;
+
+  /* Marigold is the fixed point of the identity - unchanged in dark. */
+  --ds-action: #f2b138;
+  --ds-action-foreground: #0f2430;
+
+  /* Darker than the canvas, so ink bands and the sidebar stay distinct. */
+  --ds-ink: #060d10;
+  --ds-ink-foreground: #e8ede9;
+  --ds-ink-muted: #93a5ad;
+
+  --ds-secondary: #1b2b34;
+  --ds-secondary-foreground: #e8ede9;
+
+  --ds-muted: #16242c;
+  --ds-muted-foreground: #93a5ad;
+
+  --ds-accent: #17332f;
+  --ds-accent-foreground: #cfe9e3;
+
+  --ds-border: #22343d;
+  --ds-input: #5a6d75;
+  --ds-ring: #5fbfae;
+
+  --ds-destructive: #f27a72;
+  --ds-destructive-foreground: #2a0a08;
+
+  --ds-success: #5fbfae;
+  --ds-success-foreground: #06231f;
+  --ds-warning: #e8b559;
+  --ds-warning-foreground: #241a00;
+  --ds-info: #7bb6e8;
+  --ds-info-foreground: #06202e;
+
+  --ds-attention: #f2b138;
+  --ds-attention-subtle: #2e2410;
+  --ds-attention-subtle-foreground: #f2c66d;
+  --ds-waiting-subtle: #1d2a31;
+  --ds-waiting-subtle-foreground: #b7c4c9;
+  --ds-active-subtle: #13283a;
+  --ds-active-subtle-foreground: #9cc8ee;
+  --ds-success-subtle: #12302b;
+  --ds-success-subtle-foreground: #7fd3c3;
+  --ds-danger-subtle: #35181a;
+  --ds-danger-subtle-foreground: #f4a19b;
+  --ds-neutral-subtle: #1b2b34;
+  --ds-neutral-subtle-foreground: #93a5ad;
+}
+
+/* `@theme inline` emits utilities as var(--ds-*) references, so the `.dark`
+ * overrides above apply wherever a `.dark` ancestor exists. */
+@theme inline {
+  --color-ds-background: var(--ds-background);
+  --color-ds-foreground: var(--ds-foreground);
+  --color-ds-canvas: var(--ds-canvas);
+  --color-ds-card: var(--ds-card);
+  --color-ds-card-foreground: var(--ds-card-foreground);
+  --color-ds-popover: var(--ds-popover);
+  --color-ds-popover-foreground: var(--ds-popover-foreground);
+  --color-ds-primary: var(--ds-primary);
+  --color-ds-primary-foreground: var(--ds-primary-foreground);
+  --color-ds-action: var(--ds-action);
+  --color-ds-action-foreground: var(--ds-action-foreground);
+  --color-ds-ink: var(--ds-ink);
+  --color-ds-ink-foreground: var(--ds-ink-foreground);
+  --color-ds-ink-muted: var(--ds-ink-muted);
+  --color-ds-secondary: var(--ds-secondary);
+  --color-ds-secondary-foreground: var(--ds-secondary-foreground);
+  --color-ds-muted: var(--ds-muted);
+  --color-ds-muted-foreground: var(--ds-muted-foreground);
+  --color-ds-accent: var(--ds-accent);
+  --color-ds-accent-foreground: var(--ds-accent-foreground);
+  --color-ds-border: var(--ds-border);
+  --color-ds-input: var(--ds-input);
+  --color-ds-ring: var(--ds-ring);
+  --color-ds-destructive: var(--ds-destructive);
+  --color-ds-destructive-foreground: var(--ds-destructive-foreground);
+  --color-ds-success: var(--ds-success);
+  --color-ds-success-foreground: var(--ds-success-foreground);
+  --color-ds-warning: var(--ds-warning);
+  --color-ds-warning-foreground: var(--ds-warning-foreground);
+  --color-ds-info: var(--ds-info);
+  --color-ds-info-foreground: var(--ds-info-foreground);
+  --color-ds-attention: var(--ds-attention);
+  --color-ds-attention-subtle: var(--ds-attention-subtle);
+  --color-ds-attention-subtle-foreground: var(--ds-attention-subtle-foreground);
+  --color-ds-waiting-subtle: var(--ds-waiting-subtle);
+  --color-ds-waiting-subtle-foreground: var(--ds-waiting-subtle-foreground);
+  --color-ds-active-subtle: var(--ds-active-subtle);
+  --color-ds-active-subtle-foreground: var(--ds-active-subtle-foreground);
+  --color-ds-success-subtle: var(--ds-success-subtle);
+  --color-ds-success-subtle-foreground: var(--ds-success-subtle-foreground);
+  --color-ds-danger-subtle: var(--ds-danger-subtle);
+  --color-ds-danger-subtle-foreground: var(--ds-danger-subtle-foreground);
+  --color-ds-neutral-subtle: var(--ds-neutral-subtle);
+  --color-ds-neutral-subtle-foreground: var(--ds-neutral-subtle-foreground);
+
+  /* Radius scale - each step stated, no component overrides a radius locally.
+   *   sm  chips, skeletons       ds  CONTROLS (buttons, inputs)
+   *   lg  cards, alerts, images  xl  dialogs, sheets, hero panels
+   * Pills use rounded-full. */
+  --radius-ds-sm: 4px;
+  --radius-ds: var(--radius);
+  --radius-ds-lg: 12px;
+  --radius-ds-xl: 16px;
+}
+
+/* ==========================================================================
+ * Type roles. A role carries size, line height, weight and tracking together,
+ * so a heading is one class and no screen hand-picks a weight.
+ *
+ *   text-display   public hero headline, one per page at most
+ *   text-title     page title (h1)
+ *   text-heading   section heading (h2)
+ *   text-subhead   card / panel / row title (h3)
+ *   text-body      running text
+ *   text-body-sm   secondary text, table cells
+ *   text-micro     timestamps, captions, meta
+ * ========================================================================== */
+@theme {
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  --text-display: clamp(2.25rem, 1.35rem + 3vw, 3.5rem);
+  --text-display--line-height: 1.05;
+  --text-display--font-weight: 800;
+  --text-display--letter-spacing: -0.035em;
+
+  --text-title: 1.75rem;
+  --text-title--line-height: 1.15;
+  --text-title--font-weight: 750;
+  --text-title--letter-spacing: -0.02em;
+
+  --text-heading: 1.25rem;
+  --text-heading--line-height: 1.3;
+  --text-heading--font-weight: 700;
+  --text-heading--letter-spacing: -0.015em;
+
+  --text-subhead: 1.0625rem;
+  --text-subhead--line-height: 1.35;
+  --text-subhead--font-weight: 650;
+  --text-subhead--letter-spacing: -0.01em;
+
+  --text-body: 1rem;
+  --text-body--line-height: 1.6;
+
+  --text-body-sm: 0.875rem;
+  --text-body-sm--line-height: 1.5;
+
+  --text-micro: 0.75rem;
+  --text-micro--line-height: 1.45;
+}

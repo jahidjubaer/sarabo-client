@@ -29,19 +29,19 @@ function MobileDashboardNav({ role, open, onOpenChange }) {
                         <Logo to="/dashboard" ariaLabel="Sarabo dashboard" onClick={close} surface="ink" />
                     </SheetTitle>
                     {role && (
-                        <p className="ds-label text-ds-ink-foreground/50">{ROLE_LABELS[role]} workspace</p>
+                        <p className="ds-label text-ds-ink-muted">{ROLE_LABELS[role]} workspace</p>
                     )}
                 </SheetHeader>
 
                 <div className="min-h-0 flex-1 overflow-y-auto p-3">
-                    <DashboardNavLinks sections={sections} onNavigate={close} />
+                    <DashboardNavLinks sections={sections} onNavigate={close} touch />
                 </div>
 
                 <div className="mt-auto border-t border-ds-ink-foreground/15 p-3">
                     <Link
                         to="/"
                         onClick={close}
-                        className="focus-ring flex min-h-11 items-center gap-2 rounded-ds px-3 text-body-sm font-medium text-ds-ink-foreground/65 transition-colors hover:bg-ds-ink-foreground/10 hover:text-ds-ink-foreground"
+                        className="focus-ring flex min-h-12 items-center gap-2 rounded-ds px-3 text-body-sm font-medium text-ds-ink-foreground/75 transition-colors hover:bg-ds-ink-foreground/10 hover:text-ds-ink-foreground"
                     >
                         <Home className="size-5 shrink-0" aria-hidden="true" /> Back to Sarabo
                     </Link>

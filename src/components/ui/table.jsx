@@ -8,7 +8,7 @@ import { cn } from '../../lib/utils';
 function Table({ className, ...props }) {
     return (
         <div className="relative w-full overflow-x-auto">
-            <table className={cn("w-full caption-bottom text-sm", className)} {...props} />
+            <table className={cn("w-full caption-bottom text-body-sm", className)} {...props} />
         </div>
     );
 }
@@ -28,7 +28,7 @@ function TableRow({ className, ...props }) {
 function TableHead({ className, ...props }) {
     return (
         <th
-            className={cn("h-10 px-3 text-left align-middle text-xs font-medium uppercase tracking-wide text-ds-muted-foreground", className)}
+            className={cn("ds-label h-11 px-3 text-left align-middle text-ds-muted-foreground", className)}
             {...props}
         />
     );
@@ -39,7 +39,7 @@ function TableCell({ className, ...props }) {
 }
 
 function TableCaption({ className, ...props }) {
-    return <caption className={cn("mt-4 text-sm text-ds-muted-foreground", className)} {...props} />;
+    return <caption className={cn("mt-4 text-body-sm text-ds-muted-foreground", className)} {...props} />;
 }
 
 export { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableCaption };

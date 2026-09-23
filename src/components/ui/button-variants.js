@@ -4,37 +4,45 @@ import { cva } from 'class-variance-authority';
 // component - satisfies eslint-plugin-react-refresh's fast-refresh boundary
 // rule. Import `buttonVariants` here to style a non-<button> element (e.g. a
 // router Link) as a button.
+//
+// Redesign Phase 1 hierarchy:
+//   action       Marigold - THE next step. At most one per view.
+//   primary      Verdigris - ordinary saves and confirmations. (`default` is
+//                the same style, kept so existing call sites keep working.)
+//   outline      Secondary alternatives ("Decline", "Cancel").
+//   ghost        Tertiary, low-emphasis.
+//   destructive  Solid red - only inside a confirm dialog.
+//   destructiveGhost  Red text - destructive entries in row menus/toolbars.
+//   ink / onInk / secondary / link  as before.
+// Sizes: sm 36, default 44, lg 48; icon 40 and iconLg 44 (touch).
 export const buttonVariants = cva(
-    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-ds text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-ring focus-visible:ring-offset-2 focus-visible:ring-offset-ds-background disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-4",
+    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-ds text-body-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-ring focus-visible:ring-offset-2 focus-visible:ring-offset-ds-background disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*=size-])]:size-4",
     {
         variants: {
             variant: {
-                // THE action. Marigold fill, ink text (8.47:1). Use it for the
-                // single highest-priority control on a screen - start a repair
-                // request, approve the quote, assign a technician - and never
-                // for two controls at once. Everything else is `default` or
-                // quieter, which is what makes it read as the way forward.
-                action: "bg-ds-action text-ds-action-foreground shadow-sm hover:brightness-95 active:translate-y-px",
+                action: "bg-ds-action font-bold text-ds-action-foreground hover:brightness-95 active:translate-y-px",
+                primary: "bg-ds-primary text-ds-primary-foreground hover:bg-ds-primary/90",
                 default: "bg-ds-primary text-ds-primary-foreground hover:bg-ds-primary/90",
-                // Petrol fill for a strong-but-not-action control, and for
-                // buttons that sit on a light surface next to an action.
                 ink: "bg-ds-ink text-ds-ink-foreground hover:brightness-110",
                 secondary: "bg-ds-secondary text-ds-secondary-foreground hover:bg-ds-secondary/80",
-                outline: "border border-ds-input bg-ds-background text-ds-foreground hover:bg-ds-accent hover:text-ds-accent-foreground",
-                // For controls placed ON an ink band, where the page palette
-                // would otherwise disappear into the surface.
+                outline: "border border-ds-input bg-ds-card text-ds-foreground hover:bg-ds-muted",
                 onInk: "border border-ds-ink-foreground/30 text-ds-ink-foreground hover:bg-ds-ink-foreground/10",
-                ghost: "text-ds-foreground hover:bg-ds-accent hover:text-ds-accent-foreground",
+                ghost: "text-ds-foreground hover:bg-ds-muted",
                 destructive: "bg-ds-destructive text-ds-destructive-foreground hover:bg-ds-destructive/90",
-                link: "text-ds-primary underline-offset-4 hover:underline",
+                destructiveGhost: "text-ds-destructive hover:bg-ds-danger-subtle",
+                link: "h-auto px-0 text-ds-primary underline-offset-4 hover:underline",
             },
             size: {
-                sm: "h-9 rounded-ds px-3.5 text-[13px]",
-                default: "h-10 px-4 py-2",
-                lg: "h-12 rounded-ds px-6 text-base",
-                icon: "h-10 w-10",
+                sm: "h-9 px-3.5",
+                default: "h-11 px-4",
+                lg: "h-12 px-6 text-body",
+                icon: "size-10",
+                iconLg: "size-11",
             },
         },
+        compoundVariants: [
+            { variant: 'link', size: ['sm', 'default', 'lg'], className: 'h-auto px-0' },
+        ],
         defaultVariants: {
             variant: "default",
             size: "default",

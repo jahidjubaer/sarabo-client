@@ -89,7 +89,7 @@ function TechnicianActiveJob({ job, onAdvance, pendingAction, className }) {
                                 )}
                             </div>
                         </div>
-                        <StatusBadge status={job.deliveryStatus} className="self-start" />
+                        <StatusBadge audience="technician" status={job.deliveryStatus} className="self-start" />
                     </div>
 
                     <div className="mt-4 flex flex-col gap-2 min-[390px]:flex-row min-[390px]:items-center">

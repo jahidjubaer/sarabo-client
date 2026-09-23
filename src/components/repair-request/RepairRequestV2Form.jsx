@@ -33,8 +33,8 @@ import RepairRequestSummary from './RepairRequestSummary';
 import PostCreationDamageStep from './PostCreationDamageStep';
 import RequestFlowSteps from './RequestFlowSteps';
 import RequestContextRail from './RequestContextRail';
+import { Select } from '../ui/select';
 
-const SELECT_CLASS = 'flex h-10 w-full rounded-ds border border-ds-input bg-ds-background px-3 py-2 text-sm text-ds-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-ring focus-visible:ring-offset-1 focus-visible:ring-offset-ds-background disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:border-ds-destructive';
 
 function SectionShell({ innerRef, step, stepId, title, description, onActivate, children }) {
     const headingId = `request-${stepId}-heading`;
@@ -306,7 +306,6 @@ const RepairRequestV2Form = () => {
         <MotionConfig reducedMotion="user">
             <div className="mx-auto w-full max-w-[1280px] space-y-6">
                 <PageHeader
-                    eyebrow="New repair request"
                     title="Request a Repair"
                     description="Share your device, repair need, and service location. No payment is required to submit."
                 />
@@ -438,10 +437,9 @@ const RepairRequestV2Form = () => {
                             >
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                     <FormField id="region" label="Region" required error={errors.serviceLocation?.region?.message}>
-                                        <select
+                                        <Select
                                             id="region"
                                             defaultValue=""
-                                            className={SELECT_CLASS}
                                             aria-invalid={errors.serviceLocation?.region ? 'true' : 'false'}
                                             aria-required="true"
                                             aria-describedby={errors.serviceLocation?.region ? 'region-error' : undefined}
@@ -449,14 +447,13 @@ const RepairRequestV2Form = () => {
                                         >
                                             <option value="" disabled>Pick a region</option>
                                             {regions.map((r, i) => <option key={i} value={r}>{r}</option>)}
-                                        </select>
+                                        </Select>
                                     </FormField>
 
                                     <FormField id="district" label="District" required error={errors.serviceLocation?.district?.message}>
-                                        <select
+                                        <Select
                                             id="district"
                                             defaultValue=""
-                                            className={SELECT_CLASS}
                                             aria-invalid={errors.serviceLocation?.district ? 'true' : 'false'}
                                             aria-required="true"
                                             aria-describedby={errors.serviceLocation?.district ? 'district-error' : undefined}
@@ -464,7 +461,7 @@ const RepairRequestV2Form = () => {
                                         >
                                             <option value="" disabled>Pick a district</option>
                                             {districtsByRegion(selectedRegion).map((d, i) => <option key={i} value={d}>{d}</option>)}
-                                        </select>
+                                        </Select>
                                     </FormField>
 
                                     <FormField id="address" label="Service address" required error={errors.serviceLocation?.address?.message} className="sm:col-span-2">

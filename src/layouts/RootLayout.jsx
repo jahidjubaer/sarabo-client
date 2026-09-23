@@ -23,7 +23,7 @@ const RootLayout = () => {
                 Skip to content
             </a>
             <NavBar />
-            <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-7xl flex-1">
+            <main id="main-content" tabIndex={-1} className="w-full flex-1 outline-none">
                 <Outlet />
             </main>
             <Footer />

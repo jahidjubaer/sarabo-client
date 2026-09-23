@@ -14,9 +14,8 @@ import { cn } from '../../lib/utils';
 //
 // Phase 7: the rail is now the petrol INK surface, the same brand surface as
 // the public footer, the auth panel and the how-it-works band - so the
-// dashboard reads as the same product. It keeps an explicit right border,
-// because in the dark palette `--ds-ink` and `--ds-background` are the same
-// colour by design and the rail would otherwise dissolve into the page.
+// dashboard reads as the same product. In dark mode ink sits below the canvas,
+// and the right border keeps the edge crisp in both themes.
 function DashboardSidebar({ role, collapsed, onToggleCollapse }) {
     const sections = getNavSections(role);
     const roleLabel = role ? ROLE_LABELS[role] : null;
@@ -48,7 +47,7 @@ function DashboardSidebar({ role, collapsed, onToggleCollapse }) {
             )}
         >
             <div className={cn(
-                'flex h-14 shrink-0 items-center border-b border-ds-ink-foreground/15',
+                'flex h-16 shrink-0 items-center border-b border-ds-ink-foreground/15',
                 collapsed ? 'justify-center px-0' : 'px-4'
             )}>
                 <Logo to="/dashboard" ariaLabel="Sarabo dashboard" showWordmark={!collapsed} surface="ink" />
@@ -63,8 +62,8 @@ function DashboardSidebar({ role, collapsed, onToggleCollapse }) {
                 collapsed && 'flex flex-col items-center gap-1'
             )}>
                 {!collapsed && roleLabel && (
-                    <p className="mb-3 px-3 text-micro text-ds-ink-foreground/50">
-                        Signed in as <span className="font-semibold text-ds-ink-foreground/80">{roleLabel}</span>
+                    <p className="mb-3 px-3 text-micro text-ds-ink-muted">
+                        Signed in as <span className="font-semibold text-ds-ink-foreground">{roleLabel}</span>
                     </p>
                 )}
 

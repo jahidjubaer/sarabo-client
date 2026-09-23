@@ -10,11 +10,11 @@ function Alert({ className, tone, ...props }) {
 }
 
 function AlertTitle({ className, ...props }) {
-    return <div className={cn("col-start-2 font-medium leading-none", className)} {...props} />;
+    return <div className={cn("col-start-2 font-semibold leading-snug", className)} {...props} />;
 }
 
 function AlertDescription({ className, ...props }) {
-    return <div className={cn("col-start-2 text-sm text-ds-muted-foreground", className)} {...props} />;
+    return <div className={cn("col-start-2 text-body-sm text-ds-foreground/80", className)} {...props} />;
 }
 
 export { Alert, AlertTitle, AlertDescription };

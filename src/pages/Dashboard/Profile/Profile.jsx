@@ -123,7 +123,6 @@ const Profile = () => {
     return (
         <div className="space-y-6">
             <PageHeader
-                eyebrow="Account"
                 title="My Profile"
                 description="Review your account identity and update the basic profile information supported by Sarabo."
             />

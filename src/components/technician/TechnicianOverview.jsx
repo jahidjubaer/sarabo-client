@@ -72,7 +72,7 @@ function TechnicianOverview() {
     if (isInitialLoading) {
         return (
             <div className="space-y-6">
-                <PageHeader eyebrow="Technician" title="Your repair work" description="Loading your assigned work..." />
+                <PageHeader title="Your repair work" description="Loading your assigned work..." />
                 <CardSkeleton className="h-72" />
                 <CardSkeleton className="h-40" />
             </div>
@@ -82,7 +82,7 @@ function TechnicianOverview() {
     if (isReadErrorBeforeData || isUnavailableBeforeData) {
         return (
             <div className="space-y-6">
-                <PageHeader eyebrow="Technician" title="Your repair work" />
+                <PageHeader title="Your repair work" />
                 <ErrorState
                     title="Couldn't load your jobs"
                     description="We couldn't load your assigned work right now. Please try again."
@@ -106,7 +106,6 @@ function TechnicianOverview() {
         <MotionConfig reducedMotion="user">
             <div className="space-y-6">
                 <PageHeader
-                    eyebrow="Technician"
                     title="Your repair work"
                     description={buildDescription(summary)}
                     actions={allJobsAction}

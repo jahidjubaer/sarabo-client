@@ -3,6 +3,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { cn } from '../../lib/utils';
 import { REQUEST_GROUPS, GROUP_LABELS, SORT_OPTIONS } from '../../utils/customerRequestPresentation';
+import { Select } from '../ui/select';
 
 // Search + customer-friendly status group filter + sort. All controls are
 // labelled; the group filter is a segmented set of buttons with aria-pressed so
@@ -29,16 +30,15 @@ function RequestFilters({ search, onSearchChange, group, onGroupChange, sort, on
                 </div>
                 <div className="sm:w-48">
                     <Label htmlFor="request-sort" className="sr-only">Sort requests</Label>
-                    <select
+                    <Select
                         id="request-sort"
                         value={sort}
                         onChange={(event) => onSortChange(event.target.value)}
-                        className="flex h-10 w-full rounded-ds border border-ds-input bg-ds-background px-3 text-sm text-ds-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-ring"
                     >
                         {SORT_OPTIONS.map((option) => (
                             <option key={option.value} value={option.value}>{option.label}</option>
                         ))}
-                    </select>
+                    </Select>
                 </div>
             </div>
 

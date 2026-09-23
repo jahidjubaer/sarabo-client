@@ -3,6 +3,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { cn } from '../../lib/utils';
 import { JOB_GROUPS, JOB_GROUP_LABELS, JOB_SORT_OPTIONS } from '../../utils/technicianJobPresentation';
+import { Select } from '../ui/select';
 
 // Search + technician-friendly group filter + sort. All controls labelled; the
 // group filter is a segmented button set with aria-pressed (not colour-only).
@@ -28,16 +29,15 @@ function TechnicianJobFilters({ search, onSearchChange, group, onGroupChange, so
                 </div>
                 <div className="sm:w-48">
                     <Label htmlFor="job-sort" className="sr-only">Sort jobs</Label>
-                    <select
+                    <Select
                         id="job-sort"
                         value={sort}
                         onChange={(event) => onSortChange(event.target.value)}
-                        className="flex h-10 w-full rounded-ds border border-ds-input bg-ds-background px-3 text-sm text-ds-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-ring"
                     >
                         {JOB_SORT_OPTIONS.map((option) => (
                             <option key={option.value} value={option.value}>{option.label}</option>
                         ))}
-                    </select>
+                    </Select>
                 </div>
             </div>
 

@@ -60,7 +60,7 @@ function CustomerOverview() {
     if (isInitialLoading) {
         return (
             <div className="space-y-6">
-                <PageHeader eyebrow="Customer" title="Your repairs" description="Loading your repair activity..." actions={newRequestAction} />
+                <PageHeader title="Your repairs" description="Loading your repair activity..." actions={newRequestAction} />
                 <CardSkeleton className="h-64" />
                 <CardSkeleton className="h-40" />
             </div>
@@ -70,7 +70,7 @@ function CustomerOverview() {
     if (isError || isUnavailableBeforeData) {
         return (
             <div className="space-y-6">
-                <PageHeader eyebrow="Customer" title="Your repairs" actions={newRequestAction} />
+                <PageHeader title="Your repairs" actions={newRequestAction} />
                 <ErrorState
                     title="Couldn't load your dashboard"
                     description="We couldn't load your repair activity right now. Please try again."
@@ -88,7 +88,6 @@ function CustomerOverview() {
         <MotionConfig reducedMotion="user">
             <div className="space-y-6">
                 <PageHeader
-                    eyebrow="Customer"
                     title="Your repairs"
                     description={buildDescription(summary)}
                     actions={newRequestAction}

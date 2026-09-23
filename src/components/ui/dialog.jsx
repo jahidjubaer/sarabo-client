@@ -28,7 +28,7 @@ function DialogOverlay({ className, ...props }) {
         <DialogPrimitive.Overlay
             data-slot="dialog-overlay"
             className={cn(
-                "fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-[ds-fade-in_150ms_ease-out] data-[state=closed]:animate-[ds-fade-out_150ms_ease-in]",
+                "fixed inset-0 z-50 bg-[rgb(6_13_16/0.55)] data-[state=open]:animate-[ds-fade-in_150ms_ease-out] data-[state=closed]:animate-[ds-fade-out_150ms_ease-in]",
                 className
             )}
             {...props}
@@ -50,15 +50,15 @@ function DialogContent({ className, children, showCloseButton = true, ...props }
                 // page behind. A caller can still override it via props.
                 aria-modal="true"
                 className={cn(
-                    "fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-ds-lg border border-ds-border bg-ds-popover p-6 text-ds-popover-foreground shadow-lg data-[state=open]:animate-[ds-pop-in_150ms_ease-out] data-[state=closed]:animate-[ds-pop-out_120ms_ease-in]",
+                    "fixed left-1/2 top-1/2 z-50 grid max-h-[calc(100svh-2rem)] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-ds-xl border border-ds-border bg-ds-popover p-6 text-ds-popover-foreground shadow-lg data-[state=open]:animate-[ds-pop-in_150ms_ease-out] data-[state=closed]:animate-[ds-pop-out_120ms_ease-in]",
                     className
                 )}
                 {...props}
             >
                 {children}
                 {showCloseButton && (
-                    <DialogPrimitive.Close className="absolute right-4 top-4 rounded-ds-sm opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-ring">
-                        <X className="size-4" aria-hidden="true" />
+                    <DialogPrimitive.Close className="absolute right-3 top-3 flex size-10 items-center justify-center rounded-ds text-ds-muted-foreground transition-colors hover:bg-ds-muted hover:text-ds-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-ring">
+                        <X className="size-5" aria-hidden="true" />
                         <span className="sr-only">Close</span>
                     </DialogPrimitive.Close>
                 )}
@@ -76,11 +76,11 @@ function DialogFooter({ className, ...props }) {
 }
 
 function DialogTitle({ className, ...props }) {
-    return <DialogPrimitive.Title data-slot="dialog-title" className={cn("text-lg font-semibold leading-none", className)} {...props} />;
+    return <DialogPrimitive.Title data-slot="dialog-title" className={cn("pr-10 text-heading", className)} {...props} />;
 }
 
 function DialogDescription({ className, ...props }) {
-    return <DialogPrimitive.Description data-slot="dialog-description" className={cn("text-sm text-ds-muted-foreground", className)} {...props} />;
+    return <DialogPrimitive.Description data-slot="dialog-description" className={cn("text-body-sm text-ds-muted-foreground", className)} {...props} />;
 }
 
 export {

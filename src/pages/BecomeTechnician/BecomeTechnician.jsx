@@ -18,9 +18,9 @@ import { LoadingButton } from '../../components/common/LoadingButton';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert';
 import { Input } from '../../components/ui/input';
 import { cn } from '../../lib/utils';
+import { Select } from '../../components/ui/select';
 
 const notBlank = message => value => (value && value.trim().length > 0) || message;
-const selectClass = 'flex h-10 w-full rounded-ds border border-ds-input bg-ds-background px-3 py-2 text-sm text-ds-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-ring focus-visible:ring-offset-1 focus-visible:ring-offset-ds-background disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:border-ds-destructive aria-[invalid=true]:focus-visible:ring-ds-destructive';
 
 function CheckboxControl({ checked, onChange, children, className, labelClassName, ...props }) {
     return (
@@ -230,33 +230,31 @@ const BecomeTechnician = () => {
 
                             <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
                                 <FormField id="tech-region" label="Region" required error={errors.region?.message}>
-                                    <select
+                                    <Select
                                         id="tech-region"
                                         {...register('region', { validate: value => (value && value !== 'Pick a region') || 'Please select a region.' })}
                                         defaultValue="Pick a region"
                                         required
-                                        className={selectClass}
                                         aria-invalid={errors.region ? 'true' : 'false'}
                                         aria-describedby={errors.region ? 'tech-region-error' : undefined}
                                     >
                                         <option disabled={true}>Pick a region</option>
                                         {regions.map((r, i) => <option key={i} value={r}>{r}</option>)}
-                                    </select>
+                                    </Select>
                                 </FormField>
 
                                 <FormField id="tech-district" label="District" required error={errors.district?.message}>
-                                    <select
+                                    <Select
                                         id="tech-district"
                                         {...register('district', { validate: value => (value && value !== 'Pick a district') || 'Please select a district.' })}
                                         defaultValue="Pick a district"
                                         required
-                                        className={selectClass}
                                         aria-invalid={errors.district ? 'true' : 'false'}
                                         aria-describedby={errors.district ? 'tech-district-error' : undefined}
                                     >
                                         <option disabled={true}>Pick a district</option>
                                         {districtsByRegion(technicianRegion).map((r, i) => <option key={i} value={r}>{r}</option>)}
-                                    </select>
+                                    </Select>
                                 </FormField>
 
                                 <FormField id="tech-address" label="Service address" required error={errors.address?.message} className="sm:col-span-2">

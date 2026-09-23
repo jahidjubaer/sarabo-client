@@ -1,0 +1,105 @@
+/* ==========================================================================
+ * Base styles, shared utilities and third-party theming (redesign Phase 1).
+ * ========================================================================== */
+
+body {
+  font-family: "Urbanist", sans-serif;
+  font-optical-sizing: auto;
+  font-size: var(--text-body);
+  line-height: 1.6;
+  background-color: var(--ds-background);
+  color: var(--ds-foreground);
+}
+
+/* Enter/exit keyframes for the Radix-backed primitives (Dialog, Sheet,
+ * DropdownMenu, Tooltip, Command), referenced through Tailwind's arbitrary
+ * `animate-[...]` utilities. Radix waits for the `[data-state=closed]`
+ * animation before unmounting, so exits play. Neutralised under reduced motion. */
+@keyframes ds-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ds-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes ds-pop-in { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+@keyframes ds-pop-out { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.96); } }
+@keyframes ds-slide-in-left { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+@keyframes ds-slide-out-left { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+@keyframes ds-slide-in-right { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes ds-slide-out-right { from { transform: translateX(0); } to { transform: translateX(100%); } }
+
+/* Shared keyboard-focus ring, driven by the theme-reactive --ds-ring. Clears
+ * 3:1 non-text contrast on every surface in both themes. */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--ds-ring);
+  outline-offset: 2px;
+}
+
+/* Small label for table headers, stage counters and grouped nav headings.
+ * Plain Urbanist - monospace is reserved for tracking codes and money. */
+.ds-label {
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+}
+
+/* Tracking codes, money and any column of digits. */
+.ds-numeric {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* CSS-only technical grid for ink bands - no image asset required. */
+.tech-grid-pattern {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Space reserved at the bottom of the viewport by the dashboard's mobile tab
+ * bar (components/layout/MobileTabBar). Floating UI adds this to its offset. */
+.has-tabbar {
+  --app-bottom-inset: 4.5rem;
+}
+@media (min-width: 1024px) {
+  .has-tabbar {
+    --app-bottom-inset: 0px;
+  }
+}
+
+/* react-toastify, themed from the design tokens. The container always runs
+ * its "light" theme; these variables make that theme follow `.dark`. */
+:root {
+  --toastify-font-family: inherit;
+  --toastify-color-light: var(--ds-popover);
+  --toastify-text-color-light: var(--ds-popover-foreground);
+  --toastify-color-info: var(--ds-info);
+  --toastify-color-success: var(--ds-success);
+  --toastify-color-warning: var(--ds-attention);
+  --toastify-color-error: var(--ds-destructive);
+  --toastify-icon-color-info: var(--ds-info);
+  --toastify-icon-color-success: var(--ds-success);
+  --toastify-icon-color-warning: var(--ds-attention);
+  --toastify-icon-color-error: var(--ds-destructive);
+  --toastify-color-progress-light: var(--ds-primary);
+  --toastify-toast-bd-radius: 12px;
+}
+.Toastify__toast {
+  border: 1px solid var(--ds-border);
+  box-shadow: 0 16px 32px -16px rgb(6 13 16 / 0.35);
+  font-size: var(--text-body-sm);
+  line-height: 1.45;
+}
+.Toastify__close-button {
+  color: var(--ds-muted-foreground);
+  opacity: 1;
+}
+
+/* JS-driven motion (Motion, Swiper, Leaflet) is handled at the call site or by
+ * MotionConfig; this covers every CSS transition and animation. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

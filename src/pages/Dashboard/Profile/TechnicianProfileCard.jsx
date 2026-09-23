@@ -4,6 +4,7 @@ import { Badge } from '../../../components/ui/badge';
 import { Skeleton } from '../../../components/ui/skeleton';
 import { useTechnicianProfile } from '../../../hooks/useTechnicianProfile';
 import { humanizeSlug } from '../../../utils/serviceDefinitionCatalog';
+import { StatusBadge } from '../../../components/common/StatusBadge';
 
 // The technician's own professional record (Phase 9.2), from GET /technicians/me.
 //
@@ -14,8 +15,6 @@ import { humanizeSlug } from '../../../utils/serviceDefinitionCatalog';
 // "not provided" rather than an empty space, because a blank row reads as a
 // loading bug and quietly hides that the application is incomplete.
 
-const STATUS_TONE = { approved: 'success', pending: 'warning', rejected: 'danger', suspended: 'danger' };
-const STATUS_LABEL = { approved: 'Approved', pending: 'Awaiting review', rejected: 'Not approved', suspended: 'Suspended' };
 const WORK_STATUS_LABEL = { available: 'Available for assignment', in_delivery: 'On an active repair' };
 
 function Row({ label, value, muted }) {
@@ -127,7 +126,7 @@ function TechnicianProfileCard({ role }) {
                     <Row
                         label="Application status"
                         value={data.status
-                            ? <Badge tone={STATUS_TONE[data.status] || 'neutral'}>{STATUS_LABEL[data.status] || data.status}</Badge>
+                            ? <StatusBadge domain="application" status={data.status} audience="technician" />
                             : 'Not available'}
                         muted={!data.status}
                     />

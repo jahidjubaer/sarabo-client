@@ -198,7 +198,6 @@ const NotificationsPage = () => {
         <div className="space-y-6">
             <div ref={headerRef}>
                 <PageHeader
-                    eyebrow="Account"
                     title="Notifications"
                     description="Updates about your technician application, repair requests and payments."
                     actions={

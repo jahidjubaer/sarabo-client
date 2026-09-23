@@ -98,6 +98,15 @@ export const router = createBrowserRouter([
       }
     ]
       },
+      // Redesign reference page (Phase 1). Development builds only: in a
+      // production build import.meta.env.DEV is false, so the route and its
+      // lazily imported module are dropped entirely.
+      ...(import.meta.env.DEV
+        ? [{
+          path: 'design-preview',
+          lazy: async () => ({ Component: (await import('../pages/DesignPreview/DesignPreview')).default }),
+        }]
+        : []),
       {
         path: 'dashboard',
         element: <PrivateRoute><DashboardLayout></DashboardLayout></PrivateRoute>,

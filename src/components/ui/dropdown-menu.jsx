@@ -45,7 +45,7 @@ function DropdownMenuItem({ className, inset, variant = "default", ...props }) {
             data-slot="dropdown-menu-item"
             data-inset={inset ? "" : undefined}
             className={cn(
-                "relative flex cursor-pointer select-none items-center gap-2 rounded-ds-sm px-2 py-1.5 text-sm outline-none transition-colors",
+                "relative flex cursor-pointer select-none items-center gap-2 rounded-ds-sm px-2 py-2 text-body-sm outline-none transition-colors",
                 "focus:bg-ds-accent focus:text-ds-accent-foreground",
                 "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
                 "data-[inset]:pl-8 [&_svg]:size-4 [&_svg]:shrink-0",
@@ -62,7 +62,7 @@ function DropdownMenuRadioItem({ className, children, ...props }) {
         <DropdownMenuPrimitive.RadioItem
             data-slot="dropdown-menu-radio-item"
             className={cn(
-                "relative flex cursor-pointer select-none items-center gap-2 rounded-ds-sm py-1.5 pl-8 pr-2 text-sm outline-none transition-colors focus:bg-ds-accent focus:text-ds-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+                "relative flex cursor-pointer select-none items-center gap-2 rounded-ds-sm py-2 pl-8 pr-2 text-body-sm outline-none transition-colors focus:bg-ds-accent focus:text-ds-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
                 className
             )}
             {...props}
@@ -83,7 +83,7 @@ function DropdownMenuCheckboxItem({ className, children, checked, ...props }) {
             data-slot="dropdown-menu-checkbox-item"
             checked={checked}
             className={cn(
-                "relative flex cursor-pointer select-none items-center gap-2 rounded-ds-sm py-1.5 pl-8 pr-2 text-sm outline-none transition-colors focus:bg-ds-accent focus:text-ds-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+                "relative flex cursor-pointer select-none items-center gap-2 rounded-ds-sm py-2 pl-8 pr-2 text-body-sm outline-none transition-colors focus:bg-ds-accent focus:text-ds-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
                 className
             )}
             {...props}
@@ -103,7 +103,7 @@ function DropdownMenuLabel({ className, inset, ...props }) {
         <DropdownMenuPrimitive.Label
             data-slot="dropdown-menu-label"
             data-inset={inset ? "" : undefined}
-            className={cn("px-2 py-1.5 text-sm font-semibold data-[inset]:pl-8", className)}
+            className={cn("px-2 py-1.5 text-body-sm font-semibold data-[inset]:pl-8", className)}
             {...props}
         />
     );

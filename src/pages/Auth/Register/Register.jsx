@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useLocation, useNavigate } from 'react-router';
 import axios from 'axios';
-import Swal from 'sweetalert2';
+import { FormAlert } from '../../../components/common/FormAlert';
 import useAuth from '../../../hooks/useAuth';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import SocialLogin from '../SocialLogin/SocialLogin';
@@ -33,6 +33,7 @@ const Register = () => {
     const [submitting, setSubmitting] = useState(false);
     const [pendingUserInfo, setPendingUserInfo] = useState(null);
     const [syncFailed, setSyncFailed] = useState(false);
+    const [formAlert, setFormAlert] = useState(null);
 
     // Backend upsert only - navigation is handled by finishRegistration so the
     // user is always routed to verification (never straight into the app) after
@@ -61,6 +62,7 @@ const Register = () => {
         if (submitting) return;
         setSubmitting(true);
         setSyncFailed(false);
+        setFormAlert(null);
 
         const profileImg = data.photo[0];
         let photoURL;
@@ -75,7 +77,7 @@ const Register = () => {
             photoURL = uploadRes.data.data.url;
         } catch (error) {
             if (import.meta.env.DEV) console.error('Image upload failed:', error);
-            Swal.fire({ icon: 'error', title: 'Photo upload failed', text: 'Please try again.' });
+            setFormAlert({ tone: 'danger', title: 'Photo upload failed', text: 'Please try again.' });
             setSubmitting(false);
             return;
         }
@@ -85,7 +87,7 @@ const Register = () => {
             await registerUser(data.email, data.password);
         } catch (error) {
             if (import.meta.env.DEV) console.error('Registration failed:', error);
-            Swal.fire({ icon: 'error', title: 'Registration failed', text: getAuthErrorMessage(error) });
+            setFormAlert({ tone: 'danger', title: 'Registration failed', text: getAuthErrorMessage(error) });
             setSubmitting(false);
             return;
         }
@@ -114,7 +116,6 @@ const Register = () => {
             if (import.meta.env.DEV) console.error('Backend sync failed:', error);
             setPendingUserInfo(userInfo);
             setSyncFailed(true);
-            Swal.fire({ icon: 'error', title: 'Almost there', text: getSyncErrorMessage() });
         } finally {
             setSubmitting(false);
         }
@@ -128,7 +129,7 @@ const Register = () => {
             await finishRegistration();
         } catch (error) {
             if (import.meta.env.DEV) console.error('Retry sync failed:', error);
-            Swal.fire({ icon: 'error', title: 'Still unable to finish setup', text: getSyncErrorMessage() });
+            setFormAlert({ tone: 'danger', title: 'Still unable to finish setup', text: getSyncErrorMessage() });
         } finally {
             setSubmitting(false);
         }
@@ -154,7 +155,7 @@ const Register = () => {
 
             {syncFailed && (
                 <div role="alert" className="mt-6 rounded-ds border border-ds-border bg-ds-accent/50 px-4 py-3 text-body-sm text-ds-accent-foreground">
-                    Your account was created, but we couldn't finish setting up your profile.{' '}
+                    Your account was created, but we couldn't finish setting up your profile. {getSyncErrorMessage()}{' '}
                     <button
                         type="button"
                         onClick={handleRetrySync}
@@ -165,6 +166,8 @@ const Register = () => {
                     </button>
                 </div>
             )}
+
+            <FormAlert alert={formAlert} className="mt-6" />
 
             <form onSubmit={handleSubmit(handleRegistration)} className="mt-8 flex flex-col gap-5">
                 <FormField id="register-name" label="Name" required error={nameError}>

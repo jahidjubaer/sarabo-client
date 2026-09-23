@@ -4,6 +4,7 @@ import {
 } from '@tanstack/react-table';
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../ui/table';
+import { Card } from '../../ui/card';
 import { Skeleton } from '../../ui/skeleton';
 import { TableSkeleton } from '../../common/Skeletons';
 import { DataTablePagination } from './DataTablePagination';
@@ -19,7 +20,39 @@ import { DataTableViewOptions } from './DataTableViewOptions';
 //   client (default): the table sorts/paginates/filters already-loaded data.
 //   manual: the parent owns server-side pagination; pass manualPagination +
 //           pageCount + pageIndex + onPageChange and the given rows are shown
-//           as-is (the server already returned this page).
+//           as-is (the server already returned this page). Pass totalRows too
+//           so the footer can say "Showing 11-20 of 143".
+//
+// Accessibility (redesign Phase 1): pass `caption` (visually hidden, names the
+// table for screen readers); sortable headers expose aria-sort; a header with
+// no visible text (the actions column) gets its meta.label, or "Actions", as
+// screen-reader text. Without `renderCard`, small screens get a generic
+// label/value card built from the visible columns instead of nothing.
+
+function ariaSort(direction) {
+    if (direction === 'asc') return 'ascending';
+    if (direction === 'desc') return 'descending';
+    return 'none';
+}
+
+function FallbackCard({ row }) {
+    return (
+        <Card className="p-4">
+            <dl className="space-y-2">
+                {row.getVisibleCells().map((cell) => {
+                    const def = cell.column.columnDef;
+                    const label = typeof def.header === 'string' && def.header ? def.header : def.meta?.label;
+                    return (
+                        <div key={cell.id} className="flex flex-col gap-0.5">
+                            {label ? <dt className="text-micro font-semibold text-ds-muted-foreground">{label}</dt> : null}
+                            <dd className="min-w-0 text-body-sm text-ds-foreground">{flexRender(def.cell, cell.getContext())}</dd>
+                        </div>
+                    );
+                })}
+            </dl>
+        </Card>
+    );
+}
 
 function SortIcon({ direction }) {
     if (direction === 'asc') return <ArrowUp aria-hidden="true" className="size-3.5" />;
@@ -56,6 +89,8 @@ function AdminDataTable({
     pageCount = 1,
     pageIndex = 0,
     onPageChange,
+    totalRows,
+    caption,
 }) {
     const [sorting, setSorting] = useState([]);
     const [columnVisibility, setColumnVisibility] = useState({});
@@ -97,6 +132,9 @@ function AdminDataTable({
             canNext: pageIndex + 1 < Math.max(pageCount, 1),
             onPrevious: () => onPageChange?.(pageIndex - 1),
             onNext: () => onPageChange?.(pageIndex + 1),
+            pageSize,
+            rowCount: rows.length,
+            totalRows,
         }
         : {
             pageIndex: table.getState().pagination.pageIndex,
@@ -108,6 +146,8 @@ function AdminDataTable({
             pageSize: table.getState().pagination.pageSize,
             pageSizeOptions,
             onPageSizeChange: (size) => table.setPageSize(size),
+            rowCount: rows.length,
+            totalRows: table.getPrePaginationRowModel().rows.length,
         };
 
     return (
@@ -115,7 +155,7 @@ function AdminDataTable({
             {(toolbar || enableColumnVisibility) && (
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0 flex-1">{toolbar}</div>
-                    {enableColumnVisibility && <div className="shrink-0"><DataTableViewOptions table={table} /></div>}
+                    {enableColumnVisibility && <div className="hidden shrink-0 lg:block"><DataTableViewOptions table={table} /></div>}
                 </div>
             )}
 
@@ -127,23 +167,30 @@ function AdminDataTable({
                 <>
                     <div className="hidden lg:block">
                         <Table>
+                            {caption ? <caption className="sr-only">{caption}</caption> : null}
                             <TableHeader>
                                 {table.getHeaderGroups().map((headerGroup) => (
                                     <TableRow key={headerGroup.id}>
                                         {headerGroup.headers.map((header) => (
-                                            <TableHead key={header.id} className={header.column.columnDef.meta?.headClassName}>
+                                            <TableHead
+                                                key={header.id}
+                                                scope="col"
+                                                aria-sort={header.column.getCanSort() ? ariaSort(header.column.getIsSorted()) : undefined}
+                                                className={header.column.columnDef.meta?.headClassName}
+                                            >
                                                 {header.isPlaceholder ? null : header.column.getCanSort() ? (
                                                     <button
                                                         type="button"
                                                         onClick={header.column.getToggleSortingHandler()}
-                                                        aria-label={`Sort by ${header.column.columnDef.meta?.label || header.id}`}
-                                                        className="focus-ring inline-flex items-center gap-1 rounded-ds-sm hover:text-ds-foreground"
+                                                        className="focus-ring inline-flex min-h-8 items-center gap-1 rounded-ds-sm hover:text-ds-foreground"
                                                     >
                                                         {flexRender(header.column.columnDef.header, header.getContext())}
                                                         <SortIcon direction={header.column.getIsSorted()} />
                                                     </button>
-                                                ) : (
+                                                ) : header.column.columnDef.header ? (
                                                     flexRender(header.column.columnDef.header, header.getContext())
+                                                ) : (
+                                                    <span className="sr-only">{header.column.columnDef.meta?.label || 'Actions'}</span>
                                                 )}
                                             </TableHead>
                                         ))}
@@ -164,11 +211,11 @@ function AdminDataTable({
                         </Table>
                     </div>
 
-                    {renderCard && (
-                        <div className="space-y-3 lg:hidden">
-                            {rows.map((row) => <div key={row.id}>{renderCard(row.original, row)}</div>)}
-                        </div>
-                    )}
+                    <div className="space-y-3 lg:hidden">
+                        {rows.map((row) => (
+                            <div key={row.id}>{renderCard ? renderCard(row.original, row) : <FallbackCard row={row} />}</div>
+                        ))}
+                    </div>
                 </>
             )}
 

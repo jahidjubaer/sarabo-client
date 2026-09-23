@@ -63,7 +63,7 @@ function RequestListItem({ request, onCancel, onDelete, onPay, cancellingId, del
                 <div className="space-y-4 p-4 sm:p-5">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0 space-y-2">
-                            <StatusBadge status={status} />
+                            <StatusBadge audience="customer" status={status} />
                             <div>
                                 <h2 id={headingId} className="break-words text-base font-semibold text-ds-foreground">{device}</h2>
                                 {(category || brandModel) && (

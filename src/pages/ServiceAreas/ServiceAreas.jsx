@@ -8,6 +8,7 @@ import useRole from '../../hooks/useRole';
 import { shouldShowCreateRequestLink, getRequestRepairAction } from '../../utils/publicContent';
 import { buttonVariants } from '../../components/ui/button-variants';
 import { cn } from '../../lib/utils';
+import { Select } from '../../components/ui/select';
 
 const areaKey = (area) => `${area.region}::${area.district}`;
 const controlClass = 'focus-ring mt-2 min-h-11 w-full min-w-0 rounded-ds border border-ds-border bg-ds-card px-3 text-body-sm text-ds-foreground';
@@ -57,17 +58,17 @@ const ServiceAreas = () => {
                     </div>
                     <div className="min-w-0">
                         <label htmlFor="area-region" className="text-body-sm font-semibold text-ds-foreground">Region</label>
-                        <select id="area-region" value={region} onChange={(event) => changeRegion(event.target.value)} className={controlClass}>
+                        <Select id="area-region" value={region} onChange={(event) => changeRegion(event.target.value)} wrapperClassName="mt-2">
                             <option value="all">All regions</option>
                             {regions.map((name) => <option key={name} value={name}>{name}</option>)}
-                        </select>
+                        </Select>
                     </div>
                     <div className="min-w-0 sm:col-span-2 lg:col-span-1">
                         <label htmlFor="area-district" className="text-body-sm font-semibold text-ds-foreground">Select a district</label>
-                        <select id="area-district" value={selected ? areaKey(selected) : ''} onChange={(event) => setSelectedKey(event.target.value || null)} className={controlClass}>
+                        <Select id="area-district" value={selected ? areaKey(selected) : ''} onChange={(event) => setSelectedKey(event.target.value || null)} wrapperClassName="mt-2">
                             <option value="">Choose a location</option>
                             {matches.map((area) => <option key={areaKey(area)} value={areaKey(area)}>{area.district} — {area.region}</option>)}
-                        </select>
+                        </Select>
                     </div>
                 </div>
                 <div className="my-4 flex flex-wrap items-center justify-between gap-2">

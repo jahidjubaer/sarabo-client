@@ -1,16 +1,22 @@
 import { Badge } from '../ui/badge';
-import { getStatusPresentation } from '../../config/statusPresentation';
+import { getStatus } from '../../config/status';
 
-// Design-system status badge (Phase 7.1). Given a raw backend status it renders
-// the human label + semantic tone + icon from config/statusPresentation.js -
-// a normal user never sees the raw status string, and meaning is carried by
-// label + icon, not colour alone. This is the canonical status badge for
-// redesigned surfaces; the legacy DaisyUI components/StatusBadge/StatusBadge.jsx
-// stays in place for not-yet-migrated pages.
-function StatusBadge({ status, showIcon = true, className }) {
-    const { label, tone, icon: Icon } = getStatusPresentation(status);
+// The one status badge. Given a stored status value it renders the label, tone
+// and icon from the status registry (config/status), so no page keeps its own
+// label or colour map and a raw status string is never shown.
+//
+//   <StatusBadge status={request.deliveryStatus} audience="customer" />
+//   <StatusBadge domain="withdrawal" status={row.status} audience="admin" />
+//
+// `domain` defaults to "repair". `audience` (customer | technician | admin)
+// lifts the status to amber `attention` only for the role that has to act.
+// An unknown value renders nothing.
+function StatusBadge({ status, domain = 'repair', audience, showIcon = true, size, className }) {
+    const presentation = getStatus(domain, status, audience);
+    if (!presentation) return null;
+    const { label, tone, icon: Icon } = presentation;
     return (
-        <Badge tone={tone} className={className}>
+        <Badge tone={tone} size={size} className={className}>
             {showIcon && Icon ? <Icon aria-hidden="true" /> : null}
             {label}
         </Badge>

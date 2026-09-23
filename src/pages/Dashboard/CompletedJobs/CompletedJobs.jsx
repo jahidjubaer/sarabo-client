@@ -23,7 +23,7 @@ function CompletedJobItem({ request }) {
                 <div className="space-y-4 p-4 sm:p-5">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0 space-y-2">
-                            <StatusBadge status={request.deliveryStatus} />
+                            <StatusBadge audience="technician" status={request.deliveryStatus} />
                             <div>
                                 <h3 id={headingId} className="break-words text-base font-semibold text-ds-foreground">{device}</h3>
                                 {(category || brandModel) && (
@@ -86,7 +86,7 @@ const CompletedJobs = () => {
     if (isCompletedInitialLoading) {
         return (
             <div className="space-y-6">
-                <PageHeader eyebrow="Technician" title="Completed Repairs" />
+                <PageHeader title="Completed Repairs" />
                 <Loading />
             </div>
         );
@@ -95,7 +95,7 @@ const CompletedJobs = () => {
     if (isCompletedErrorBeforeData || isCompletedUnavailableBeforeData) {
         return (
             <div className="space-y-6">
-                <PageHeader eyebrow="Technician" title="Completed Repairs" />
+                <PageHeader title="Completed Repairs" />
                 <ErrorState
                     title="Couldn't load completed repairs"
                     description="We couldn't load your completed repairs right now. Please try again."
@@ -111,7 +111,7 @@ const CompletedJobs = () => {
 
     return (
         <div className="space-y-6">
-            <PageHeader eyebrow="Technician" title="Completed Repairs" description={description} />
+            <PageHeader title="Completed Repairs" description={description} />
 
             <section aria-labelledby="completed-job-history-heading" className="space-y-3">
                 <div>

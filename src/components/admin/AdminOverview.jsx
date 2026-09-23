@@ -78,7 +78,7 @@ function AdminOverview() {
     return (
         <MotionConfig reducedMotion="user">
             <div className="space-y-7">
-                <PageHeader eyebrow="Admin" title="Operations Dashboard" description="Resolve blocked repair work first, then review workload and supporting analytics." />
+                <PageHeader title="Operations Dashboard" description="Resolve blocked repair work first, then review workload and supporting analytics." />
 
                 <Motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-8">
                     <Motion.div variants={staggerItem}>

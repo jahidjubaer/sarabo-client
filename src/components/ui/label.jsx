@@ -6,7 +6,7 @@ function Label({ className, ...props }) {
     return (
         <label
             className={cn(
-                "text-sm font-medium text-ds-foreground leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
+                "text-body-sm font-semibold text-ds-foreground leading-snug peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
                 className
             )}
             {...props}
