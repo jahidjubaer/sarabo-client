@@ -112,11 +112,23 @@ export function getRequestAction(request) {
 }
 
 // Safe device/product identity from list-available fields only.
+//
+// `device` is the title. v2 requests have no legacy `deviceName`, so the title
+// is the brand/model the customer entered, then the category, and only then
+// the generic fallback (previously every v2 request was titled "Repair
+// request"). Whichever field became the title is blanked in the returned
+// `category`/`brandModel`, so callers that show "category · brandModel" under
+// the title never repeat it.
 export function getProductSummary(request) {
-    const device = (request?.deviceName || '').trim();
+    const legacy = (request?.deviceName || '').trim();
     const category = request?.product?.categorySlug ? humanizeSlug(request.product.categorySlug) : '';
     const brandModel = [request?.product?.brand, request?.product?.model].filter(Boolean).join(' ').trim();
-    return { device: device || 'Repair request', category, brandModel };
+    const device = legacy || brandModel || category || 'Repair request';
+    return {
+        device,
+        category: category === device ? '' : category,
+        brandModel: brandModel === device ? '' : brandModel,
+    };
 }
 
 // One device label for compact surfaces (admin tables, assignment lists) that
