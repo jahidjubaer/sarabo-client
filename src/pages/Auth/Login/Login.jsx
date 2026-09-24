@@ -83,9 +83,11 @@ const Login = () => {
     }
 
     const emailError = errors.email?.type === 'required' ? 'Email is required.' : undefined;
-    const passwordError = errors.password?.type === 'minLength'
-        ? 'Password must be 6 characters or longer.'
-        : undefined;
+    const passwordError = errors.password?.type === 'required'
+        ? 'Password is required.'
+        : errors.password?.type === 'minLength'
+            ? 'Password must be 6 characters or longer.'
+            : undefined;
 
     return (
         <div>
