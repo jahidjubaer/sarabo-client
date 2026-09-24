@@ -21,13 +21,17 @@ import { Select } from '../../../components/ui/select';
 import { getStatusLabel } from '../../../config/status';
 
 // Exactly the statuses GET /admin/repair-requests can filter on (the server's
-// ADMIN_LIST_VALID_STATUSES). The server ignores any other value and returns
-// every row, so offering a status outside this list would show a wrong result.
-// Labels come from the status registry so they match the badges in the table
-// (this list previously called a collected device "Repair In Progress").
-// parcel_delivered shares the "Repair Completed" badge with repair_completed,
-// which the server cannot filter, so its option says what it actually selects.
-const FILTERABLE_STATUSES = ['pending-pickup', 'driver_assigned', 'rider_arriving', 'parcel_picked_up', 'parcel_delivered', 'cancelled'];
+// ADMIN_LIST_VALID_STATUSES), in lifecycle order: every real request state.
+// The server ignores any other value and returns every row, so offering a
+// status outside this list would show a wrong result. Labels come from the
+// status registry so they match the badges in the table. parcel_delivered is
+// the legacy "received by customer" end state and shares the "Repair
+// completed" badge with repair_completed, so its option says what it selects.
+const FILTERABLE_STATUSES = [
+    'pending-pickup', 'assignment_pending', 'driver_assigned', 'rider_arriving', 'parcel_picked_up',
+    'inspection_completed', 'quote_submitted', 'quote_approved', 'quote_rejected', 'payment_completed',
+    'repair_in_progress', 'repair_completed', 'parcel_delivered', 'cancelled',
+];
 const STATUS_OPTIONS = [
     { value: 'all', label: 'All statuses' },
     ...FILTERABLE_STATUSES.map((value) => ({

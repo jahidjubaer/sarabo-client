@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { ShieldCheck, ShieldX, Search, Info } from 'lucide-react';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
@@ -17,11 +17,23 @@ import { notify } from '../../../lib/notify';
 import { getRoleLabel, getRoleTone, ROLE_FILTER_OPTIONS } from '../../../utils/adminPresentation';
 import { getUserRoleUpdateErrorMessage } from '../../../utils/userRoleUpdateErrorMessage';
 import { Select } from '../../../components/ui/select';
+import { cn } from '../../../lib/utils';
 
 const EMPTY_USERS = [];
-// GET /users answers with the newest matches only (the server caps the list
-// at 5). The page says so rather than implying it lists every account.
-const SERVER_RESULT_CAP = 5;
+const PAGE_LIMIT = 20;
+// A server that predates paging ignores `page` and answers with a bare array
+// of its 5 newest matches. The page still works against it, and says so.
+const LEGACY_RESULT_CAP = 5;
+
+// Normalises both GET /users answers: { data, pagination } from a paging
+// server, or the legacy bare array (pagination: null).
+function readUsersPage(body) {
+    if (Array.isArray(body)) return { users: body, pagination: null };
+    if (Array.isArray(body?.data) && body.pagination && typeof body.pagination === 'object') {
+        return { users: body.data, pagination: body.pagination };
+    }
+    return null;
+}
 
 function initials(name) {
     if (!name) return '';
@@ -35,9 +47,10 @@ function initials(name) {
 const UsersManagement = () => {
     const axiosSecure = useAxiosSecure();
     const queryClient = useQueryClient();
-    const [filters, setFilters] = useUrlFilters({ q: '', role: 'all' });
+    const [filters, setFilters] = useUrlFilters({ q: '', role: 'all', page: '1' });
     const search = filters.q;
-    const roleFilter = filters.role;
+    const roleFilter = ROLE_FILTER_OPTIONS.some((o) => o.value === filters.role) ? filters.role : 'all';
+    const { page } = filters;
     const [searchInput, setSearchInput] = useState(search);
     const [pendingUserId, setPendingUserId] = useState(null);
     const [roleChange, setRoleChange] = useState(null);
@@ -45,25 +58,35 @@ const UsersManagement = () => {
     useEffect(() => {
         const handle = setTimeout(() => {
             const next = searchInput.trim();
-            if (next !== search) setFilters({ q: next });
+            if (next !== search) setFilters({ q: next, page: 1 });
         }, 350);
         return () => clearTimeout(handle);
     }, [searchInput, search, setFilters]);
 
-    const usersQueryKey = ['users', search];
-    const { refetch, data, isPending, isPaused, isError } = useQuery({
+    // Server-side paging, search and role filter (GET /users?page=...).
+    const usersQueryKey = ['users', { search, role: roleFilter, page }];
+    const { refetch, data, isPending, isPaused, isError, isFetching } = useQuery({
         queryKey: usersQueryKey,
-        queryFn: async () => (await axiosSecure.get(`/users?searchText=${encodeURIComponent(search)}`)).data,
+        queryFn: async () => {
+            const params = { searchText: search, page, limit: PAGE_LIMIT };
+            if (roleFilter !== 'all') params.role = roleFilter;
+            return (await axiosSecure.get('/users', { params })).data;
+        },
+        placeholderData: keepPreviousData,
     });
-    const hasUsableUsers = Array.isArray(data);
-    const users = hasUsableUsers ? data : EMPTY_USERS;
+    const usersPage = readUsersPage(data);
+    const hasUsableUsers = !!usersPage;
+    const users = hasUsableUsers ? usersPage.users : EMPTY_USERS;
+    const pagination = usersPage?.pagination || null;
+    const isLegacyServer = hasUsableUsers && !pagination;
     const isInitialLoading = isPending && !isPaused && !hasUsableUsers;
     const isUnavailableBeforeData = !hasUsableUsers && (isPaused || isError);
     const retryUsers = () => queryClient.resetQueries({ queryKey: usersQueryKey });
 
+    // A paging server already filtered by role; a legacy one did not.
     const filteredUsers = useMemo(
-        () => (roleFilter === 'all' ? users : users.filter((user) => user.role === roleFilter)),
-        [users, roleFilter]
+        () => (!isLegacyServer || roleFilter === 'all' ? users : users.filter((user) => user.role === roleFilter)),
+        [users, roleFilter, isLegacyServer]
     );
 
     const applyRoleUpdate = (user, role, successMessage) => {
@@ -206,7 +229,7 @@ const UsersManagement = () => {
                 <Input id="users-search" type="search" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} placeholder="Search users" className="pl-9" />
             </div>
             <Label htmlFor="users-role" className="sr-only">Filter by role</Label>
-            <Select id="users-role" value={roleFilter} onChange={(e) => setFilters({ role: e.target.value })} size="sm" wrapperClassName="sm:w-52">
+            <Select id="users-role" value={roleFilter} onChange={(e) => setFilters({ role: e.target.value, page: 1 })} size="sm" wrapperClassName="sm:w-52">
                 {ROLE_FILTER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </Select>
         </div>
@@ -214,15 +237,21 @@ const UsersManagement = () => {
 
     return (
         <div className="space-y-6">
-            <PageHeader title="Users" description="Find an account by name or email to grant or remove Admin access." />
-            {!isInitialLoading && users.length >= SERVER_RESULT_CAP && (
+            <PageHeader
+                title="Users"
+                description={pagination
+                    ? `${pagination.totalItems}${search || roleFilter !== 'all' ? ' matching' : ''} account${pagination.totalItems === 1 ? '' : 's'}. Grant or remove Admin access.`
+                    : 'Find an account by name or email to grant or remove Admin access.'}
+            />
+            {isLegacyServer && users.length >= LEGACY_RESULT_CAP && (
                 <p className="flex items-start gap-2 rounded-ds-lg bg-ds-muted p-3 text-body-sm text-ds-muted-foreground">
                     <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
                     {search
-                        ? `Showing the ${SERVER_RESULT_CAP} newest accounts that match. Make the search more specific to find someone else.`
-                        : `Showing the ${SERVER_RESULT_CAP} newest accounts. Search by name or email to find anyone else.`}
+                        ? `Showing the ${LEGACY_RESULT_CAP} newest accounts that match. Make the search more specific to find someone else.`
+                        : `Showing the ${LEGACY_RESULT_CAP} newest accounts. Search by name or email to find anyone else.`}
                 </p>
             )}
+            <p className={cn('text-sm text-ds-muted-foreground transition-opacity', isFetching && hasUsableUsers ? 'opacity-100' : 'opacity-0')} role="status" aria-live="polite">Updating results…</p>
             <AdminDataTable
                 caption="User accounts"
                 columns={columns}
@@ -232,6 +261,14 @@ const UsersManagement = () => {
                 toolbar={toolbar}
                 renderCard={renderCard}
                 enableColumnVisibility
+                {...(pagination ? {
+                    manualPagination: true,
+                    pageSize: pagination.limit,
+                    totalRows: pagination.totalItems,
+                    pageCount: pagination.totalPages,
+                    pageIndex: pagination.page - 1,
+                    onPageChange: (index) => setFilters({ page: index + 1 }),
+                } : {})}
                 emptyState={
                     <EmptyState
                         title={search || roleFilter !== 'all' ? 'No matching users' : 'No users found'}
