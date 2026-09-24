@@ -138,8 +138,8 @@ const PaymentSuccess = () => {
                     }
 
                     <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                        <Link to="/dashboard/my-requests" className={`${buttonVariants({ variant: 'outline' })} flex-1`}>View my repair requests</Link>
-                        <Link to="/dashboard" className={`${buttonVariants({ variant: 'outline' })} flex-1`}>Go to dashboard</Link>
+                        <Link to="/dashboard/my-requests" className={`${buttonVariants({ variant: 'outline' })} sm:flex-1`}>View my repair requests</Link>
+                        <Link to="/dashboard" className={`${buttonVariants({ variant: 'outline' })} sm:flex-1`}>Go to dashboard</Link>
                     </div>
                 </Card>
             </div>
@@ -197,8 +197,8 @@ const PaymentSuccess = () => {
                             </p>
 
                             <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                                <Link to={returnPath} className={`${buttonVariants({ variant: 'primary' })} flex-1`}>{returnLabel}</Link>
-                                <Link to="/dashboard/payment-history" className={`${buttonVariants({ variant: 'outline' })} flex-1`}>View payment history</Link>
+                                <Link to={returnPath} className={`${buttonVariants({ variant: 'primary' })} sm:flex-1`}>{returnLabel}</Link>
+                                <Link to="/dashboard/payment-history" className={`${buttonVariants({ variant: 'outline' })} sm:flex-1`}>View payment history</Link>
                             </div>
                             <Link to="/dashboard" className={`${buttonVariants({ variant: 'ghost', size: 'sm' })} mt-2 w-full`}>Return to dashboard</Link>
                         </>

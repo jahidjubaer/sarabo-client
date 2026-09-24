@@ -15,7 +15,6 @@
 // canonical payload, and validates those selections for UX. The server remains
 // the authority: it re-validates every value against the canonical taxonomy.
 
-export const EXPERTISE_LEVELS = ['beginner', 'intermediate', 'advanced', 'expert'];
 export const MIN_EXPERIENCE_YEARS = 0;
 export const MAX_EXPERIENCE_YEARS = 50;
 
@@ -85,16 +84,6 @@ export function validateExpertiseSelections(selections) {
         }
     }
     return { valid: true };
-}
-
-// Readable summary chips for a set of selections, e.g. "Smartphone · Advanced".
-export function describeExpertiseSelections(selections) {
-    return buildExpertiseFromSelections(selections).map((entry) => ({
-        key: entry.productCategorySlug,
-        label: humanizeSlug(entry.productCategorySlug),
-        level: entry.level ? humanizeSlug(entry.level) : null,
-        repairCount: entry.repairCategorySlugs.length,
-    }));
 }
 
 // Assembles the exact POST /technicians body. Deliberately carries ONLY the

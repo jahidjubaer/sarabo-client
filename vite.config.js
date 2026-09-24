@@ -19,5 +19,22 @@ export default defineConfig(({ command, mode }) => {
 
   return {
     plugins: [tailwindcss(), react()],
+    build: {
+      rollupOptions: {
+        output: {
+          // Long-lived libraries in their own chunks, so a deploy that only
+          // changes app code leaves them cached in returning visitors'
+          // browsers. Everything else is split per route (routes/Router.jsx).
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return undefined;
+            // Vite normalises module ids to forward slashes on every OS.
+            if (/node_modules\/(react|react-dom|react-router|scheduler)\//.test(id)) return 'vendor-react';
+            if (/node_modules\/(@firebase|firebase)\//.test(id)) return 'vendor-firebase';
+            if (/node_modules\/(motion|motion-dom|motion-utils|framer-motion)\//.test(id)) return 'vendor-motion';
+            return undefined;
+          },
+        },
+      },
+    },
   };
 })

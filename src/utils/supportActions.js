@@ -1,7 +1,7 @@
 export const SUPPORT_ACTIONS = Object.freeze({
     VIEW_SERVICES: Object.freeze({ id: 'VIEW_SERVICES', label: 'View services', to: '/services' }),
     TRACK_REQUEST: Object.freeze({ id: 'TRACK_REQUEST', label: 'Track a request', to: '/track-request' }),
-    LOGIN: Object.freeze({ id: 'LOGIN', label: 'Log in', to: '/login' }),
+    LOGIN: Object.freeze({ id: 'LOGIN', label: 'Sign in', to: '/login' }),
     REGISTER: Object.freeze({ id: 'REGISTER', label: 'Create an account', to: '/register' }),
 });
 

@@ -31,22 +31,6 @@ export const SPINE_STAGES = [
 
 export const SPINE_STAGE_COUNT = SPINE_STAGES.length;
 
-// Stage states.
-//   done      the stage is behind us
-//   current   where the repair is right now
-//   upcoming  not reached yet
-//   blocked   reached, then stopped here (a declined quote)
-//   cancelled the request was cancelled
-//   skipped   this stage does not exist for this request (legacy records only)
-// `skipped` extends the base set. It exists because legacy (schemaVersion 1)
-// requests never had an inspection/quote workflow at all, and showing their
-// "Approve" stage as permanently upcoming would claim something untrue about a
-// finished repair.
-export const STAGE_STATES = ['done', 'current', 'upcoming', 'blocked', 'cancelled', 'skipped'];
-
-// Flow-level state, describing the repair as a whole rather than one stage.
-export const FLOW_STATES = ['active', 'complete', 'blocked', 'cancelled', 'unknown'];
-
 // ---------------------------------------------------------------------------
 // Status table. Every persisted deliveryStatus the client references maps here.
 //
@@ -242,11 +226,6 @@ export function getHandoverState(request) {
         confirmed,
         confirmedAt: confirmed ? (confirmation?.confirmedAt || null) : null,
     };
-}
-
-// Convenience for callers that only need a stage's name.
-export function getSpineStageLabel(key) {
-    return SPINE_STAGES.find((s) => s.key === key)?.label || '';
 }
 
 // "Stage 3 of 4" - the counter shown in mono beside a spine. Returns null for

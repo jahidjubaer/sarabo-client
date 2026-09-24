@@ -77,7 +77,7 @@ const Hero = () => {
                 one on phones where the text sits low over the photo. */}
             <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-t from-[rgb(6_13_16/0.92)] via-[rgb(6_13_16/0.6)] to-[rgb(6_13_16/0.15)] md:bg-gradient-to-r md:from-[rgb(6_13_16/0.88)] md:via-[rgb(6_13_16/0.55)] md:to-transparent" />
 
-            <div className="mx-auto flex w-full max-w-6xl flex-col justify-end px-4 pb-24 pt-32 sm:px-6 md:justify-center md:pb-20 lg:px-8">
+            <div className="mx-auto flex w-full max-w-6xl lg:max-w-[76rem] flex-col justify-end px-4 pb-24 pt-32 sm:px-6 md:justify-center md:pb-20 lg:px-8">
                 <div data-tour="request-repair" className="max-w-xl">
                     <p className="ds-eyebrow text-ds-action">{HERO.eyebrow}</p>
                     <h1 id="home-hero-heading" className="mt-4 text-display text-ds-ink-foreground">
@@ -108,7 +108,7 @@ const Hero = () => {
                 </div>
             </div>
 
-            <div className="absolute inset-x-0 bottom-6 mx-auto flex max-w-6xl items-center gap-3 px-4 sm:px-6 lg:px-8">
+            <div className="absolute inset-x-0 bottom-6 mx-auto flex max-w-6xl lg:max-w-[76rem] items-center gap-3 px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center gap-2">
                     {SLIDES.map((slide, slideIndex) => (
                         <button

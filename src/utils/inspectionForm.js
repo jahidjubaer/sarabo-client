@@ -52,55 +52,6 @@ export function parseEstimate(raw) {
     return { ok: true, value: num };
 }
 
-// Client-side validation mirroring the server contract, returning a flat
-// { field: message } map keyed to match the form's field names.
-export function validateInspectionForm(values) {
-    const errors = {};
-
-    if (isBlank(values.diagnosisSummary) || values.diagnosisSummary.trim().length < DIAGNOSIS_SUMMARY_MIN || values.diagnosisSummary.trim().length > DIAGNOSIS_SUMMARY_MAX) {
-        errors.diagnosisSummary = `Describe the diagnosis in ${DIAGNOSIS_SUMMARY_MIN}-${DIAGNOSIS_SUMMARY_MAX} characters.`;
-    }
-
-    const issues = Array.isArray(values.detectedIssues) ? values.detectedIssues : [];
-    if (issues.length < MIN_DETECTED_ISSUES) {
-        errors.detectedIssues = 'Add at least one detected issue.';
-    } else if (issues.length > MAX_DETECTED_ISSUES) {
-        errors.detectedIssues = `At most ${MAX_DETECTED_ISSUES} detected issues are allowed.`;
-    } else {
-        issues.forEach((issue, index) => {
-            if (isBlank(issue.label) || issue.label.trim().length < ISSUE_LABEL_MIN || issue.label.trim().length > ISSUE_LABEL_MAX) {
-                errors[`detectedIssues.${index}.label`] = `Label must be ${ISSUE_LABEL_MIN}-${ISSUE_LABEL_MAX} characters.`;
-            }
-            if (!SEVERITY_VALUES.includes(issue.severity)) {
-                errors[`detectedIssues.${index}.severity`] = 'Select a severity.';
-            }
-            if (!isBlank(issue.notes) && issue.notes.trim().length > ISSUE_NOTES_MAX) {
-                errors[`detectedIssues.${index}.notes`] = `Notes must be ${ISSUE_NOTES_MAX} characters or fewer.`;
-            }
-        });
-    }
-
-    if (!REPAIRABILITY_VALUES.includes(values.repairabilityDecision)) {
-        errors.repairabilityDecision = 'Select a repairability decision.';
-    }
-    if (isBlank(values.repairabilityReason) || values.repairabilityReason.trim().length < REASON_MIN || values.repairabilityReason.trim().length > REASON_MAX) {
-        errors.repairabilityReason = `Give a reason in ${REASON_MIN}-${REASON_MAX} characters.`;
-    }
-
-    if (!parseEstimate(values.laborEstimate).ok) {
-        errors.laborEstimate = `Enter a whole number of taka (0-${MAX_ESTIMATE_BDT}) or leave blank.`;
-    }
-    if (!parseEstimate(values.partsEstimate).ok) {
-        errors.partsEstimate = `Enter a whole number of taka (0-${MAX_ESTIMATE_BDT}) or leave blank.`;
-    }
-
-    if (!isBlank(values.internalNotes) && values.internalNotes.trim().length > INTERNAL_NOTES_MAX) {
-        errors.internalNotes = `Internal notes must be ${INTERNAL_NOTES_MAX} characters or fewer.`;
-    }
-
-    return { valid: Object.keys(errors).length === 0, errors };
-}
-
 // Builds the exact server payload from form values via an explicit
 // field-by-field whitelist - never spreads the raw form object, so no
 // unexpected/injected key (a MongoDB operator, or an authority field like

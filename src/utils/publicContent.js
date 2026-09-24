@@ -105,12 +105,6 @@ export function getCategoryRequestRoute(slug) {
     return `${REQUEST_REPAIR_ROUTE}?category=${encodeURIComponent(slug)}`;
 }
 
-// "Become a technician" for anyone who is not already a technician or admin.
-export function shouldShowBecomeTechnicianLink({ user, role } = {}) {
-    if (!user) return true;
-    return role === 'user';
-}
-
 // Path-aware active matching for the public nav: a link is active on its own
 // path and anything nested under it.
 export function isPublicNavLinkActive(pathname, link) {

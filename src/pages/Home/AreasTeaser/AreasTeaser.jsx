@@ -33,7 +33,7 @@ const AreasTeaser = ({ areas }) => {
                 <div>
                     <form role="search" onSubmit={submit} className="flex flex-col gap-3 sm:flex-row">
                         <label htmlFor="home-area-search" className="sr-only">Search your district or area</label>
-                        <div className="flex h-12 flex-1 items-center gap-2 rounded-ds border border-ds-input bg-ds-card px-4 focus-within:ring-2 focus-within:ring-ds-ring">
+                        <div className="flex h-12 min-w-0 items-center gap-2 rounded-ds border border-ds-input bg-ds-card px-4 focus-within:ring-2 focus-within:ring-ds-ring sm:flex-1">
                             <MapPin aria-hidden="true" className="size-5 shrink-0 text-ds-primary" />
                             <input
                                 id="home-area-search"

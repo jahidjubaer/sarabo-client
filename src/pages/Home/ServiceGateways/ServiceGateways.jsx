@@ -28,7 +28,7 @@ const ServiceGateways = () => (
                     <Reveal as="li" key={group.key} delay={index * 0.08}>
                         <Link
                             to={getServiceGroupAnchor(group.key)}
-                            className="focus-ring group relative isolate flex aspect-[4/5] flex-col justify-end overflow-hidden rounded-ds-xl bg-ds-ink sm:aspect-[16/11]"
+                            className="focus-ring group relative isolate flex aspect-[4/5] flex-col justify-end overflow-hidden rounded-ds-xl bg-ds-ink sm:aspect-[4/3] lg:aspect-[16/11]"
                         >
                             <img
                                 src={group.photo}
@@ -37,7 +37,7 @@ const ServiceGateways = () => (
                                 decoding="async"
                                 className="absolute inset-0 -z-20 size-full object-cover transition-transform duration-700 ease-out motion-safe:group-hover:scale-105"
                             />
-                            <span aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-t from-[rgb(6_13_16/0.9)] via-[rgb(6_13_16/0.35)] to-transparent transition-opacity duration-500 group-hover:opacity-95" />
+                            <span aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-t from-[rgb(6_13_16/0.92)] from-10% via-[rgb(6_13_16/0.6)] via-55% to-[rgb(6_13_16/0.12)] transition-opacity duration-500 group-hover:opacity-95" />
                             <span className="flex flex-col items-start gap-3 p-6 sm:p-8">
                                 <span className="text-heading text-ds-ink-foreground sm:text-title">{group.title}</span>
                                 <span className="max-w-sm text-body-sm text-ds-ink-foreground/80">{group.description}</span>

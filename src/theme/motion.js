@@ -13,11 +13,6 @@
 
 const EASE_OUT = [0.16, 1, 0.3, 1];
 
-export const fadeIn = {
-    hidden: { opacity: 0 },
-    show: { opacity: 1, transition: { duration: 0.2, ease: EASE_OUT } },
-};
-
 export const slideUp = {
     hidden: { opacity: 0, y: 8 },
     show: { opacity: 1, y: 0, transition: { duration: 0.25, ease: EASE_OUT } },
@@ -30,13 +25,6 @@ export const staggerContainer = {
 };
 
 export const staggerItem = slideUp;
-
-// For animated route/page mounts (use with AnimatePresence at the shell level).
-export const pageTransition = {
-    initial: { opacity: 0, y: 6 },
-    animate: { opacity: 1, y: 0, transition: { duration: 0.2, ease: EASE_OUT } },
-    exit: { opacity: 0, y: -6, transition: { duration: 0.15 } },
-};
 
 // Runtime check for call sites that branch on reduced-motion themselves rather
 // than relying on MotionConfig.

@@ -88,7 +88,9 @@ const TrackRequest = () => {
             <form onSubmit={handleSubmit} className="mt-7 max-w-xl">
                 <label htmlFor="tracking-code" className="sr-only">Tracking code</label>
                 <div className="flex flex-col gap-2 sm:flex-row">
-                    <div className="flex h-12 flex-1 items-center gap-3 rounded-ds border border-ds-ink-foreground/25 bg-ds-ink-foreground/10 px-4 focus-within:border-ds-ink-foreground/50">
+                    {/* sm:flex-1, not flex-1: in the stacked phone layout a
+                        0% flex-basis collapsed this field to its text height. */}
+                    <div className="flex h-12 min-w-0 items-center gap-3 rounded-ds border border-ds-ink-foreground/25 bg-ds-ink-foreground/10 px-4 focus-within:border-ds-ink-foreground/60 focus-within:ring-2 focus-within:ring-ds-ink-foreground/70 sm:flex-1">
                         <Search aria-hidden="true" className="size-4 shrink-0 text-ds-ink-foreground/60" />
                         <input
                             id="tracking-code"

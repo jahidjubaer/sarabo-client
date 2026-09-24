@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router';
+import { RouteSuspense } from '../components/layout/RouteSuspense';
 import Footer from '../pages/Shared/Footer/Footer';
 import NavBar from '../pages/Shared/NavBar/NavBar';
 
@@ -24,7 +24,7 @@ const RootLayout = () => {
             </a>
             <NavBar />
             <main id="main-content" tabIndex={-1} className="w-full flex-1 outline-none">
-                <Outlet />
+                <RouteSuspense />
             </main>
             <Footer />
         </div>

@@ -229,23 +229,23 @@ const Register = () => {
                     variant="action"
                     size="lg"
                     loading={submitting}
-                    loadingText="Creating account..."
+                    loadingText="Creating account…"
                     className="w-full"
                 >
-                    Register
+                    Create account
                 </LoadingButton>
             </form>
 
             <SocialLogin />
 
             <p className="mt-8 border-t border-ds-border pt-6 text-body-sm text-ds-muted-foreground">
-                Already have an account{' '}
+                Already have an account?{' '}
                 <Link
                     state={location.state}
                     to="/login"
                     className="focus-ring rounded-ds font-semibold text-ds-primary underline-offset-4 hover:underline"
                 >
-                    Login
+                    Sign in
                 </Link>
             </p>
         </div>

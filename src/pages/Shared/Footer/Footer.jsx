@@ -13,7 +13,7 @@ const footerLink = 'focus-ring inline-flex min-h-10 items-center rounded-ds text
 
 const Footer = () => (
     <footer className="bg-ds-ink text-ds-ink-foreground">
-        <div className="mx-auto max-w-6xl px-4 pb-8 pt-12 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl lg:max-w-[76rem] px-4 pb-8 pt-12 sm:px-6 lg:px-8">
             <div className="grid grid-cols-2 gap-8 lg:grid-cols-4">
                 <div className="col-span-2">
                     <Logo surface="ink" imgClassName="h-9" />

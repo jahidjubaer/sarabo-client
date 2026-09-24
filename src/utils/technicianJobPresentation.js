@@ -56,10 +56,6 @@ export function getJobGroup(job) {
     return STATUS_GROUP[getRequestStatus(job)] || 'waiting';
 }
 
-export function isActionNeeded(job) {
-    return NEEDS_ATTENTION_STATUSES.has(getRequestStatus(job));
-}
-
 export function isV2Job(job) {
     return job?.schemaVersion === 2;
 }

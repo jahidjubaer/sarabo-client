@@ -8,7 +8,6 @@ export const PROGRESS_MESSAGE_MIN = 5;
 export const PROGRESS_MESSAGE_MAX = 500;
 export const COMPLETION_SUMMARY_MIN = 10;
 export const COMPLETION_SUMMARY_MAX = 2000;
-export const MIN_EVIDENCE_IMAGES = 1;
 export const MAX_EVIDENCE_IMAGES = 3;
 
 function trimmed(value) {

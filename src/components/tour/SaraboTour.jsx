@@ -4,7 +4,6 @@ import { useLocation, useNavigate } from 'react-router';
 import useProductTour from '../../hooks/useProductTour';
 import { prefersReducedMotion } from '../../theme/motion';
 import TourTooltip from './TourTooltip';
-import TourWelcome from './TourWelcome';
 import { TOUR_STEPS, TOUR_TARGETS } from './tourSteps';
 
 const TARGET_CHECK_INTERVAL_MS = 75;
@@ -52,11 +51,9 @@ function SaraboTour() {
     const location = useLocation();
     const navigate = useNavigate();
     const {
-        welcomeOpen,
         tourRunning,
         stepIndex,
         setStepIndex,
-        dismissWelcome,
         startTour,
         exitTour,
         finishTour,
@@ -104,22 +101,12 @@ function SaraboTour() {
     ]);
 
     // The tour is opt-in (redesign Phase 2): it starts only from ?tour=start -
-    // the hero's "Take the one-minute tour" chip or the footer link. It used
-    // to open a welcome dialog on every first homepage visit, for every role,
-    // competing with the sticky nav and the support button at first paint.
+    // the hero's "Take the one-minute tour" chip or the footer link. (The
+    // first-visit welcome dialog it replaced was removed in Phase 6.) Leaving
+    // the homepage ends a running tour.
     useEffect(() => {
-        if (isHome) return;
-        if (welcomeOpen) dismissWelcome();
-        if (tourRunning) exitTour();
-    }, [dismissWelcome, exitTour, isHome, tourRunning, welcomeOpen]);
-
-    const handleStart = useCallback(() => {
-        if (!tourTargetsReady()) {
-            dismissWelcome();
-            return;
-        }
-        startTour();
-    }, [dismissWelcome, startTour]);
+        if (!isHome && tourRunning) exitTour();
+    }, [exitTour, isHome, tourRunning]);
 
     const handleJoyrideEvent = useCallback((event) => {
         if (event.type === EVENTS.TARGET_NOT_FOUND || event.type === EVENTS.ERROR) {
@@ -154,12 +141,6 @@ function SaraboTour() {
 
     return (
         <>
-            <TourWelcome
-                open={welcomeOpen}
-                onStart={handleStart}
-                onSkip={dismissWelcome}
-            />
-
             <Joyride
                 run={tourRunning}
                 stepIndex={stepIndex}

@@ -87,7 +87,7 @@ function normalizeSupportError(error) {
             return {
                 code,
                 title: 'Your session has expired',
-                message: 'Log in again before continuing with authenticated support.',
+                message: 'Sign in again before continuing with authenticated support.',
                 tone: 'warning',
                 canRetry: false,
                 actions: [SUPPORT_ACTIONS.LOGIN],

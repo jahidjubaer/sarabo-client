@@ -20,8 +20,8 @@ const PaymentCancelled = () => {
                 </p>
 
                 <div className="mt-6 flex flex-col gap-2 sm:flex-row">
-                    <Link to="/dashboard/my-requests" className={`${buttonVariants({ variant: 'primary' })} flex-1`}>Back to my repairs</Link>
-                    <Link to="/dashboard" className={`${buttonVariants({ variant: 'outline' })} flex-1`}>Go to dashboard</Link>
+                    <Link to="/dashboard/my-requests" className={`${buttonVariants({ variant: 'primary' })} sm:flex-1`}>Back to my repairs</Link>
+                    <Link to="/dashboard" className={`${buttonVariants({ variant: 'outline' })} sm:flex-1`}>Go to dashboard</Link>
                 </div>
             </Card>
         </div>

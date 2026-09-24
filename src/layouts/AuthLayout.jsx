@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router';
+import { RouteSuspense } from '../components/layout/RouteSuspense';
 import Logo from '../components/Logo/Logo';
 import { SPINE_STAGES } from '../utils/repairStage';
 import { HERO, SPINE_STEP_COPY } from '../utils/publicContent';
@@ -69,7 +69,7 @@ const AuthLayout = () => (
 
             <main id="main-content" tabIndex={-1} className="flex flex-1 items-center justify-center py-10 outline-none">
                 <div className="w-full max-w-md">
-                    <Outlet />
+                    <RouteSuspense />
                 </div>
             </main>
         </div>

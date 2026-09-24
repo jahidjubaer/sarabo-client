@@ -34,13 +34,6 @@ export function sanitizeInternalPath(path, fallback = '/') {
     return path;
 }
 
-// Where an authenticated user should land: the verify page if not verified,
-// otherwise the (sanitized) intended internal path or a fallback.
-export function resolveAuthLandingPath(user, intended, fallback = '/') {
-    if (!isUserEmailVerified(user)) return '/verify-email';
-    return sanitizeInternalPath(intended, fallback);
-}
-
 // Resend cooldown (UX protection only - it does NOT replace Firebase's own
 // anti-abuse rate limiting). Remaining whole seconds given the last-sent
 // timestamp.

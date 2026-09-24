@@ -31,10 +31,8 @@ function focusWithoutScrolling(element) {
 
 export default function useProductTour() {
     const [status, setStatus] = useState(readTourStatus);
-    const [welcomeOpen, setWelcomeOpen] = useState(false);
     const [tourRunning, setTourRunning] = useState(false);
     const [stepIndex, setStepIndex] = useState(0);
-    const sessionDismissedRef = useRef(false);
     const focusReturnRef = useRef(null);
 
     const persistStatus = useCallback((nextStatus) => {
@@ -56,23 +54,8 @@ export default function useProductTour() {
         }, 0);
     }, []);
 
-    const showWelcome = useCallback((trigger) => {
-        if (sessionDismissedRef.current) return;
-        rememberFocus(trigger);
-        setWelcomeOpen(true);
-    }, [rememberFocus]);
-
-    const dismissWelcome = useCallback(() => {
-        sessionDismissedRef.current = true;
-        setWelcomeOpen(false);
-        persistStatus('skipped');
-        restoreFocus();
-    }, [persistStatus, restoreFocus]);
-
     const startTour = useCallback(({ trigger } = {}) => {
-        sessionDismissedRef.current = true;
         if (trigger !== undefined) rememberFocus(trigger);
-        setWelcomeOpen(false);
         setStepIndex(0);
 
         if (status === null) {
@@ -83,14 +66,12 @@ export default function useProductTour() {
     }, [persistStatus, rememberFocus, status]);
 
     const exitTour = useCallback(() => {
-        sessionDismissedRef.current = true;
         setTourRunning(false);
         setStepIndex(0);
         restoreFocus();
     }, [restoreFocus]);
 
     const finishTour = useCallback(() => {
-        sessionDismissedRef.current = true;
         setTourRunning(false);
         setStepIndex(0);
         persistStatus('completed');
@@ -99,13 +80,9 @@ export default function useProductTour() {
 
     return {
         status,
-        welcomeOpen,
         tourRunning,
         stepIndex,
-        sessionDismissedRef,
         setStepIndex,
-        showWelcome,
-        dismissWelcome,
         startTour,
         exitTour,
         finishTour,

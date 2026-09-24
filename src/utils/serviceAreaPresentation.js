@@ -8,24 +8,6 @@ function isArea(area) {
     return area && typeof area.region === 'string' && typeof area.district === 'string';
 }
 
-// Groups areas into region -> districts, both alphabetically sorted, so the
-// page can render stable expandable region groups. Malformed rows are dropped
-// rather than throwing.
-export function groupServiceAreasByRegion(areas) {
-    const map = new Map();
-    for (const area of Array.isArray(areas) ? areas : []) {
-        if (!isArea(area)) continue;
-        if (!map.has(area.region)) map.set(area.region, []);
-        map.get(area.region).push(area);
-    }
-    return [...map.entries()]
-        .sort((a, b) => a[0].localeCompare(b[0]))
-        .map(([region, districts]) => ({
-            region,
-            districts: districts.slice().sort((d1, d2) => d1.district.localeCompare(d2.district)),
-        }));
-}
-
 // Case-insensitive search across region, district, city, and covered sub-areas.
 // An empty query returns everything (no filtering).
 export function filterServiceAreas(areas, query) {
@@ -56,17 +38,6 @@ export function countServiceAreas(areas) {
 // lists. An area without well-formed numbers is simply not plotted.
 export function hasServiceAreaCoordinates(area) {
     return Number.isFinite(area?.latitude) && Number.isFinite(area?.longitude);
-}
-
-// The distinct regions present in a set of areas, alphabetically - used for the
-// region filter. Derived from the data, so a region added to the file appears
-// on its own without a code change.
-export function listServiceRegions(areas) {
-    const regions = new Set();
-    for (const area of Array.isArray(areas) ? areas : []) {
-        if (isArea(area)) regions.add(area.region);
-    }
-    return [...regions].sort((a, b) => a.localeCompare(b));
 }
 
 // The area a search should jump to. Prefers a district whose own name matches

@@ -12,7 +12,3 @@ export async function getServiceDefinitions(axiosPublic, filters = {}) {
     return res.data;
 }
 
-export async function getServiceDefinitionById(axiosPublic, id) {
-    const res = await axiosPublic.get(`/service-definitions/${encodeURIComponent(id)}`);
-    return res.data;
-}

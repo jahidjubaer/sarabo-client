@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Outlet } from 'react-router';
+import { RouteSuspense } from './RouteSuspense';
 import { TooltipProvider } from '../ui/tooltip';
 import useRole from '../../hooks/useRole';
 import { DashboardSidebar } from './DashboardSidebar';
@@ -95,7 +95,7 @@ function DashboardShell() {
                     >
                         <div className="mx-auto w-full max-w-[80rem]">
                             <DashboardVerificationBanner />
-                            <Outlet />
+                            <RouteSuspense />
                         </div>
                     </main>
                 </div>

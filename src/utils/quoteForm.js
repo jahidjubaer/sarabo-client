@@ -38,23 +38,6 @@ export function computeTotal(values) {
     return labor.value + parts.value + additional.value;
 }
 
-export function validateQuoteForm(values) {
-    const errors = {};
-    if (!parseAmount(values.laborAmount, { required: true }).ok) {
-        errors.laborAmount = `Enter a whole number of taka (0-${MAX_LINE_AMOUNT_BDT}).`;
-    }
-    if (!parseAmount(values.partsAmount, { required: true }).ok) {
-        errors.partsAmount = `Enter a whole number of taka (0-${MAX_LINE_AMOUNT_BDT}).`;
-    }
-    if (!parseAmount(values.additionalCharges).ok) {
-        errors.additionalCharges = `Enter a whole number of taka (0-${MAX_LINE_AMOUNT_BDT}) or leave blank.`;
-    }
-    if (!isBlank(values.notes) && values.notes.trim().length > NOTES_MAX) {
-        errors.notes = `Notes must be ${NOTES_MAX} characters or fewer.`;
-    }
-    return { valid: Object.keys(errors).length === 0, errors };
-}
-
 // Builds the exact server payload via an explicit whitelist - never spreads the
 // form object, so no injected key (a MongoDB operator, or an authority field
 // like totalAmount/currency/status/technicianId) can reach the request body. The

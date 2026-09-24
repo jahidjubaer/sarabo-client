@@ -70,7 +70,11 @@ const NavBar = () => {
 
     return (
         <header className="sticky top-0 z-50 border-b border-ds-border bg-ds-background/95 backdrop-blur supports-[backdrop-filter]:bg-ds-background/85">
-            <div className="mx-auto flex h-16 max-w-6xl items-center gap-2 px-4 sm:px-6 lg:px-8">
+            {/* Padding sits inside this container, so from lg it is 76rem
+                (72rem of content + 2rem each side) to line up with page
+                sections, which pad outside a 72rem (max-w-6xl) container.
+                Same for the hero and footer. */}
+            <div className="mx-auto flex h-16 max-w-6xl lg:max-w-[76rem] items-center gap-2 px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center gap-1">
                     <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
                         <SheetTrigger

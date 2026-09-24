@@ -49,7 +49,7 @@ const Login = () => {
             }
         } catch (error) {
             if (import.meta.env.DEV) console.error('Login failed:', error);
-            setFormAlert({ tone: 'danger', title: 'Login failed', text: getAuthErrorMessage(error) });
+            setFormAlert({ tone: 'danger', title: 'Sign-in failed', text: getAuthErrorMessage(error) });
             setSubmitting(false);
         }
     }
@@ -139,23 +139,23 @@ const Login = () => {
                     variant="action"
                     size="lg"
                     loading={submitting}
-                    loadingText="Logging in..."
+                    loadingText="Signing in…"
                     className="w-full"
                 >
-                    Login
+                    Sign in
                 </LoadingButton>
             </form>
 
             <SocialLogin />
 
             <p className="mt-8 border-t border-ds-border pt-6 text-body-sm text-ds-muted-foreground">
-                New to Sarabo{' '}
+                New to Sarabo?{' '}
                 <Link
                     state={location.state}
                     to="/register"
                     className="focus-ring rounded-ds font-semibold text-ds-primary underline-offset-4 hover:underline"
                 >
-                    Register
+                    Create an account
                 </Link>
             </p>
         </div>

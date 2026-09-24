@@ -1,44 +1,59 @@
+import { lazy } from "react";
 import { createBrowserRouter } from "react-router";
 import RootLayout from "../layouts/RootLayout";
 import Home from "../pages/Home/Home/Home";
-import ServiceAreas from "../pages/ServiceAreas/ServiceAreas";
-import Services from "../pages/Services/Services";
-import About from "../pages/About/About";
 import AuthLayout from "../layouts/AuthLayout";
-import Login from "../pages/Auth/Login/Login";
-import Register from "../pages/Auth/Register/Register";
-import VerifyEmail from "../pages/Auth/VerifyEmail/VerifyEmail";
 import PrivateRoute from "./PrivateRoute";
-import BecomeTechnician from "../pages/BecomeTechnician/BecomeTechnician";
-import RepairRequestV2Form from "../components/repair-request/RepairRequestV2Form";
-import DashboardLayout from "../layouts/DashboardLayout";
-import MyRequests from "../pages/Dashboard/MyRequests/MyRequests";
-import Payment from "../pages/Dashboard/Payment/Payment";
-import PaymentSuccess from "../pages/Dashboard/Payment/PaymentSuccess";
-import PaymentCancelled from "../pages/Dashboard/Payment/PaymentCancelled";
-import PaymentHistory from "../pages/Dashboard/PaymentHistory/PaymentHistory";
-import ApproveTechnicians from "../pages/Dashboard/ApproveTechnicians/ApproveTechnicians";
-import UsersManagement from "../pages/Dashboard/UsersManagement/UsersManagement";
 import AdminRoute from "./AdminRoute";
 import CustomerRoute from "./CustomerRoute";
-import AssignTechnicians from "../pages/Dashboard/AssignTechnicians/AssignTechnicians";
 import TechnicianRoute from "./TechnicianRoute";
-import AssignedJobs from "../pages/Dashboard/AssignedJobs/AssignedJobs";
-import CompletedJobs from "../pages/Dashboard/CompletedJobs/CompletedJobs";
-import TrackRequest from "../pages/TrackRequest/TrackRequest";
-import DashboardHome from "../pages/Dashboard/DashboardHome/DashboardHome";
-import RequestDetails from "../pages/Dashboard/RequestDetails/RequestDetails";
-import Profile from "../pages/Dashboard/Profile/Profile";
-import ManageRepairRequests from "../pages/Dashboard/ManageRepairRequests/ManageRepairRequests";
-import NotificationsPage from "../pages/Dashboard/Notifications/NotificationsPage";
-import Wallet from "../pages/Dashboard/Wallet/Wallet";
-import WithdrawalRequests from "../pages/Dashboard/WithdrawalRequests/WithdrawalRequests";
 import ApplicationLayout from "../layouts/ApplicationLayout";
-import AdminFeedbackPage from "../pages/Dashboard/TechnicianFeedback/AdminFeedbackPage";
+import RouteError from "../pages/Shared/RouteError/RouteError";
+import NotFound from "../pages/Shared/NotFound/NotFound";
+
+// Route-level code splitting (redesign Phase 6). The public and auth layouts,
+// the route guards and the homepage load up front; the dashboard shell and
+// every other page load when first visited, so a visitor to the homepage no
+// longer downloads the dashboards, charts, tables and map. Each layout wraps
+// its <Outlet/> in a Suspense boundary (RouteSuspense), so a page that is
+// still loading shows a small loading state inside the layout, never a blank
+// screen.
+const ServiceAreas = lazy(() => import("../pages/ServiceAreas/ServiceAreas"));
+const Services = lazy(() => import("../pages/Services/Services"));
+const About = lazy(() => import("../pages/About/About"));
+const Login = lazy(() => import("../pages/Auth/Login/Login"));
+const Register = lazy(() => import("../pages/Auth/Register/Register"));
+const VerifyEmail = lazy(() => import("../pages/Auth/VerifyEmail/VerifyEmail"));
+const BecomeTechnician = lazy(() => import("../pages/BecomeTechnician/BecomeTechnician"));
+const DashboardLayout = lazy(() => import("../layouts/DashboardLayout"));
+const RepairRequestV2Form = lazy(() => import("../components/repair-request/RepairRequestV2Form"));
+const MyRequests = lazy(() => import("../pages/Dashboard/MyRequests/MyRequests"));
+const Payment = lazy(() => import("../pages/Dashboard/Payment/Payment"));
+const PaymentSuccess = lazy(() => import("../pages/Dashboard/Payment/PaymentSuccess"));
+const PaymentCancelled = lazy(() => import("../pages/Dashboard/Payment/PaymentCancelled"));
+const PaymentHistory = lazy(() => import("../pages/Dashboard/PaymentHistory/PaymentHistory"));
+const ApproveTechnicians = lazy(() => import("../pages/Dashboard/ApproveTechnicians/ApproveTechnicians"));
+const UsersManagement = lazy(() => import("../pages/Dashboard/UsersManagement/UsersManagement"));
+const AssignTechnicians = lazy(() => import("../pages/Dashboard/AssignTechnicians/AssignTechnicians"));
+const AssignedJobs = lazy(() => import("../pages/Dashboard/AssignedJobs/AssignedJobs"));
+const CompletedJobs = lazy(() => import("../pages/Dashboard/CompletedJobs/CompletedJobs"));
+const TrackRequest = lazy(() => import("../pages/TrackRequest/TrackRequest"));
+const DashboardHome = lazy(() => import("../pages/Dashboard/DashboardHome/DashboardHome"));
+const RequestDetails = lazy(() => import("../pages/Dashboard/RequestDetails/RequestDetails"));
+const Profile = lazy(() => import("../pages/Dashboard/Profile/Profile"));
+const ManageRepairRequests = lazy(() => import("../pages/Dashboard/ManageRepairRequests/ManageRepairRequests"));
+const NotificationsPage = lazy(() => import("../pages/Dashboard/Notifications/NotificationsPage"));
+const Wallet = lazy(() => import("../pages/Dashboard/Wallet/Wallet"));
+const WithdrawalRequests = lazy(() => import("../pages/Dashboard/WithdrawalRequests/WithdrawalRequests"));
+const AdminFeedbackPage = lazy(() => import("../pages/Dashboard/TechnicianFeedback/AdminFeedbackPage"));
 
 export const router = createBrowserRouter([
   {
     Component: ApplicationLayout,
+    // Any routing or render error, including a page chunk that no longer
+    // exists after a deploy (Phase 6). Imported eagerly so it still works
+    // when loading code is what failed.
+    errorElement: <RouteError />,
     children: [
       {
         path: "/",
@@ -85,6 +100,11 @@ export const router = createBrowserRouter([
       {
         path: 'track-request/:requestId',
         Component: TrackRequest
+      },
+      {
+        // Any unknown address, inside the public layout (Phase 6).
+        path: '*',
+        Component: NotFound
       }
     ]
       },
