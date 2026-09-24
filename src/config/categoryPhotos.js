@@ -1,11 +1,11 @@
-import airConditioner from '../../assets/card-air-conditioner.jpg';
-import laptopComputer from '../../assets/card-laptop-computer.jpg';
-import microwaveOven from '../../assets/card-microwave-oven.jpg';
-import otherElectronics from '../../assets/card-other-electronics.jpg';
-import refrigerator from '../../assets/card-refrigerator.jpg';
-import smartphone from '../../assets/card-smartphone.jpg';
-import television from '../../assets/card-television.jpg';
-import washingMachine from '../../assets/card-washing-machine.jpg';
+import airConditioner from '../assets/card-air-conditioner.jpg';
+import laptopComputer from '../assets/card-laptop-computer.jpg';
+import microwaveOven from '../assets/card-microwave-oven.jpg';
+import otherElectronics from '../assets/card-other-electronics.jpg';
+import refrigerator from '../assets/card-refrigerator.jpg';
+import smartphone from '../assets/card-smartphone.jpg';
+import television from '../assets/card-television.jpg';
+import washingMachine from '../assets/card-washing-machine.jpg';
 
 // Photograph for each product category on the homepage service grid.
 //

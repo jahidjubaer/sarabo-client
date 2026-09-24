@@ -46,7 +46,9 @@ function prefersReducedMotion() {
         && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 }
 
-function ServiceAreaMap({ areas, focus, onSelect, className = '' }) {
+// `className` sets the map's size and frame; without it the map uses a
+// framed, responsive default height.
+function ServiceAreaMap({ areas, focus, onSelect, className }) {
     const containerRef = useRef(null);
     const mapRef = useRef(null);
     const layerRef = useRef(null);
@@ -60,14 +62,20 @@ function ServiceAreaMap({ areas, focus, onSelect, className = '' }) {
     // must never render children into it.
     useEffect(() => {
         const map = L.map(containerRef.current, {
-            zoomControl: true,
+            // Added below at bottom-right, clear of any search bar floating
+            // over the top of the map.
+            zoomControl: false,
             scrollWheelZoom: false, // page scroll must not be hijacked by the map
             attributionControl: true,
         });
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 18,
+            // Styled in styles/base.css: inverted in dark mode so the map is
+            // not a bright slab on a dark page.
+            className: 'sarabo-map-tiles',
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         }).addTo(map);
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
         map.setView([23.685, 90.356], 7);
         layerRef.current = L.layerGroup().addTo(map);
         mapRef.current = map;
@@ -132,7 +140,7 @@ function ServiceAreaMap({ areas, focus, onSelect, className = '' }) {
             aria-label={focus
                 ? `Map showing the ${focus.district} service area`
                 : 'Map showing every listed Sarabo service area'}
-            className={`z-0 h-[22rem] w-full rounded-ds-lg border border-ds-border bg-ds-muted! sm:h-[28rem] lg:h-[34rem] ${className}`}
+            className={`z-0 w-full bg-ds-muted! ${className || 'h-64 rounded-ds-lg border border-ds-border sm:h-[26rem] lg:h-[32rem]'}`}
         />
     );
 }

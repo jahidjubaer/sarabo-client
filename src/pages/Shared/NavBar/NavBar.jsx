@@ -10,42 +10,37 @@ import { ThemeToggle } from '../../../components/layout/ThemeToggle';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../../../components/ui/sheet';
 import { buttonVariants } from '../../../components/ui/button-variants';
 import {
-    getPublicNavLinks, shouldShowCreateRequestLink,
-    getRequestRepairAction, isPublicNavLinkActive,
+    PUBLIC_NAV_LINKS, shouldShowCreateRequestLink, getRequestRepairAction, isPublicNavLinkActive,
 } from '../../../utils/publicContent';
 import { ROLE_SHORTCUTS } from './roleShortcuts';
 import { cn } from '../../../lib/utils';
 
-// Public site header (Phase 2, service-spine shell).
+// Public site header (redesign Phase 2).
 //
-// AUTH BEHAVIOUR IS UNCHANGED. It reads useAuth/useRole exactly as before, the
-// same links appear for the same auth states, logout calls the same function,
-// and the route guards remain the only access boundary - nothing here grants
-// or restricts anything. What changed is the frame: a calmer bar, one primary
-// action, and an active state you can read at a glance.
+// Four destinations, Sign in, and one action. That is what lets the full bar
+// return at lg (1024px) - the previous bar carried six links, Register, Log in,
+// the theme toggle and the action, and only fitted from 1280px, so common
+// laptops got a hamburger. Register lives on the sign-in page and in the menu
+// sheet; "Become a technician" lives in the footer and the account menu.
 //
-// Marigold scarcity: the action colour appears exactly twice - the "Request a
-// Repair" button, and the 2px rail under the current page. Everything else is
-// ink, muted, or verdigris on hover. Register is an outline, Log in a ghost, so
-// the three auth controls rank themselves without shouting.
-
-// Desktop nav item. Active state is carried by THREE signals, never colour
-// alone: heavier weight, the marigold rail, and aria-current="page".
+// AUTH IS UNCHANGED: it reads useAuth/useRole as before, logout is the same
+// call, and route guards remain the only access boundary.
+//
+// Active state uses three signals, never colour alone: weight, the marigold
+// rail, and aria-current="page".
 function desktopLink(active) {
     return cn(
-        'focus-ring relative inline-flex h-16 items-center whitespace-nowrap px-2 text-body-sm transition-colors',
-        'after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:content-[""]',
+        'focus-ring relative inline-flex h-16 items-center whitespace-nowrap px-3 text-body-sm transition-colors',
+        'after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:content-[""]',
         active
             ? 'font-semibold text-ds-foreground after:bg-ds-action'
             : 'font-medium text-ds-muted-foreground after:bg-transparent hover:text-ds-foreground hover:after:bg-ds-border'
     );
 }
 
-// Mobile item. Same three signals, expressed for a stacked list: weight, a
-// left rail, and aria-current.
 function mobileLink(active) {
     return cn(
-        'focus-ring flex min-h-11 items-center rounded-ds border-l-2 px-3 text-body-sm transition-colors',
+        'focus-ring flex min-h-12 items-center rounded-ds border-l-2 px-3 text-body transition-colors',
         active
             ? 'border-l-ds-action bg-ds-muted font-semibold text-ds-foreground'
             : 'border-l-transparent font-medium text-ds-muted-foreground hover:bg-ds-muted hover:text-ds-foreground'
@@ -60,7 +55,7 @@ const NavBar = () => {
 
     const closeMobile = () => setMobileOpen(false);
 
-    // Close the sheet on any route change (covers the Logo and back/forward),
+    // Close the sheet on any route change (covers the logo and back/forward),
     // adjusted during render per React's sanctioned reset pattern.
     const [prevPath, setPrevPath] = useState(location.pathname);
     if (location.pathname !== prevPath) {
@@ -70,34 +65,33 @@ const NavBar = () => {
 
     const roleKnown = !roleLoading && !isError;
     const roleShortcut = roleKnown ? ROLE_SHORTCUTS[role] : null;
-    const navLinks = getPublicNavLinks({ user, role });
     const showRequestCta = shouldShowCreateRequestLink({ user, role });
     const requestAction = getRequestRepairAction();
 
     return (
-        <header className="sticky top-0 z-50 border-b border-ds-border bg-ds-background/95 backdrop-blur supports-[backdrop-filter]:bg-ds-background/80">
+        <header className="sticky top-0 z-50 border-b border-ds-border bg-ds-background/95 backdrop-blur supports-[backdrop-filter]:bg-ds-background/85">
             <div className="mx-auto flex h-16 max-w-6xl items-center gap-2 px-4 sm:px-6 lg:px-8">
-                {/* Mobile trigger + brand */}
                 <div className="flex items-center gap-1">
                     <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
                         <SheetTrigger
                             aria-label="Open main menu"
-                            className="focus-ring inline-flex size-10 items-center justify-center rounded-ds text-ds-foreground hover:bg-ds-muted xl:hidden"
+                            className="focus-ring -ml-2 inline-flex size-11 items-center justify-center rounded-ds text-ds-foreground hover:bg-ds-muted lg:hidden"
                         >
-                            <Menu aria-hidden="true" className="size-5" />
+                            <Menu aria-hidden="true" className="size-6" />
                         </SheetTrigger>
 
-                        {/* Radix Dialog under the hood: focus trap, Escape to
-                            close, scroll lock, focus returned to the trigger,
-                            and aria-expanded / aria-controls wired on the
-                            trigger automatically. No new dependency. */}
                         <SheetContent side="left" className="w-[86%] max-w-xs">
                             <SheetHeader className="border-b border-ds-border">
-                                <SheetTitle>Menu</SheetTitle>
+                                <SheetTitle className="flex items-center">
+                                    <Logo onClick={closeMobile} />
+                                </SheetTitle>
                             </SheetHeader>
 
                             <nav aria-label="Primary" className="flex flex-col gap-1 overflow-y-auto p-4">
-                                {navLinks.map((link) => {
+                                <Link to="/" aria-current={location.pathname === '/' ? 'page' : undefined} className={mobileLink(location.pathname === '/')} onClick={closeMobile}>
+                                    Home
+                                </Link>
+                                {PUBLIC_NAV_LINKS.map((link) => {
                                     const active = isPublicNavLinkActive(location.pathname, link);
                                     return (
                                         <Link
@@ -114,21 +108,11 @@ const NavBar = () => {
                             </nav>
 
                             <div className="mt-auto flex flex-col gap-2 border-t border-ds-border p-4">
-                                {/* Action first: the primary action leads the
-                                    block, before account controls and theme. */}
                                 {showRequestCta && (
-                                    <Link to={requestAction.to} className={buttonVariants({ variant: 'action' })} onClick={closeMobile}>
+                                    <Link to={requestAction.to} className={buttonVariants({ variant: 'action', size: 'lg' })} onClick={closeMobile}>
                                         {requestAction.label}
                                     </Link>
                                 )}
-
-                                {/* Account actions (Dashboard, Profile,
-                                    Notifications, Sign out) now live in the
-                                    avatar menu, which is present at every width -
-                                    so the sheet no longer repeats them. Only the
-                                    role workspace shortcut stays, because it is
-                                    navigation rather than an account action and
-                                    the avatar menu does not carry it. */}
                                 {user ? (
                                     roleShortcut && (
                                         <Link to={roleShortcut.to} className={buttonVariants({ variant: 'outline' })} onClick={closeMobile}>
@@ -136,41 +120,29 @@ const NavBar = () => {
                                         </Link>
                                     )
                                 ) : (
-                                    <>
-                                        <Link to="/register" className={buttonVariants({ variant: 'outline' })} onClick={closeMobile}>Register</Link>
-                                        <Link to="/login" className={buttonVariants({ variant: 'ghost' })} onClick={closeMobile}>Log in</Link>
-                                    </>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <Link to="/login" className={buttonVariants({ variant: 'outline' })} onClick={closeMobile}>Sign in</Link>
+                                        <Link to="/register" className={buttonVariants({ variant: 'ghost' })} onClick={closeMobile}>Create account</Link>
+                                    </div>
                                 )}
-
                                 <div className="mt-2 flex items-center justify-between border-t border-ds-border pt-3">
-                                    <span className="ds-label text-ds-muted-foreground">Theme</span>
+                                    <span className="text-body-sm font-semibold text-ds-muted-foreground">Theme</span>
                                     <ThemeToggle />
                                 </div>
                             </div>
                         </SheetContent>
                     </Sheet>
 
-                    {/* The wordmark now lives inside the lockup artwork, so the
-                        old `[&>span]` fold-away selector had nothing left to
-                        target. Measured at 320px the full lockup is 80px wide
-                        and still leaves 24px of clearance before the primary
-                        action, so the bar keeps the complete brand at every
-                        width rather than dropping to the symbol. */}
                     <Logo />
                 </div>
 
-                {/* Desktop primary navigation */}
-                <nav aria-label="Primary" className="ml-2 hidden xl:block">
+                <nav aria-label="Primary" className="ml-4 hidden lg:block">
                     <ul className="flex items-center">
-                        {navLinks.map((link) => {
+                        {PUBLIC_NAV_LINKS.map((link) => {
                             const active = isPublicNavLinkActive(location.pathname, link);
                             return (
                                 <li key={link.to}>
-                                    <Link
-                                        to={link.to}
-                                        aria-current={active ? 'page' : undefined}
-                                        className={desktopLink(active)}
-                                    >
+                                    <Link to={link.to} aria-current={active ? 'page' : undefined} className={desktopLink(active)}>
                                         {link.label}
                                     </Link>
                                 </li>
@@ -179,39 +151,23 @@ const NavBar = () => {
                     </ul>
                 </nav>
 
-                {/* Right cluster - one action, everything else quiet */}
-                <div className="ml-auto flex items-center gap-2">
+                <div className="ml-auto flex items-center gap-1 sm:gap-2">
                     {user && <NotificationBell />}
-                    <div className="hidden xl:block"><ThemeToggle /></div>
+                    <div className="hidden lg:block"><ThemeToggle /></div>
 
                     {!user && (
-                        <div className="hidden items-center gap-1 xl:flex">
-                            {/* Register is the wider control, so it appears from
-                                xl where there is room; below that it lives in
-                                the mobile sheet and on the Log in page. */}
-                            <Link to="/register" className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'hidden xl:inline-flex')}>
-                                Register
-                            </Link>
-                            <Link to="/login" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>Log in</Link>
-                        </div>
-                    )}
-
-                    {/* Signed out, the bar carries no bell or avatar, so the
-                        action keeps its existing 320px slot. Signed in it would
-                        crowd them, and the mobile sheet still leads with the
-                        same action. */}
-                    {showRequestCta && (
-                        <Link
-                            to={requestAction.to}
-                            className={cn(buttonVariants({ variant: 'action', size: 'sm' }), user && 'hidden sm:inline-flex')}
-                        >
-                            {requestAction.label}
+                        <Link to="/login" className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'hidden sm:inline-flex')}>
+                            Sign in
                         </Link>
                     )}
 
-                    {/* The signed-in account control, at every width: the avatar
-                        replaces the log-in action rather than sitting beside it,
-                        and the two states are mutually exclusive. */}
+                    {showRequestCta && (
+                        <Link to={requestAction.to} aria-label={requestAction.label} className={buttonVariants({ variant: 'action', size: 'sm' })}>
+                            <span className="sm:hidden">Request</span>
+                            <span className="hidden sm:inline">{requestAction.label}</span>
+                        </Link>
+                    )}
+
                     {user && <AccountMenu role={roleKnown ? role : undefined} />}
                 </div>
             </div>

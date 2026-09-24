@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { Bell, LayoutDashboard, LogOut, User as UserIcon } from 'lucide-react';
+import { Bell, HardHat, LayoutDashboard, LogOut, User as UserIcon } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar';
 import {
     DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuGroup,
@@ -7,6 +7,7 @@ import {
 } from '../ui/dropdown-menu';
 import useAuth from '../../hooks/useAuth';
 import { ROLE_LABELS } from '../../config/dashboardNavigation';
+import { BECOME_TECHNICIAN_ROUTE } from '../../utils/publicContent';
 
 function getInitials(name) {
     if (!name) return '';
@@ -74,6 +75,13 @@ function AccountMenu({ role, className = '' }) {
                     <DropdownMenuItem asChild>
                         <Link to="/dashboard/notifications"><Bell aria-hidden="true" />Notifications</Link>
                     </DropdownMenuItem>
+                    {/* Only customers can apply; technicians and admins never
+                        see it, and it is hidden while the role resolves. */}
+                    {role === 'user' && (
+                        <DropdownMenuItem asChild>
+                            <Link to={BECOME_TECHNICIAN_ROUTE}><HardHat aria-hidden="true" />Become a technician</Link>
+                        </DropdownMenuItem>
+                    )}
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive" onSelect={handleLogOut}>

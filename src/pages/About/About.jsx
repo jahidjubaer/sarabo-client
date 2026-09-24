@@ -1,37 +1,83 @@
-import { ClipboardList, ReceiptText, Route } from 'lucide-react';
-import repairPhoto from '../../assets/hero-repair-1920.jpg';
+import { Link } from 'react-router';
+import { ArrowRight, ClipboardCheck, ReceiptText, ShieldCheck } from 'lucide-react';
+import storyPhoto from '../../assets/card-microwave-oven.jpg';
 import CTABand from '../../components/public/CTABand';
+import Reveal from '../../components/public/Reveal';
+import SectionHeader from '../../components/public/SectionHeader';
 
+// Three commitments, each a rule the product enforces rather than a slogan.
 const VALUES = [
-    { title: 'Convenient repair requests', copy: 'Describe your device and the fault in one request.', icon: <ClipboardList aria-hidden="true" className="size-6" /> },
-    { title: 'Transparent quotations', copy: 'Review an itemised quote after inspection, before approving the repair.', icon: <ReceiptText aria-hidden="true" className="size-6" /> },
-    { title: 'Trackable progress', copy: 'Follow your repair updates and confirm receipt when your device is back.', icon: <Route aria-hidden="true" className="size-6" /> },
+    { icon: ShieldCheck, title: 'Approved technicians', copy: 'Technicians only take work after an administrator reviews and approves them.' },
+    { icon: ReceiptText, title: 'The quote comes first', copy: 'You approve an itemised quote before any repair starts, and pay only after that.' },
+    { icon: ClipboardCheck, title: 'Every step on record', copy: 'Inspection, quote, payment, progress and handover are tracked against your request.' },
 ];
 
+// About (Phase 2 refinement): what Sarabo is and why it exists, how it helps,
+// and one next action - in the same eyebrow -> heading -> short text -> visual
+// rhythm as the homepage. Deliberately short: not a corporate article.
 const About = () => (
     <div>
-        <section className="px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
-            <div className="mx-auto grid max-w-6xl items-center gap-8 lg:grid-cols-2 lg:gap-12">
-                <header className="min-w-0">
-                    <p className="ds-label text-ds-primary">About Sarabo</p>
-                    <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-ds-foreground sm:text-4xl lg:text-display">A clearer way to arrange a repair.</h1>
-                    <p className="mt-5 max-w-xl text-body text-ds-muted-foreground">Sarabo brings electronics and appliance repair requests, quotations and progress updates into one place, so you can understand the next step for your device.</p>
-                </header>
-                <img src={repairPhoto} alt="Electronics repair work at a technician's workbench" width="1920" height="1280" className="aspect-[4/3] w-full rounded-ds-lg border border-ds-border object-cover object-center" />
+        <section className="px-4 py-12 sm:px-6 lg:px-8 lg:py-20">
+            <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-2 lg:gap-16">
+                <Reveal>
+                    <SectionHeader
+                        as="h1"
+                        id="page-title"
+                        eyebrow="About Sarabo"
+                        title="Repair should not be a guessing game"
+                        description="Getting a device fixed often means handing it over and hoping. Sarabo is a managed repair service for electronics and home appliances across Bangladesh: an approved technician inspects your device, you decide on an itemised quote, and you can see every step."
+                    />
+                    <Link
+                        to="/services"
+                        className="focus-ring mt-6 inline-flex min-h-11 items-center gap-2 rounded-ds text-body-sm font-bold text-ds-primary hover:underline"
+                    >
+                        See what we repair <ArrowRight aria-hidden="true" className="size-4" />
+                    </Link>
+                </Reveal>
+                <Reveal delay={0.08}>
+                    <img
+                        src={storyPhoto}
+                        width="800"
+                        height="800"
+                        loading="lazy"
+                        decoding="async"
+                        alt="A technician opening the casing of a microwave oven with a screwdriver."
+                        className="aspect-[5/4] w-full rounded-ds-xl object-cover"
+                    />
+                </Reveal>
             </div>
         </section>
-        <section aria-label="What Sarabo helps you do" className="px-4 pb-12 sm:px-6 lg:px-8 lg:pb-20">
-            <div className="mx-auto grid max-w-6xl gap-6 border-t border-ds-border pt-8 md:grid-cols-3 md:gap-8">
-                {VALUES.map((value) => (
-                    <div key={value.title} className="min-w-0">
-                        <span className="text-ds-primary">{value.icon}</span>
-                        <h2 className="mt-4 text-heading text-ds-foreground">{value.title}</h2>
-                        <p className="mt-2 text-body-sm text-ds-muted-foreground">{value.copy}</p>
-                    </div>
-                ))}
+
+        <section aria-labelledby="about-values-heading" className="bg-ds-canvas px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
+            <div className="mx-auto max-w-6xl">
+                <Reveal>
+                    <SectionHeader
+                        id="about-values-heading"
+                        align="center"
+                        eyebrow="Why Sarabo"
+                        title="What we hold ourselves to"
+                    />
+                </Reveal>
+                <ul className="mt-12 grid gap-5 md:grid-cols-3">
+                    {VALUES.map((value, index) => {
+                        const Icon = value.icon;
+                        return (
+                            <Reveal as="li" key={value.title} delay={index * 0.06} className="rounded-ds-xl border border-ds-border bg-ds-card p-7">
+                                <span className="flex size-12 items-center justify-center rounded-full bg-ds-accent text-ds-accent-foreground">
+                                    <Icon aria-hidden="true" className="size-6" />
+                                </span>
+                                <h3 className="mt-5 text-subhead text-ds-foreground">{value.title}</h3>
+                                <p className="mt-2 text-body-sm text-ds-muted-foreground">{value.copy}</p>
+                            </Reveal>
+                        );
+                    })}
+                </ul>
             </div>
         </section>
-        <CTABand heading="Let's take the next step." description="Choose a service or tell us what needs repair." />
+
+        <div className="pt-20 lg:pt-28">
+            <CTABand heading="Have something that needs fixing?" description="Choose your device and tell us what is wrong." />
+        </div>
     </div>
 );
 

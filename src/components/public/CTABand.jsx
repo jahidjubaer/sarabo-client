@@ -5,21 +5,15 @@ import useRole from '../../hooks/useRole';
 import { buttonVariants } from '../ui/button-variants';
 import { shouldShowCreateRequestLink, getRequestRepairAction, TRACK_REPAIR_ROUTE } from '../../utils/publicContent';
 import { cn } from '../../lib/utils';
+import Reveal from './Reveal';
+import SectionHeader from './SectionHeader';
 
-// The closing action band for public pages (Phase 5A).
-//
-// Replaces CTAPanel, whose light/dark variants and hand-styled buttons predate
-// the service-spine system. This is the ink band the approved direction uses to
-// close a page and hand off to the ink footer.
-//
-// One action, in marigold. The tracking link beside it is deliberately
-// subordinate - an outline on ink, never a second filled button - so a page
-// never offers two equal choices.
-//
-// Role awareness reuses the shared helper, so a signed-in technician or admin
-// is not shown a customer-only action. Route guards remain the access boundary;
-// this only decides what is offered.
-const CTABand = ({ eyebrow, heading, description }) => {
+// The one closing band for public pages: an ink panel with one marigold
+// action and a subordinate tracking link. A signed-in technician or admin is
+// not offered the customer-only action; they get a quiet dashboard link
+// instead, so the band never shows two filled buttons. Route guards remain the
+// access boundary.
+const CTABand = ({ eyebrow = 'Get started', heading, description, headingId = 'cta-band-heading' }) => {
     const { user } = useAuth();
     const { role } = useRole();
 
@@ -27,16 +21,10 @@ const CTABand = ({ eyebrow, heading, description }) => {
     const requestAction = getRequestRepairAction();
 
     return (
-        <section className="px-4 pb-16 sm:px-6 lg:px-8 lg:pb-20">
-            <div className="mx-auto max-w-6xl rounded-ds-lg border border-ds-ink-foreground/15 bg-ds-ink px-6 py-12 text-ds-ink-foreground sm:px-10 lg:px-14 lg:py-16">
-                <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-                    <div className="max-w-xl">
-                        {eyebrow ? <p className="ds-label text-ds-ink-muted">{eyebrow}</p> : null}
-                        <h2 className="mt-3 text-title text-ds-ink-foreground">{heading}</h2>
-                        {description ? (
-                            <p className="mt-4 text-body-sm text-ds-ink-foreground/70">{description}</p>
-                        ) : null}
-                    </div>
+        <section aria-labelledby={headingId} className="px-4 pb-16 sm:px-6 lg:px-8 lg:pb-24">
+            <Reveal className="mx-auto max-w-6xl rounded-ds-xl bg-ds-ink px-6 py-10 text-ds-ink-foreground sm:px-10 lg:px-14 lg:py-14">
+                <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+                    <SectionHeader id={headingId} tone="ink" eyebrow={eyebrow} title={heading} description={description} />
 
                     <div className="flex shrink-0 flex-col gap-3 sm:flex-row">
                         {showRequestCta ? (
@@ -45,7 +33,7 @@ const CTABand = ({ eyebrow, heading, description }) => {
                                 <ArrowRight aria-hidden="true" />
                             </Link>
                         ) : (
-                            <Link to="/dashboard" className={cn(buttonVariants({ variant: 'action', size: 'lg' }), 'w-full sm:w-auto')}>
+                            <Link to="/dashboard" className={cn(buttonVariants({ variant: 'onInk', size: 'lg' }), 'w-full sm:w-auto')}>
                                 <LayoutDashboard aria-hidden="true" />
                                 Open your dashboard
                             </Link>
@@ -55,7 +43,7 @@ const CTABand = ({ eyebrow, heading, description }) => {
                         </Link>
                     </div>
                 </div>
-            </div>
+            </Reveal>
         </section>
     );
 };

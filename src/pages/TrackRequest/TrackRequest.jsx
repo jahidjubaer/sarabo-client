@@ -79,7 +79,7 @@ const TrackRequest = () => {
     // reflows around the thing you came here to use.
     const header = (
         <header className="tech-grid-pattern border border-ds-ink-foreground/15 bg-ds-ink px-6 py-12 text-ds-ink-foreground sm:rounded-ds-xl sm:px-10 lg:px-14">
-            <p className="ds-label text-ds-action">Public tracking</p>
+            <p className="text-body-sm font-semibold text-ds-ink-muted">Public tracking</p>
             <h1 className="mt-4 text-title text-ds-ink-foreground">Where is my device?</h1>
             <p className="mt-3 max-w-md text-body-sm text-ds-ink-foreground/70">
                 Enter the tracking code from your request. No account needed.
@@ -97,7 +97,7 @@ const TrackRequest = () => {
                             placeholder="e.g. SRB-..."
                             aria-invalid={formError ? 'true' : 'false'}
                             aria-describedby={formError ? 'tracking-code-error' : undefined}
-                            className="ds-numeric w-full bg-transparent text-body-sm tracking-widest text-ds-ink-foreground placeholder:text-ds-ink-foreground/40 focus:outline-none"
+                            className="ds-numeric w-full bg-transparent text-body-sm tracking-widest text-ds-ink-foreground placeholder:text-ds-ink-muted focus:outline-none"
                         />
                     </div>
                     <LoadingButton type="submit" variant="action" className="h-12 shrink-0">
@@ -105,7 +105,7 @@ const TrackRequest = () => {
                     </LoadingButton>
                 </div>
                 {formError && (
-                    <p id="tracking-code-error" role="alert" className="mt-2 text-micro font-semibold text-ds-action">
+                    <p id="tracking-code-error" role="alert" className="mt-2 text-body-sm font-semibold text-ds-danger-on-ink">
                         {formError}
                     </p>
                 )}

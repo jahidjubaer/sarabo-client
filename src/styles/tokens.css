@@ -50,6 +50,7 @@
   --ds-ink: #0f2430;
   --ds-ink-foreground: #e8ede9;
   --ds-ink-muted: #93a5ad;
+  --ds-danger-on-ink: #f4a19b;
 
   --ds-secondary: #eef1ee;
   --ds-secondary-foreground: #0f2430;
@@ -114,6 +115,7 @@
   --ds-ink: #060d10;
   --ds-ink-foreground: #e8ede9;
   --ds-ink-muted: #93a5ad;
+  --ds-danger-on-ink: #f4a19b;
 
   --ds-secondary: #1b2b34;
   --ds-secondary-foreground: #e8ede9;
@@ -170,6 +172,7 @@
   --color-ds-ink: var(--ds-ink);
   --color-ds-ink-foreground: var(--ds-ink-foreground);
   --color-ds-ink-muted: var(--ds-ink-muted);
+  --color-ds-danger-on-ink: var(--ds-danger-on-ink);
   --color-ds-secondary: var(--ds-secondary);
   --color-ds-secondary-foreground: var(--ds-secondary-foreground);
   --color-ds-muted: var(--ds-muted);
@@ -216,6 +219,7 @@
  * so a heading is one class and no screen hand-picks a weight.
  *
  *   text-display   public hero headline, one per page at most
+ *   text-headline  public page titles and section headings (from sm up)
  *   text-title     page title (h1)
  *   text-heading   section heading (h2)
  *   text-subhead   card / panel / row title (h3)
@@ -230,6 +234,11 @@
   --text-display--line-height: 1.05;
   --text-display--font-weight: 800;
   --text-display--letter-spacing: -0.035em;
+
+  --text-headline: 2.25rem;
+  --text-headline--line-height: 1.12;
+  --text-headline--font-weight: 800;
+  --text-headline--letter-spacing: -0.025em;
 
   --text-title: 1.75rem;
   --text-title--line-height: 1.15;

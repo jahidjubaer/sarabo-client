@@ -46,7 +46,11 @@ export const router = createBrowserRouter([
         children: [
       {
         index: true,
-        Component: Home
+        Component: Home,
+        // Coverage counts for the homepage "Where we work" section. A failed
+        // fetch must never take the homepage down, so it degrades to an empty
+        // list and the section simply does not render.
+        loader: () => fetch('/serviceAreas.json').then((res) => (res.ok ? res.json() : [])).catch(() => [])
       },
       {
         path: 'become-technician',

@@ -1,114 +1,217 @@
-import { useMemo, useState } from 'react';
-import { Link, useLoaderData } from 'react-router';
-import { MapPin, ArrowRight } from 'lucide-react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { Link, useLoaderData, useSearchParams } from 'react-router';
+import { ArrowRight, LayoutDashboard, MapPin, Search, X } from 'lucide-react';
 import ServiceAreaMap from '../../components/public/ServiceAreaMap';
-import { filterServiceAreas, listServiceRegions, findSearchTarget } from '../../utils/serviceAreaPresentation';
+import { countServiceAreas, filterServiceAreas, findSearchTarget } from '../../utils/serviceAreaPresentation';
 import useAuth from '../../hooks/useAuth';
 import useRole from '../../hooks/useRole';
 import { shouldShowCreateRequestLink, getRequestRepairAction } from '../../utils/publicContent';
 import { buttonVariants } from '../../components/ui/button-variants';
 import { cn } from '../../lib/utils';
-import { Select } from '../../components/ui/select';
 
 const areaKey = (area) => `${area.region}::${area.district}`;
-const controlClass = 'focus-ring mt-2 min-h-11 w-full min-w-0 rounded-ds border border-ds-border bg-ds-card px-3 text-body-sm text-ds-foreground';
+const SEARCH_DEBOUNCE_MS = 250;
+const MAX_SUGGESTIONS = 8;
 
+// Public Service Areas page (Phase 2 refinement): search + a map that fills
+// the screen. Nothing else competes with it.
+//
+//   - The search box is an ARIA combobox: typing lists matching districts,
+//     arrow keys move through them, Enter picks one. It reaches every listed
+//     district by keyboard, so it is also the accessible alternative to the map.
+//   - Choosing a district (from the list or a pin) flies the map there and
+//     opens a small panel over the map with the areas it covers and the action.
+//   - While a search is active the map shows only the matching pins.
+//   - ?q= (from the homepage) pre-fills the search and opens the best match.
+// Everything comes from serviceAreas.json via the route loader; nothing here
+// claims live technician availability.
 const ServiceAreas = () => {
     const serviceAreas = useLoaderData();
+    const [searchParams] = useSearchParams();
     const { user } = useAuth();
     const { role } = useRole();
-    const [query, setQuery] = useState('');
-    const [region, setRegion] = useState('all');
-    const [selectedKey, setSelectedKey] = useState(null);
-    const regions = useMemo(() => listServiceRegions(serviceAreas), [serviceAreas]);
-    const matches = useMemo(() => filterServiceAreas(serviceAreas, query)
-        .filter((area) => region === 'all' || area.region === region)
-        .sort((a, b) => a.district.localeCompare(b.district)), [serviceAreas, query, region]);
-    const selected = matches.find((area) => areaKey(area) === selectedKey) || null;
+    const listboxId = useId();
+
+    const initialQuery = searchParams.get('q') || '';
+    const [query, setQuery] = useState(initialQuery);
+    const [debouncedQuery, setDebouncedQuery] = useState(initialQuery);
+    const [listOpen, setListOpen] = useState(false);
+    const [activeIndex, setActiveIndex] = useState(-1);
+    const [selectedKey, setSelectedKey] = useState(() => {
+        const target = findSearchTarget(filterServiceAreas(serviceAreas, initialQuery), initialQuery);
+        return target ? areaKey(target) : null;
+    });
+    const inputRef = useRef(null);
+    const panelHeadingRef = useRef(null);
+
+    useEffect(() => {
+        const handle = setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS);
+        return () => clearTimeout(handle);
+    }, [query]);
+
+    const total = countServiceAreas(serviceAreas);
+    const matches = useMemo(
+        () => filterServiceAreas(serviceAreas, debouncedQuery).sort((a, b) => a.district.localeCompare(b.district)),
+        [serviceAreas, debouncedQuery]
+    );
+    const searching = debouncedQuery.trim() !== '';
+    const suggestions = searching ? matches.slice(0, MAX_SUGGESTIONS) : [];
+    const allAreas = useMemo(() => filterServiceAreas(serviceAreas, ''), [serviceAreas]);
+    const selected = allAreas.find((area) => areaKey(area) === selectedKey) || null;
+    const showList = listOpen && searching;
+
     const showRequest = shouldShowCreateRequestLink({ user, role });
     const requestAction = getRequestRepairAction();
 
-    const search = (value) => {
-        setQuery(value);
-        const results = filterServiceAreas(serviceAreas, value).filter((area) => region === 'all' || area.region === region);
-        const target = findSearchTarget(results, value) || (value.trim() ? results[0] : null);
-        setSelectedKey(target ? areaKey(target) : null);
+    const choose = (area) => {
+        setSelectedKey(areaKey(area));
+        setQuery(area.district);
+        setDebouncedQuery(area.district);
+        setListOpen(false);
+        setActiveIndex(-1);
     };
-    const changeRegion = (value) => {
-        setRegion(value);
-        const results = filterServiceAreas(serviceAreas, query).filter((area) => value === 'all' || area.region === value);
-        const target = value !== 'all' ? results[0] : findSearchTarget(results, query);
-        setSelectedKey(target ? areaKey(target) : null);
+
+    const onKeyDown = (event) => {
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            setListOpen(true);
+            setActiveIndex((current) => Math.min(current + 1, suggestions.length - 1));
+        } else if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            setActiveIndex((current) => Math.max(current - 1, 0));
+        } else if (event.key === 'Enter') {
+            event.preventDefault();
+            const pick = suggestions[activeIndex] || findSearchTarget(filterServiceAreas(serviceAreas, query), query);
+            if (pick) choose(pick);
+        } else if (event.key === 'Escape') {
+            setListOpen(false);
+            setActiveIndex(-1);
+        }
     };
-    const reset = () => { setQuery(''); setRegion('all'); setSelectedKey(null); };
+
+    const clear = () => {
+        setQuery('');
+        setDebouncedQuery('');
+        setSelectedKey(null);
+        setActiveIndex(-1);
+        inputRef.current?.focus();
+    };
 
     return (
-        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
-            <header className="max-w-2xl">
-                <p className="ds-label text-ds-primary">Service areas</p>
-                <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-ds-foreground sm:text-4xl">Find your district.</h1>
-                <p className="mt-4 text-body text-ds-muted-foreground">Explore listed coverage and the areas within each district. Coverage listings do not indicate live Technician availability.</p>
-            </header>
+        <div className="relative">
+            <h1 id="page-title" tabIndex={-1} className="sr-only">Service areas</h1>
 
-            <section aria-label="Explore service coverage" className="mt-8">
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1.5fr)]">
-                    <div className="min-w-0">
-                        <label htmlFor="area-search" className="text-body-sm font-semibold text-ds-foreground">Search locations</label>
-                        <input id="area-search" type="search" value={query} onChange={(event) => search(event.target.value)} placeholder="District, city or covered area" className={controlClass} />
+            {/* Search bar, floating over the top of the map. */}
+            <div className="pointer-events-none absolute inset-x-0 top-4 z-[1000] px-4 sm:px-6 lg:px-8">
+                <div className="pointer-events-auto relative mx-auto max-w-xl">
+                    <label htmlFor="area-search" className="sr-only">Search a district, city or area</label>
+                    <div className="flex h-14 items-center gap-3 rounded-full border border-ds-border bg-ds-card px-5 shadow-xl focus-within:ring-2 focus-within:ring-ds-ring">
+                        <Search aria-hidden="true" className="size-5 shrink-0 text-ds-muted-foreground" />
+                        <input
+                            ref={inputRef}
+                            id="area-search"
+                            type="text"
+                            role="combobox"
+                            autoComplete="off"
+                            aria-autocomplete="list"
+                            aria-expanded={showList}
+                            aria-controls={listboxId}
+                            aria-activedescendant={showList && activeIndex >= 0 ? `${listboxId}-${activeIndex}` : undefined}
+                            value={query}
+                            onChange={(event) => { setQuery(event.target.value); setListOpen(true); setActiveIndex(-1); }}
+                            onFocus={() => setListOpen(true)}
+                            onBlur={() => setTimeout(() => setListOpen(false), 120)}
+                            onKeyDown={onKeyDown}
+                            placeholder={`Search ${total} districts, e.g. Mirpur or Sylhet`}
+                            className="min-w-0 flex-1 bg-transparent text-body text-ds-foreground outline-none placeholder:text-ds-muted-foreground"
+                        />
+                        {query && (
+                            <button type="button" onClick={clear} aria-label="Clear search" className="focus-ring -mr-2 flex size-9 items-center justify-center rounded-full text-ds-muted-foreground hover:bg-ds-muted hover:text-ds-foreground">
+                                <X aria-hidden="true" className="size-4" />
+                            </button>
+                        )}
                     </div>
-                    <div className="min-w-0">
-                        <label htmlFor="area-region" className="text-body-sm font-semibold text-ds-foreground">Region</label>
-                        <Select id="area-region" value={region} onChange={(event) => changeRegion(event.target.value)} wrapperClassName="mt-2">
-                            <option value="all">All regions</option>
-                            {regions.map((name) => <option key={name} value={name}>{name}</option>)}
-                        </Select>
-                    </div>
-                    <div className="min-w-0 sm:col-span-2 lg:col-span-1">
-                        <label htmlFor="area-district" className="text-body-sm font-semibold text-ds-foreground">Select a district</label>
-                        <Select id="area-district" value={selected ? areaKey(selected) : ''} onChange={(event) => setSelectedKey(event.target.value || null)} wrapperClassName="mt-2">
-                            <option value="">Choose a location</option>
-                            {matches.map((area) => <option key={areaKey(area)} value={areaKey(area)}>{area.district} — {area.region}</option>)}
-                        </Select>
-                    </div>
+
+                    <ul
+                        id={listboxId}
+                        role="listbox"
+                        aria-label="Matching districts"
+                        hidden={!showList}
+                        className="absolute inset-x-0 top-16 max-h-80 overflow-y-auto rounded-ds-xl border border-ds-border bg-ds-popover p-1.5 shadow-xl"
+                    >
+                        {suggestions.length === 0 ? (
+                            <li role="option" aria-disabled="true" aria-selected="false" className="px-4 py-3 text-body-sm text-ds-muted-foreground">No listed district matches.</li>
+                        ) : suggestions.map((area, index) => (
+                            <li
+                                key={areaKey(area)}
+                                id={`${listboxId}-${index}`}
+                                role="option"
+                                aria-selected={index === activeIndex}
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={() => choose(area)}
+                                className={cn(
+                                    'flex min-h-11 cursor-pointer items-center gap-3 rounded-ds-lg px-3 text-body-sm',
+                                    index === activeIndex ? 'bg-ds-accent text-ds-accent-foreground' : 'text-ds-foreground hover:bg-ds-muted'
+                                )}
+                            >
+                                <MapPin aria-hidden="true" className="size-4 shrink-0 text-ds-primary" />
+                                <span className="font-semibold">{area.district}</span>
+                                <span className="text-ds-muted-foreground">{area.region}</span>
+                            </li>
+                        ))}
+                    </ul>
+                    <p role="status" className="sr-only">
+                        {searching ? `${matches.length} district${matches.length === 1 ? '' : 's'} match.` : ''}
+                    </p>
                 </div>
-                <div className="my-4 flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-body-sm text-ds-muted-foreground" role="status">{matches.length ? `${matches.length} listed districts match your controls.` : 'No matching locations. Try another search or show all areas.'}</p>
-                    <button type="button" onClick={reset} className={buttonVariants({ variant: 'outline', size: 'sm' })}>Show all areas</button>
-                </div>
-                <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-                    <div className="min-w-0">
-                        <ServiceAreaMap areas={matches} focus={selected} onSelect={(area) => setSelectedKey(areaKey(area))} />
-                        <p className="mt-3 text-micro text-ds-muted-foreground">Pins show listed district centres, not branches or exact coverage boundaries. Use the district selector without interacting with the map.</p>
-                    </div>
-                    <aside aria-labelledby="selected-area-heading" className="min-w-0 rounded-ds-lg border border-ds-border bg-ds-card p-5 sm:p-6">
-                        <p className="ds-label text-ds-primary">Listed coverage</p>
-                        <div aria-live="polite" aria-atomic="true" className="break-words">
-                            <h2 id="selected-area-heading" className="mt-3 text-heading text-ds-foreground">{selected ? selected.district : 'Explore a location'}</h2>
-                            {selected ? (
-                                <>
-                                    <dl className="mt-4 space-y-3 text-body-sm">
-                                        <div><dt className="text-ds-muted-foreground">Region</dt><dd className="mt-1 text-ds-foreground">{selected.region}</dd></div>
-                                        {selected.city && selected.city !== selected.district && <div><dt className="text-ds-muted-foreground">City</dt><dd className="mt-1 text-ds-foreground">{selected.city}</dd></div>}
-                                        <div><dt className="text-ds-muted-foreground">Coverage status</dt><dd className="mt-1 text-ds-foreground">{selected.status === 'active' ? 'Active listing' : selected.status || 'Not specified'}</dd></div>
-                                    </dl>
-                                    <h3 className="mt-5 text-body-sm font-semibold text-ds-foreground">Covered areas</h3>
-                                    {Array.isArray(selected.covered_area) && selected.covered_area.length ? (
-                                        <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-body-sm text-ds-muted-foreground">{selected.covered_area.map((name) => <li key={name}>{name}</li>)}</ul>
-                                    ) : <p className="mt-2 text-body-sm text-ds-muted-foreground">No specific areas listed.</p>}
-                                </>
-                            ) : (
-                                <p className="mt-3 text-body-sm text-ds-muted-foreground"><MapPin aria-hidden="true" className="mb-3 size-6 text-ds-primary" />Search, choose a district or tap a map marker to see its listed coverage.</p>
-                            )}
+            </div>
+
+            <ServiceAreaMap
+                areas={searching ? matches : allAreas}
+                focus={selected}
+                onSelect={(area) => {
+                    setSelectedKey(areaKey(area));
+                    // After the panel renders, move focus to it so the change is announced.
+                    requestAnimationFrame(() => panelHeadingRef.current?.focus({ preventScroll: true }));
+                }}
+                className="h-[calc(100svh-4rem)] min-h-[32rem]"
+            />
+
+            {/* Selected district: a compact panel over the map. */}
+            {selected && (
+                <section
+                    aria-labelledby="selected-area-heading"
+                    className="absolute inset-x-4 bottom-4 z-[1000] rounded-ds-xl border border-ds-border bg-ds-card p-5 shadow-2xl sm:inset-x-auto sm:bottom-6 sm:left-6 sm:w-96 lg:left-8"
+                >
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                            <h2 id="selected-area-heading" ref={panelHeadingRef} tabIndex={-1} className="text-heading text-ds-foreground outline-none">{selected.district}</h2>
+                            <p className="mt-0.5 text-body-sm text-ds-muted-foreground">
+                                {selected.city && selected.city !== selected.district ? `${selected.city}, ` : ''}{selected.region} Division
+                            </p>
                         </div>
-                        <div className="mt-6 border-t border-ds-border pt-5">
-                            <p className="text-body-sm text-ds-muted-foreground">Select your region and district in the repair request form.</p>
-                            <Link to={showRequest ? requestAction.to : '/dashboard'} className={cn(buttonVariants({ variant: 'action' }), 'mt-4 h-auto min-h-11 w-full whitespace-normal text-center')}>
-                                {showRequest ? 'Request a repair' : 'Open your dashboard'}<ArrowRight aria-hidden="true" className="shrink-0" />
-                            </Link>
-                        </div>
-                    </aside>
-                </div>
-            </section>
+                        <button type="button" onClick={() => setSelectedKey(null)} aria-label="Close district details" className="focus-ring -mr-2 -mt-1 flex size-9 shrink-0 items-center justify-center rounded-full text-ds-muted-foreground hover:bg-ds-muted hover:text-ds-foreground">
+                            <X aria-hidden="true" className="size-4" />
+                        </button>
+                    </div>
+                    {Array.isArray(selected.covered_area) && selected.covered_area.length > 0 && (
+                        <ul aria-label="Areas covered" className="mt-4 flex max-h-24 flex-wrap gap-1.5 overflow-y-auto">
+                            {selected.covered_area.map((name) => (
+                                <li key={name} className="rounded-full bg-ds-muted px-2.5 py-1 text-micro font-semibold text-ds-foreground">{name}</li>
+                            ))}
+                        </ul>
+                    )}
+                    {showRequest ? (
+                        <Link to={requestAction.to} className={cn(buttonVariants({ variant: 'action' }), 'mt-5 w-full')}>
+                            {requestAction.label} <ArrowRight aria-hidden="true" />
+                        </Link>
+                    ) : (
+                        <Link to="/dashboard" className={cn(buttonVariants({ variant: 'outline' }), 'mt-5 w-full')}>
+                            <LayoutDashboard aria-hidden="true" /> Open your dashboard
+                        </Link>
+                    )}
+                </section>
+            )}
         </div>
     );
 };

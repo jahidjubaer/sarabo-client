@@ -1,7 +1,7 @@
 import { Outlet } from 'react-router';
 import Logo from '../components/Logo/Logo';
 import { SPINE_STAGES } from '../utils/repairStage';
-import { HERO } from '../utils/publicContent';
+import { HERO, SPINE_STEP_COPY } from '../utils/publicContent';
 
 // Auth shell (Phase 6). An ink/paper split: the brand panel is the ink surface
 // used everywhere else in the redesign (footer, how-it-works band, CTA bands),
@@ -30,27 +30,29 @@ const AuthLayout = () => (
             <Logo to="/" className="text-ds-ink-foreground" surface="ink" />
 
             <div className="max-w-sm">
-                <p className="ds-label text-ds-action">{HERO.eyebrow}</p>
-                <p className="mt-4 text-title text-ds-ink-foreground">
-                    {HERO.headlineLead} {HERO.headlineAccent}
+                <p className="text-title text-ds-ink-foreground">
+                    {HERO.headline}
                 </p>
 
                 <ol className="mt-10 flex flex-col gap-5">
                     {SPINE_STAGES.map((stage) => (
-                        <li key={stage.key} className="flex items-center gap-4">
+                        <li key={stage.key} className="flex items-start gap-4">
                             <span
                                 aria-hidden="true"
                                 className="ds-numeric flex size-8 shrink-0 items-center justify-center rounded-full border border-ds-ink-foreground/25 text-body-sm font-bold text-ds-ink-foreground"
                             >
                                 {stage.stage}
                             </span>
-                            <span className="text-body-sm text-ds-ink-foreground/80">{stage.label}</span>
+                            <span className="min-w-0">
+                                <span className="block text-body-sm font-semibold text-ds-ink-foreground">{stage.label}</span>
+                                <span className="mt-0.5 block text-body-sm text-ds-ink-muted">{SPINE_STEP_COPY[stage.key]}</span>
+                            </span>
                         </li>
                     ))}
                 </ol>
             </div>
 
-            <p className="text-micro text-ds-ink-foreground/50">Sarabo</p>
+            <p className="text-micro text-ds-ink-muted">Sarabo</p>
         </aside>
 
         {/* Form column. It carries the card surface rather than the page ground

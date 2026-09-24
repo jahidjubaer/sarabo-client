@@ -1,45 +1,36 @@
+import { useLoaderData } from 'react-router';
 import Hero from '../Hero/Hero';
+import ServiceGateways from '../ServiceGateways/ServiceGateways';
 import HowItWorks from '../HowItWorks/HowItWorks';
-import ServiceCatalogue from '../ServiceCatalogue/ServiceCatalogue';
-import QuoteExplainer from '../QuoteExplainer/QuoteExplainer';
+import AreasTeaser from '../AreasTeaser/AreasTeaser';
 import FAQ from '../FAQ/FAQ';
-import FinalCTA from '../FinalCTA/FinalCTA';
+import CTABand from '../../../components/public/CTABand';
 
-// Public homepage (Phase 3, service-spine redesign).
+// Public homepage (Phase 2 refinement). Five sections and a closing band, each
+// built on the same rhythm (eyebrow -> heading -> short line -> visual/action):
 //
-// Six sections, each answering one question, in the order a visitor asks them:
-//
-//   Hero              what is this, and what do I do next?
-//   ServiceCatalogue  can you fix my kind of device?
-//   HowItWorks        what happens after I submit?      (#how-it-works)
-//   QuoteExplainer    how does pricing work?
-//   FAQ               the remaining doubts
-//   FinalCTA          the one action again
-//
-// The catalogue comes before HowItWorks deliberately: a visitor who cannot see
-// their own device listed has no reason to care how the process runs. The
-// hero's "How it works" button is an anchor (#how-it-works), so it still lands
-// on the right section from wherever that section sits.
-//
-// Weight is deliberately uneven: the hero is the strongest thing on the page
-// and carries the only marigold action above the fold, HowItWorks and FAQ sit
-// on the muted ground, and the page closes on an ink band that hands off to
-// the ink footer.
-//
-// Retired here (all Home-exclusive, single-importer, verified before deletion):
-// the three-slide HeroSwiper carousel and its HeroLifecycleVisual, the
-// dismissible WelcomeBanner, the eight hardcoded ServiceCategories cards whose
-// marketing aliases did not match the server's canonical slugs, and the
-// overlapping WhyChooseSarabo / TrustAndSafety / RepairLifecycle trio.
+//   Hero             what is Sarabo, and where do I start? (photo slider)
+//   ServiceGateways  what needs repairing? (two large visual entry points)
+//   HowItWorks       what happens next? (four steps + the example quote)
+//   AreasTeaser      do you cover my district? (search -> map)
+//   FAQ              the remaining doubts
+//   CTABand          the one action again
 const Home = () => {
+    const serviceAreas = useLoaderData();
     return (
         <div>
             <Hero />
-            <ServiceCatalogue />
+            <ServiceGateways />
             <HowItWorks />
-            <QuoteExplainer />
+            <div className="pt-20 lg:pt-28">
+                <AreasTeaser areas={serviceAreas} />
+            </div>
             <FAQ />
-            <FinalCTA />
+            <CTABand
+                headingId="home-final-cta-heading"
+                heading="Get your device looked at"
+                description="Tell us what is wrong, and an approved technician takes it from there."
+            />
         </div>
     );
 };

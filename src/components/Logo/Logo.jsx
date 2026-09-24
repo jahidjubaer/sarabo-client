@@ -28,12 +28,9 @@ import logoLockup from "../../assets/logo.png";
 // (verdigris and marigold accents, alpha and geometry are byte-identical), for
 // 13.5-15.6:1 instead.
 //
-// WHY AN ARBITRARY VARIANT, NOT `dark:`. This project sets a `.dark` class on
-// <html> (see theme/ThemeProvider.jsx) but never declares Tailwind v4's
-// `@custom-variant dark`, so a bare `dark:` utility would compile to
-// `@media (prefers-color-scheme: dark)` and follow the OS rather than the
-// app's own theme control. `in-[.dark]:` targets the real class. The hidden
-// variant is `display:none`, so it contributes no layout and no second width.
+// Dark mode is class-driven (`.dark` on <html>, declared as a custom variant
+// in index.css); `in-[.dark]:` targets that class directly. The hidden variant
+// is display:none, so it adds no layout. Both files are small (under 32KB).
 //
 // Both images are deliberately alt="" (decorative): the wordmark is artwork,
 // not text, and the Link already carries `ariaLabel`. Giving either image its

@@ -199,10 +199,14 @@ function SupportWidget() {
             <SheetTrigger asChild>
                 <Button
                     data-tour="ai-support"
-                    variant="ink"
+                    variant="primary"
                     size="lg"
                     className="fixed right-4 bottom-[calc(max(1rem,env(safe-area-inset-bottom))+var(--app-bottom-inset,0px))] z-40 h-12 rounded-full px-4 shadow-lg sm:right-6 sm:bottom-[calc(1.5rem+var(--app-bottom-inset,0px))]"
-                    aria-label="Open Sarabo AI Support"
+                    // The accessible name starts with the visible text (WCAG
+                    // 2.5.3) - it used to say "Open Sarabo AI Support" while the
+                    // button read "Ask Sarabo". Verdigris rather than ink, so it
+                    // stays visible on dark pages where ink sits below the page.
+                    aria-label="Ask Sarabo, AI support"
                 >
                     <MessageCircleQuestion aria-hidden="true" />
                     Ask Sarabo

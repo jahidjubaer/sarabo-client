@@ -1,39 +1,91 @@
-import { ClipboardList, Search, ClipboardCheck, Wrench } from 'lucide-react';
+import Reveal from '../../../components/public/Reveal';
+import SectionHeader from '../../../components/public/SectionHeader';
 import { SPINE_STAGES } from '../../../utils/repairStage';
+import { SPINE_STEP_COPY } from '../../../utils/publicContent';
 
-const STEP_CONTENT = {
-    request: { icon: <ClipboardList aria-hidden="true" className="size-5" />, copy: 'Tell us what needs repair.' },
-    inspect: { icon: <Search aria-hidden="true" className="size-5" />, copy: 'A Technician inspects the device and prepares the quote.' },
-    approve: { icon: <ClipboardCheck aria-hidden="true" className="size-5" />, copy: 'Review the itemised quote before repair begins.' },
-    repaired: { icon: <Wrench aria-hidden="true" className="size-5" />, copy: 'Follow progress through completion and receipt.' },
-};
+// Example amounts only - clearly labelled - to show the SHAPE of a real quote
+// (labour + parts + additional = total). Real quotes come from the technician
+// after inspection.
+const EXAMPLE_LINES = [
+    ['Labour', 'Screen replacement', '৳1,800'],
+    ['Parts', '15.6" display panel', '৳2,600'],
+    ['Additional', 'Pickup and return', '৳450'],
+];
 
-// A generic process, not a live repair status. Stage names stay canonical.
-const HowItWorks = () => (
-    <section id="how-it-works" aria-labelledby="home-process-heading" className="scroll-mt-24 border-y border-ds-border bg-ds-muted/50 px-4 py-12 sm:px-6 lg:px-8 lg:py-20">
-        <div className="mx-auto max-w-6xl">
-            <div data-tour="repair-process">
-                <h2 id="home-process-heading" className="text-title text-ds-foreground">How your repair works</h2>
-            </div>
-            <ol className="mt-8 grid gap-7 md:mt-10 md:grid-cols-4 md:gap-6">
-                {SPINE_STAGES.map((stage, index) => (
-                    <li key={stage.key} className="relative flex min-w-0 gap-4 md:block">
-                        {index < SPINE_STAGES.length - 1 && (
-                            <span aria-hidden="true" className="absolute bottom-[-1.75rem] left-5 top-10 w-px bg-ds-border md:bottom-auto md:left-10 md:right-[-1.5rem] md:top-5 md:h-px md:w-auto" />
-                        )}
-                        <span aria-hidden="true" className="relative flex size-10 shrink-0 items-center justify-center rounded-full border border-ds-primary/30 bg-ds-background font-semibold tabular-nums text-ds-primary">
-                            {stage.stage}
-                        </span>
-                        <div className="min-w-0 pt-1 md:mt-5 md:pt-0">
-                            <h3 className="flex items-center gap-2 text-heading text-ds-foreground">
-                                <span className="text-ds-primary">{STEP_CONTENT[stage.key].icon}</span>
-                                {stage.label}
-                            </h3>
-                            <p className="mt-2 max-w-xs text-body-sm text-ds-muted-foreground">{STEP_CONTENT[stage.key].copy}</p>
-                        </div>
-                    </li>
+function QuoteReceipt() {
+    return (
+        <figure className="rounded-ds-xl border border-ds-border bg-ds-card p-6 shadow-xl sm:p-8">
+            <figcaption className="flex items-center justify-between">
+                <span className="text-subhead text-ds-foreground">Your repair quote</span>
+                <span className="rounded-full bg-ds-muted px-2.5 py-1 text-micro font-bold tracking-wide text-ds-muted-foreground">EXAMPLE</span>
+            </figcaption>
+            <dl className="mt-6 space-y-3.5">
+                {EXAMPLE_LINES.map(([kind, detail, amount]) => (
+                    <div key={kind} className="flex items-baseline justify-between gap-4 text-body-sm">
+                        <dt className="text-ds-muted-foreground"><span className="font-semibold text-ds-foreground">{kind}</span> · {detail}</dt>
+                        <dd className="ds-numeric shrink-0 text-ds-foreground">{amount}</dd>
+                    </div>
                 ))}
-            </ol>
+                <div className="flex items-baseline justify-between border-t border-dashed border-ds-input pt-4">
+                    <dt className="text-body font-bold text-ds-foreground">Total</dt>
+                    <dd className="ds-numeric text-heading text-ds-foreground">৳4,850</dd>
+                </div>
+            </dl>
+            <div aria-hidden="true" className="mt-6 grid grid-cols-2 gap-3">
+                <span className="flex h-11 items-center justify-center rounded-ds bg-ds-action text-body-sm font-bold text-ds-action-foreground">Approve &amp; pay</span>
+                <span className="flex h-11 items-center justify-center rounded-ds border border-ds-input text-body-sm font-semibold text-ds-foreground">Decline</span>
+            </div>
+            <p className="mt-4 text-micro text-ds-muted-foreground">Nothing is charged until you approve.</p>
+        </figure>
+    );
+}
+
+// How it works: the four stages a customer later sees on their own repair,
+// beside the moment that matters most - the itemised quote they approve or
+// decline. One section, one story (this replaces the separate "how it works"
+// and "quote explained" sections, which told overlapping halves of it).
+const HowItWorks = () => (
+    <section id="how-it-works" aria-labelledby="home-process-heading" className="scroll-mt-24 bg-ds-canvas px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
+        <div className="mx-auto max-w-6xl">
+            <Reveal>
+                <div data-tour="repair-process">
+                    <SectionHeader
+                        id="home-process-heading"
+                        eyebrow="How it works"
+                        title="From request to repaired"
+                        description="You see the price before any work starts, and you follow every step."
+                    />
+                </div>
+            </Reveal>
+
+            <div className="mt-12 grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_26rem] lg:gap-20">
+                <ol className="space-y-2">
+                    {SPINE_STAGES.map((stage, index) => {
+                        const decision = stage.key === 'approve';
+                        const last = index === SPINE_STAGES.length - 1;
+                        return (
+                            <Reveal as="li" key={stage.key} delay={index * 0.06} className="relative flex gap-5 pb-6">
+                                {!last && <span aria-hidden="true" className="absolute left-[1.375rem] top-12 bottom-0 w-0.5 bg-ds-border" />}
+                                <span
+                                    aria-hidden="true"
+                                    className={decision
+                                        ? 'relative flex size-11 shrink-0 items-center justify-center rounded-full bg-ds-action text-body font-extrabold text-ds-action-foreground'
+                                        : 'relative flex size-11 shrink-0 items-center justify-center rounded-full bg-ds-ink text-body font-extrabold text-ds-ink-foreground'}
+                                >
+                                    {stage.stage}
+                                </span>
+                                <div className="min-w-0 pt-2">
+                                    <h3 className="text-subhead text-ds-foreground">{stage.label}</h3>
+                                    <p className="mt-1 max-w-md text-body-sm text-ds-muted-foreground">{SPINE_STEP_COPY[stage.key]}</p>
+                                </div>
+                            </Reveal>
+                        );
+                    })}
+                </ol>
+                <Reveal delay={0.1}>
+                    <QuoteReceipt />
+                </Reveal>
+            </div>
         </div>
     </section>
 );

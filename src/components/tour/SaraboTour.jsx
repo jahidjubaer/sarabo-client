@@ -52,13 +52,10 @@ function SaraboTour() {
     const location = useLocation();
     const navigate = useNavigate();
     const {
-        status,
         welcomeOpen,
         tourRunning,
         stepIndex,
-        sessionDismissedRef,
         setStepIndex,
-        showWelcome,
         dismissWelcome,
         startTour,
         exitTour,
@@ -106,32 +103,10 @@ function SaraboTour() {
         startTour,
     ]);
 
-    useEffect(() => {
-        if (
-            !isHome
-            || hasReplayQuery
-            || status !== null
-            || welcomeOpen
-            || tourRunning
-            || sessionDismissedRef.current
-        ) {
-            return undefined;
-        }
-
-        return waitForTourTargets(
-            () => showWelcome(document.activeElement),
-            () => {},
-        );
-    }, [
-        hasReplayQuery,
-        isHome,
-        sessionDismissedRef,
-        showWelcome,
-        status,
-        tourRunning,
-        welcomeOpen,
-    ]);
-
+    // The tour is opt-in (redesign Phase 2): it starts only from ?tour=start -
+    // the hero's "Take the one-minute tour" chip or the footer link. It used
+    // to open a welcome dialog on every first homepage visit, for every role,
+    // competing with the sticky nav and the support button at first paint.
     useEffect(() => {
         if (isHome) return;
         if (welcomeOpen) dismissWelcome();

@@ -40,6 +40,21 @@ body {
   line-height: 1.2;
 }
 
+/* Eyebrow: the small label above a public section heading. Part of the
+ * section rhythm eyebrow -> heading -> short text -> visual/action. In the
+ * components layer so a colour utility (text-ds-action on dark bands) can
+ * override the default Verdigris. */
+@layer components {
+  .ds-eyebrow {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    line-height: 1.2;
+    text-transform: uppercase;
+    color: var(--ds-primary);
+  }
+}
+
 /* Tracking codes, money and any column of digits. */
 .ds-numeric {
   font-family: var(--font-mono);
@@ -63,6 +78,30 @@ body {
   .has-tabbar {
     --app-bottom-inset: 0px;
   }
+}
+
+/* Leaflet in dark mode: invert the OpenStreetMap tiles (hue-rotated back so
+ * water stays blue) and theme the zoom and attribution controls. */
+.dark .sarabo-map-tiles {
+  filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9);
+}
+.dark .leaflet-bar a {
+  background-color: var(--ds-card);
+  border-color: var(--ds-border);
+  color: var(--ds-foreground);
+}
+.dark .leaflet-control-attribution {
+  background-color: rgb(19 33 42 / 0.85);
+  color: var(--ds-muted-foreground);
+}
+.dark .leaflet-control-attribution a {
+  color: var(--ds-primary);
+}
+
+/* The zoom buttons sit bottom-right, clear of the search bar floating over
+ * the top of the map; lift them above the floating "Ask Sarabo" button. */
+.leaflet-bottom.leaflet-right .leaflet-control-zoom {
+  margin-bottom: 5.5rem;
 }
 
 /* react-toastify, themed from the design tokens. The container always runs

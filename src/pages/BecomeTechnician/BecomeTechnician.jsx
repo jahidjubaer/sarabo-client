@@ -345,7 +345,8 @@ const BecomeTechnician = () => {
                                                     labelClassName="font-semibold"
                                                     checked={selected}
                                                     onChange={() => toggleProduct(product.slug)}
-                                                    aria-expanded={selected}
+                                                    // aria-expanded is not valid on a checkbox; aria-controls
+                                                    // still points at the repair list the tick reveals.
                                                     aria-controls={selected ? repairsId : undefined}
                                                 >
                                                     {product.label}

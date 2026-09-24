@@ -8,7 +8,7 @@
 // verbatim from the server; this module never invents a taxonomy value of
 // its own, it only groups/sorts/formats what the server already sent.
 
-import { formatMoneyRange } from './currency';
+import { formatMoney, formatMoneyRange } from './currency';
 
 function isNonEmptyString(value) {
     return typeof value === 'string' && value.trim().length > 0;
@@ -78,4 +78,18 @@ export function formatEstimateRange(pricingEstimate) {
     if (!pricingEstimate) return '';
     const { currency, min, max } = pricingEstimate;
     return formatMoneyRange(min, max, currency);
+}
+
+// The lowest estimate among a category's services, formatted ("৳500"), or ''
+// when there is none or the services disagree on currency - a mixed-currency
+// minimum would compare numbers that are not comparable. Display-only: the
+// binding price is always the quote prepared after inspection.
+export function getCategoryStartingPrice(definitions, productCategorySlug) {
+    const estimates = definitions
+        .filter((def) => def.productCategorySlug === productCategorySlug)
+        .map((def) => def.pricingEstimate);
+    if (estimates.length === 0) return '';
+    const currency = estimates[0].currency;
+    if (estimates.some((estimate) => estimate.currency !== currency)) return '';
+    return formatMoney(Math.min(...estimates.map((estimate) => estimate.min)), currency);
 }

@@ -1,188 +1,194 @@
-import { Link } from 'react-router';
+import { useEffect, useRef } from 'react';
+import { Link, useLocation } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowRight, ChevronRight, RotateCcw, Wrench } from 'lucide-react';
+import { ArrowRight, RotateCcw, Wrench } from 'lucide-react';
 import useAuth from '../../hooks/useAuth';
 import useRole from '../../hooks/useRole';
 import { useServiceDefinitions } from '../../hooks/useServiceDefinitions';
 import { serviceDefinitionKeys } from '../../hooks/serviceDefinitionKeys';
 import {
-    normalizeServiceDefinitions, deriveProductCategories, getServicesForProduct,
-    formatEstimateRange, humanizeSlug,
+    normalizeServiceDefinitions, deriveProductCategories, getServicesForProduct, formatEstimateRange, getCategoryStartingPrice,
 } from '../../utils/serviceDefinitionCatalog';
-import { getProductCategoryIcon } from '../../utils/productCategoryIcons';
-import { shouldShowCreateRequestLink, REQUEST_REPAIR_ROUTE } from '../../utils/publicContent';
+import { getPhotoCredits } from '../../config/categoryPhotos';
+import { SERVICE_GROUPS, getServiceGroupKey } from '../../config/serviceGroups';
+import { shouldShowCreateRequestLink, getCategoryRequestRoute, REQUEST_REPAIR_ROUTE } from '../../utils/publicContent';
+import CategoryImage from '../../components/public/CategoryImage';
 import CTABand from '../../components/public/CTABand';
+import Reveal from '../../components/public/Reveal';
+import SectionHeader from '../../components/public/SectionHeader';
+import { Accordion } from '../../components/ui/accordion';
 import { Skeleton } from '../../components/ui/skeleton';
 import { EmptyState } from '../../components/common/EmptyState';
 import { buttonVariants } from '../../components/ui/button-variants';
-import { cn } from '../../lib/utils';
 
-// Public Services page (Phase 5A).
+// One service entry point: the photo says what it is, the title names it, one
+// short line and a starting price, and the whole card is the action.
+// Visitors and customers land in a request with the device already chosen;
+// staff are taken to the price guide instead.
+function ServiceCard({ category, definitions, showRequestLinks, index }) {
+    const services = getServicesForProduct(definitions, category.slug);
+    const from = getCategoryStartingPrice(definitions, category.slug);
+    const count = `${services.length} repair${services.length === 1 ? '' : 's'} listed`;
+    const to = showRequestLinks ? getCategoryRequestRoute(category.slug) : '#price-guide';
+
+    return (
+        <Reveal as="li" delay={index * 0.05}>
+            <Link
+                to={to}
+                className="focus-ring group flex h-full flex-col overflow-hidden rounded-ds-xl border border-ds-border bg-ds-card transition-[box-shadow,border-color,transform] duration-300 hover:border-ds-primary/40 hover:shadow-xl motion-safe:hover:-translate-y-1"
+            >
+                <div className="relative">
+                    <CategoryImage slug={category.slug} className="aspect-[4/3] w-full" />
+                    {from && (
+                        <span className="absolute left-2 top-2 rounded-full bg-ds-card/95 px-2.5 py-1 text-micro font-bold sm:left-3 sm:top-3 sm:px-3 text-ds-foreground shadow-sm backdrop-blur">
+                            from <span className="ds-numeric">{from}</span>
+                        </span>
+                    )}
+                </div>
+                <div className="flex flex-1 flex-col p-3.5 sm:p-5">
+                    <h3 className="text-subhead text-ds-foreground">{category.label}</h3>
+                    <p className="mt-1 text-body-sm text-ds-muted-foreground">{count}</p>
+                    <span className="mt-auto flex items-center justify-between gap-2 pt-4 text-body-sm font-bold text-ds-primary sm:pt-5">
+                        {showRequestLinks ? 'Request repair' : 'See prices'}
+                        <span className="hidden size-9 shrink-0 items-center justify-center rounded-full bg-ds-accent min-[380px]:flex transition-colors group-hover:bg-ds-primary group-hover:text-ds-primary-foreground">
+                            <ArrowRight aria-hidden="true" className="size-4 transition-transform duration-300 motion-safe:group-hover:translate-x-0.5" />
+                        </span>
+                    </span>
+                </div>
+            </Link>
+        </Reveal>
+    );
+}
+
+// Public Services page (Phase 2 refinement).
 //
-// CANONICAL CATALOGUE. This page previously rendered the hardcoded
-// SERVICE_CATEGORIES marketing list, whose keys (`ac`, `mobile`, `tv`,
-// `laptop`, `microwave`, `other`) are NOT the server's productCategorySlug
-// values - Phase 3 proved six of the eight do not match. It now reads the live
-// catalogue through the existing useServiceDefinitions hook: the same public
-// GET /service-definitions and the same existing query key
-// (['service-definitions','list']), so there is no new endpoint, no new key and
-// no extra fetch beyond the one the request form already warms.
+// Visual entry points first, detail second: each device is a clickable card
+// grouped under the same two gateways the homepage uses, and every estimated
+// range lives in the collapsible price guide below. All ranges are the exact
+// pricingEstimate the server stated for each service, labelled as estimates -
+// the binding price is the quote prepared after inspection.
 //
-// Where Home shows a category-level span, this page lists the actual SERVICES.
-// That means every range here is the exact `pricingEstimate` the server stated
-// for that row - nothing derived, nothing aggregated, nothing invented. Ranges
-// are labelled as estimates, because the binding number is the quote prepared
-// after inspection: labour + parts + additional charges, approved by the
-// customer before any work starts. This page does not change that.
-//
-// Degrades honestly: skeletons reserve the layout while loading; an empty or
-// unavailable catalogue drops to a truthful state rather than showing invented
-// services.
+// Degrades honestly: skeletons while loading; an unreachable or empty
+// catalogue drops to a truthful state instead of invented services.
 const Services = () => {
     const { user } = useAuth();
     const { role } = useRole();
     const { data, isPending, isPaused, isError } = useServiceDefinitions();
     const queryClient = useQueryClient();
 
-    // Technicians and admins are not offered a customer-only action.
     const showRequestLinks = shouldShowCreateRequestLink({ user, role });
-
     const definitions = normalizeServiceDefinitions(data);
     const categories = deriveProductCategories(definitions);
 
-    // Three states, kept genuinely distinct. `isLoading` is not enough: it is
-    // `isPending && isFetching`, and when the API is unreachable React Query
-    // PAUSES the query (fetchStatus 'paused') - so isLoading goes false while
-    // the request has never resolved. Branching on it would drop an unreachable
-    // catalogue into the empty branch and tell the visitor there are no repair
-    // services, which is a claim this page has no basis to make. Verified
-    // against a stopped API: status 'pending', fetchStatus 'paused'.
+    // A paused query (API unreachable) is neither loading nor empty.
+    // resetQueries restarts a paused query where refetch() cannot.
     const loading = isPending && !isPaused;
     const unreachable = isError || isPaused;
     const unavailable = !loading && (unreachable || categories.length === 0);
-
-    // Retry has to actually retry. `refetch()` cannot restart a PAUSED query -
-    // React Query will not begin a fetch it believes cannot succeed, so the
-    // button would look live and do nothing. Resetting discards the paused
-    // retryer and lets this page's observer fetch again; verified by stopping
-    // the API, pressing the control, restarting it and pressing it again. The
-    // key comes from the existing factory, so no new query key is introduced,
-    // and there is no data on screen in this branch for the reset to discard.
     const handleRetry = () => queryClient.resetQueries({ queryKey: serviceDefinitionKeys.list() });
+    const photoCredits = getPhotoCredits(categories.map((category) => category.slug));
+    const ready = !loading && !unavailable;
+
+    // Homepage gateways link to /services#devices or #appliances, but those
+    // sections only exist once the catalogue has loaded, after the router's
+    // own hash scroll has already run. Scroll once, when they appear.
+    const { hash } = useLocation();
+    const scrolledFor = useRef(null);
+    useEffect(() => {
+        if (!ready || !hash || scrolledFor.current === hash) return;
+        const target = document.getElementById(decodeURIComponent(hash.slice(1)));
+        if (!target) return;
+        scrolledFor.current = hash;
+        target.scrollIntoView({ block: 'start' });
+    }, [ready, hash]);
+
+    const groups = SERVICE_GROUPS
+        .map((group) => ({ ...group, categories: categories.filter((category) => getServiceGroupKey(category.slug) === group.key) }))
+        .filter((group) => group.categories.length > 0);
+
+    const priceItems = categories.map((category) => ({
+        key: category.slug,
+        question: category.label,
+        answer: (
+            <ul className="divide-y divide-ds-border rounded-ds-lg border border-ds-border bg-ds-card">
+                {getServicesForProduct(definitions, category.slug).map((definition) => (
+                    <li key={definition.id} className="flex flex-col gap-0.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+                        <span className="text-body-sm font-semibold text-ds-foreground">{definition.label}</span>
+                        <span className="ds-numeric text-body-sm text-ds-muted-foreground">
+                            <span className="sr-only">Estimated range </span>{formatEstimateRange(definition.pricingEstimate)}
+                        </span>
+                    </li>
+                ))}
+            </ul>
+        ),
+    }));
 
     return (
         <div>
-            <section className="px-4 pb-12 pt-12 sm:px-6 lg:px-8 lg:pt-16">
+            <header className="px-4 pb-4 pt-12 sm:px-6 lg:px-8 lg:pt-20">
                 <div className="mx-auto max-w-6xl">
-                    {/* Deliberately NOT the homepage's "What we repair / Every
-                        service, with an honest range." Both pages used to open
-                        on that exact string, so following "All services" from
-                        the homepage landed on a first screen that read as the
-                        one you just left. The homepage spans a whole category;
-                        this page lists the individual repairs underneath it,
-                        and the heading now says so. */}
-                    <p className="ds-label text-ds-primary">Full catalogue</p>
-                    <h1 className="mt-4 max-w-[20ch] text-3xl font-extrabold tracking-tight text-ds-foreground sm:text-4xl lg:text-display">
-                        The whole list, device by device.
-                    </h1>
-                    <p className="mt-5 max-w-2xl text-body text-ds-muted-foreground">
-                        Browse repairs and indicative estimates by device. After inspection, review your
-                        Technician's itemised quote before approving the repair.
-                    </p>
+                    <SectionHeader
+                        as="h1"
+                        id="page-title"
+                        eyebrow="Services"
+                        title="Find the right repair"
+                        description="Pick your device to start a request. Your technician confirms the exact price in an itemised quote after inspection."
+                    />
                 </div>
-            </section>
+            </header>
 
-            <section className="px-4 pb-16 sm:px-6 lg:px-8 lg:pb-20">
-                <div className="mx-auto max-w-6xl">
-                    {loading && (
-                        <div className="flex flex-col gap-6" aria-busy="true" aria-label="Loading repair services">
-                            {Array.from({ length: 3 }).map((_, index) => (
-                                <Skeleton key={index} className="h-56 rounded-ds-lg" />
-                            ))}
+            {loading && (
+                <div className="px-4 py-12 sm:px-6 lg:px-8" aria-busy="true">
+                    <div className="mx-auto grid max-w-6xl grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
+                        {Array.from({ length: 8 }).map((_, index) => <Skeleton key={index} className="aspect-[4/5] rounded-ds-xl" />)}
+                    </div>
+                    <span role="status" className="sr-only">Loading repair services…</span>
+                </div>
+            )}
+
+            {!loading && !unavailable && (
+                <>
+                    {groups.map((group) => (
+                        <section key={group.key} id={group.key} aria-labelledby={`${group.key}-heading`} className="scroll-mt-20 px-4 py-12 sm:px-6 lg:px-8">
+                            <div className="mx-auto max-w-6xl">
+                                <Reveal>
+                                    <div className="flex items-center gap-3">
+                                        <span className="h-6 w-1 rounded-full bg-ds-action" aria-hidden="true" />
+                                        <h2 id={`${group.key}-heading`} className="text-heading text-ds-foreground">{group.title}</h2>
+                                    </div>
+                                </Reveal>
+                                <ul className="mt-6 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
+                                    {group.categories.map((category, index) => (
+                                        <ServiceCard key={category.slug} category={category} definitions={definitions} showRequestLinks={showRequestLinks} index={index} />
+                                    ))}
+                                </ul>
+                            </div>
+                        </section>
+                    ))}
+
+                    <section id="price-guide" aria-labelledby="price-guide-heading" className="scroll-mt-16 bg-ds-canvas px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
+                        <div className="mx-auto max-w-4xl">
+                            <Reveal>
+                                <SectionHeader
+                                    id="price-guide-heading"
+                                    align="center"
+                                    eyebrow="Price guide"
+                                    title="Estimated prices"
+                                    description="Starting ranges for every repair we list. Your final price is the quote you approve."
+                                />
+                            </Reveal>
+                            <Reveal delay={0.08} className="mt-10">
+                                <Accordion items={priceItems} />
+                            </Reveal>
+                            {photoCredits.length > 0 && <p className="mt-6 text-center text-micro text-ds-muted-foreground">Photo credits: {photoCredits.join(' · ')}.</p>}
                         </div>
-                    )}
+                    </section>
+                </>
+            )}
 
-                    {!loading && !unavailable && (
-                        <div className="flex flex-col gap-8">
-                            {categories.map((category) => {
-                                const Icon = getProductCategoryIcon(category.slug);
-                                const services = getServicesForProduct(definitions, category.slug);
-                                const to = showRequestLinks
-                                    ? `${REQUEST_REPAIR_ROUTE}?category=${encodeURIComponent(category.slug)}`
-                                    : null;
-
-                                return (
-                                    <section key={category.slug} className="overflow-hidden rounded-ds-lg border border-ds-border bg-ds-card">
-                                        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-ds-border bg-ds-muted/50 px-5 py-4 sm:px-6">
-                                            <h2 className="flex min-w-0 items-center gap-3 text-heading text-ds-foreground">
-                                                <span className="flex size-10 shrink-0 items-center justify-center text-ds-primary">
-                                                    <Icon aria-hidden="true" className="size-5" />
-                                                </span>
-                                                {category.label}
-                                            </h2>
-                                            {to && (
-                                                <Link
-                                                    to={to}
-                                                    className="focus-ring inline-flex items-center gap-1.5 rounded-ds text-body-sm font-semibold text-ds-primary hover:underline"
-                                                >
-                                                    Request {category.label} repair
-                                                    <ArrowRight aria-hidden="true" className="size-4" />
-                                                </Link>
-                                            )}
-                                        </div>
-
-                                        <ul>
-                                            {services.map((definition) => {
-                                                const range = formatEstimateRange(definition.pricingEstimate);
-                                                const row = (
-                                                    <>
-                                                        <span className="min-w-0">
-                                                            <span className="block text-body-sm font-semibold text-ds-foreground">
-                                                                {definition.label}
-                                                            </span>
-                                                            <span className="mt-0.5 block text-micro text-ds-muted-foreground">
-                                                                {humanizeSlug(definition.repairCategorySlug)}
-                                                            </span>
-                                                        </span>
-                                                        <span className="flex items-center gap-3 sm:gap-5">
-                                                            {range && (
-                                                                <span className="text-right">
-                                                                    <span className="ds-numeric block text-body-sm font-semibold text-ds-foreground">{range}</span>
-                                                                    <span className="block text-micro text-ds-muted-foreground">estimated range</span>
-                                                                </span>
-                                                            )}
-                                                            {to && (
-                                                                <span className="hidden size-8 shrink-0 items-center justify-center rounded-full border border-ds-border text-ds-muted-foreground transition-colors group-hover:border-ds-primary/50 group-hover:text-ds-primary sm:flex">
-                                                                    <ChevronRight aria-hidden="true" className="size-4" />
-                                                                </span>
-                                                            )}
-                                                        </span>
-                                                    </>
-                                                );
-
-                                                return (
-                                                    <li key={definition.id} className="border-b border-ds-border last:border-b-0">
-                                                        {to ? (
-                                                            <Link
-                                                                to={to}
-                                                                className="focus-ring group flex flex-col items-start justify-between gap-3 px-5 py-4 transition-colors hover:bg-ds-muted/50 sm:flex-row sm:items-center sm:px-6"
-                                                            >
-                                                                {row}
-                                                            </Link>
-                                                        ) : (
-                                                            <div className="flex flex-col items-start justify-between gap-3 px-5 py-4 sm:flex-row sm:items-center sm:px-6">{row}</div>
-                                                        )}
-                                                    </li>
-                                                );
-                                            })}
-                                        </ul>
-                                    </section>
-                                );
-                            })}
-                        </div>
-                    )}
-
-                    {unavailable && (
+            {unavailable && (
+                <div className="px-4 py-12 sm:px-6 lg:px-8">
+                    <div className="mx-auto max-w-6xl">
                         <EmptyState
                             icon={Wrench}
                             title={unreachable ? 'Services could not be loaded' : 'No repair services listed yet'}
@@ -194,27 +200,29 @@ const Services = () => {
                             action={
                                 <div className="flex flex-wrap justify-center gap-2">
                                     {showRequestLinks && (
-                                        <Link to={REQUEST_REPAIR_ROUTE} className={buttonVariants({ size: 'sm' })}>
-                                            Request a Repair <ArrowRight aria-hidden="true" />
+                                        <Link to={REQUEST_REPAIR_ROUTE} className={buttonVariants({ variant: 'primary', size: 'sm' })}>
+                                            Request a repair <ArrowRight aria-hidden="true" />
                                         </Link>
                                     )}
                                     {unreachable && (
-                                        <button type="button" onClick={handleRetry} className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}>
+                                        <button type="button" onClick={handleRetry} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
                                             <RotateCcw aria-hidden="true" /> Try again
                                         </button>
                                     )}
                                 </div>
                             }
                         />
-                    )}
+                    </div>
                 </div>
-            </section>
+            )}
 
-            <CTABand
-                eyebrow="Not sure which service?"
-                heading="Describe the problem and we'll work it out."
-                description="Pick the closest device category, tell us what is wrong, and the technician confirms the exact service during inspection."
-            />
+            <div className={unavailable || loading ? '' : 'pt-20 lg:pt-28'}>
+                <CTABand
+                    eyebrow="Not sure?"
+                    heading="Describe it, we will work it out"
+                    description="Pick the closest device and tell us what is wrong. The technician confirms the exact repair during inspection."
+                />
+            </div>
         </div>
     );
 };
