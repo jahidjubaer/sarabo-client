@@ -17,19 +17,19 @@ export function TechnicianReviewCard({ review }) {
     const comment = typeof review.comment === 'string' ? review.comment : '';
     const longComment = comment.length > 320;
     return (
-        <article className="min-w-0 space-y-3 rounded-ds-lg border border-ds-border p-4">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                    <h3 className="text-sm font-semibold">Verified customer</h3>
-                    {review.createdAt && <time dateTime={review.createdAt} className="text-xs text-ds-muted-foreground">{formatAbsoluteDateTime(review.createdAt)}</time>}
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
+        <article className="min-w-0 space-y-2 rounded-ds-lg border border-ds-border p-4">
+            {/* One visible rating: stars for the eye, a plain sentence for
+                screen readers. Every review is from a verified customer, so
+                that is said once in the summary rather than on every card. */}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="flex items-center gap-2">
                     <ReviewStars rating={review.rating} />
-                    <p className="text-sm" aria-label={`Rating: ${review.rating} out of 5`}>{review.rating} / 5</p>
-                </div>
+                    <span className="ds-numeric text-body-sm font-bold text-ds-foreground">{review.rating}<span className="sr-only"> out of 5</span></span>
+                </p>
+                {review.createdAt && <time dateTime={review.createdAt} className="text-micro text-ds-muted-foreground">{formatAbsoluteDateTime(review.createdAt)}</time>}
             </div>
-            <p id={commentId} className="whitespace-pre-wrap break-words text-sm [overflow-wrap:anywhere]">
-                {comment ? (longComment && !expanded ? `${comment.slice(0, 320)}…` : comment) : 'No comment provided.'}
+            <p id={commentId} className="whitespace-pre-wrap break-words text-body-sm text-ds-foreground [overflow-wrap:anywhere]">
+                {comment ? (longComment && !expanded ? `${comment.slice(0, 320)}…` : comment) : <span className="text-ds-muted-foreground">No comment left.</span>}
             </p>
             {longComment && <Button variant="ghost" size="sm" className="min-h-11" aria-expanded={expanded} aria-controls={commentId}
                 onClick={() => setExpanded((value) => !value)}>{expanded ? 'Show less' : 'Read full comment'}</Button>}
@@ -49,7 +49,7 @@ function TechnicianReviews() {
     return (
         <Card role="region" aria-labelledby={headingId} className="min-w-0 space-y-4 p-5 sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 id={headingId} className="text-base font-semibold">Customer reviews</h2>
+                <h2 id={headingId} className="text-subhead text-ds-foreground">Customer reviews</h2>
                 {data && <Button variant="outline" size="sm" className="min-h-11" disabled={query.isFetching} onClick={refresh}>Refresh reviews</Button>}
             </div>
             {state === 'loading' && <p role="status" className="text-sm text-ds-muted-foreground">Loading your rating and reviews…</p>}

@@ -44,10 +44,10 @@ const STATUS_GROUP = {
     'cancelled': 'completed',
 };
 
-export const JOB_GROUPS = ['all', 'needs-attention', 'waiting', 'in-repair', 'completed'];
-export const JOB_GROUP_LABELS = { all: 'All', 'needs-attention': 'Needs Attention', waiting: 'Waiting', 'in-repair': 'In Repair', completed: 'Completed' };
+export const JOB_GROUPS = ['all', 'needs-attention', 'in-repair', 'waiting', 'completed'];
+export const JOB_GROUP_LABELS = { all: 'All', 'needs-attention': 'Needs you', 'in-repair': 'In repair', waiting: 'Waiting', completed: 'Completed' };
 export const JOB_SORT_OPTIONS = [
-    { value: 'priority', label: 'Recommended' },
+    { value: 'priority', label: 'Most urgent first' },
     { value: 'newest', label: 'Newest' },
     { value: 'oldest', label: 'Oldest' },
 ];
@@ -203,33 +203,6 @@ function comparePriority(a, b) {
         return byOldest(a, b);
     }
     return byNewest(a, b);
-}
-
-export function summarizeJobs(jobs) {
-    const list = Array.isArray(jobs) ? jobs : [];
-    let needsAttention = 0;
-    let inRepair = 0;
-    let completed = 0;
-    for (const job of list) {
-        const group = getJobGroup(job);
-        if (group === 'needs-attention') needsAttention += 1;
-        else if (group === 'in-repair') inRepair += 1;
-        else if (group === 'completed') completed += 1;
-    }
-    return { total: list.length, needsAttention, inRepair, completed };
-}
-
-// Deterministic "current/next" job: the first job in priority order.
-export function selectActiveJob(jobs) {
-    const list = Array.isArray(jobs) ? jobs : [];
-    return [...list].sort(comparePriority)[0] || null;
-}
-
-// The next few jobs after the featured one, in the same priority order, so a
-// job that needs the technician is never pushed off the list by newer
-// completed or cancelled jobs.
-export function getPriorityJobs(jobs, count = 4) {
-    return [...(Array.isArray(jobs) ? jobs : [])].sort(comparePriority).slice(0, count);
 }
 
 export function jobMatchesSearch(job, query) {

@@ -1,11 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { CircleCheckBig } from 'lucide-react';
+import { ChevronDown, CircleCheckBig } from 'lucide-react';
 import { useRepair } from '../../hooks/useRepair';
 import { useStartRepair } from '../../hooks/useRepairMutations';
 import { repairKeys } from '../../hooks/repairKeys';
 import { notify } from '../../lib/notify';
 import { Button } from '../ui/button';
-import { Separator } from '../ui/separator';
+import { LoadingButton } from '../common/LoadingButton';
 import RepairProgressTimeline from './RepairProgressTimeline';
 import RepairProgressForm from './RepairProgressForm';
 import RepairCompletionForm from './RepairCompletionForm';
@@ -57,14 +57,26 @@ const RepairSection = ({ requestId, canManage, deliveryStatus }) => {
         return (
             <div className="space-y-5">
                 <div>
-                    <h4 className="mb-2 text-sm font-semibold text-ds-foreground">Progress</h4>
+                    <h4 className="mb-2 text-body-sm font-bold text-ds-foreground">Progress</h4>
                     <RepairProgressTimeline updates={repair.progressUpdates} />
                 </div>
                 {canManage && (
                     <>
                         <RepairProgressForm requestId={requestId} />
-                        <Separator />
-                        <RepairCompletionForm requestId={requestId} />
+                        {/* The completion form sits behind a disclosure so an
+                            update is never mistaken for finishing the job. */}
+                        <details className="group rounded-ds-lg border border-ds-border">
+                            <summary className="focus-ring flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-ds-lg px-4 py-3 [&::-webkit-details-marker]:hidden">
+                                <span>
+                                    <span className="block text-body-sm font-bold text-ds-foreground">Ready to finish?</span>
+                                    <span className="block text-micro text-ds-muted-foreground">Mark the repair complete and notify the customer</span>
+                                </span>
+                                <ChevronDown aria-hidden="true" className="size-4 shrink-0 text-ds-muted-foreground transition-transform group-open:rotate-180" />
+                            </summary>
+                            <div className="border-t border-ds-border p-4">
+                                <RepairCompletionForm requestId={requestId} />
+                            </div>
+                        </details>
                     </>
                 )}
             </div>
@@ -85,9 +97,9 @@ const RepairSection = ({ requestId, canManage, deliveryStatus }) => {
                 <p className="flex items-center gap-2 text-sm text-ds-foreground">
                     <CircleCheckBig aria-hidden="true" className="size-4 text-ds-success" /> Payment confirmed. You can begin the repair.
                 </p>
-                <Button onClick={onStart} disabled={startMutation.isPending}>
-                    {startMutation.isPending ? 'Starting…' : 'Start repair'}
-                </Button>
+                <LoadingButton variant="action" size="lg" onClick={onStart} loading={startMutation.isPending} loadingText="Starting…">
+                    Start repair
+                </LoadingButton>
             </div>
         );
     }

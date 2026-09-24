@@ -1,64 +1,26 @@
-import { Link } from 'react-router';
-import { CalendarDays, ChevronRight, Hash, PackageCheck } from 'lucide-react';
+import { PackageCheck } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import useAuth from '../../../hooks/useAuth';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
-import Loading from '../../../components/Loading/Loading';
+import { CardSkeleton } from '../../../components/common/Skeletons';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { EmptyState } from '../../../components/common/EmptyState';
 import { ErrorState } from '../../../components/common/ErrorState';
-import { StatusBadge } from '../../../components/common/StatusBadge';
-import { Card } from '../../../components/ui/card';
-import TechnicianSettlementSummary from '../../../components/repair/TechnicianSettlementSummary';
-import { formatAbsoluteDateTime } from '../../../utils/relativeTime';
-import { getProductSummary } from '../../../utils/customerRequestPresentation';
+import { JobRow } from '../../../components/technician/JobRow';
+import { formatMoney } from '../../../utils/currency';
 
-function CompletedJobItem({ request }) {
-    const { device, category, brandModel } = getProductSummary(request);
-    const headingId = `completed-job-${request._id}`;
+const SETTLEMENT_STATE = { pending: 'Pending receipt', available: 'In your balance' };
 
+// What the job added to the wallet, in one line. Amounts are the server's own
+// settlement snapshot, formatted only.
+function EarningsLine({ settlement }) {
+    if (!settlement) return <p className="text-micro text-ds-muted-foreground">No wallet settlement recorded for this earlier repair.</p>;
     return (
-        <Card className="overflow-hidden">
-            <article aria-labelledby={headingId}>
-                <div className="space-y-4 p-4 sm:p-5">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="min-w-0 space-y-2">
-                            <StatusBadge audience="technician" status={request.deliveryStatus} />
-                            <div>
-                                <h3 id={headingId} className="break-words text-base font-semibold text-ds-foreground">{device}</h3>
-                                {(category || brandModel) && (
-                                    <p className="mt-0.5 break-words text-sm text-ds-muted-foreground">
-                                        {[category, brandModel].filter(Boolean).join(' · ')}
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-                        <span className="inline-flex shrink-0 items-center gap-1.5 text-xs text-ds-muted-foreground">
-                            <CalendarDays aria-hidden="true" className="size-3.5" />
-                            {request.updatedAt ? formatAbsoluteDateTime(request.updatedAt) : 'Completion time unavailable'}
-                        </span>
-                    </div>
-
-                    {request.trackingId && (
-                        <p className="flex min-w-0 items-start gap-1.5 font-mono text-xs text-ds-muted-foreground">
-                            <Hash aria-hidden="true" className="mt-px size-3.5 shrink-0" />
-                            <span className="break-all">{request.trackingId}</span>
-                        </p>
-                    )}
-
-                    <TechnicianSettlementSummary settlement={request.technicianSettlement} compact />
-                </div>
-
-                <Link
-                    to={`/dashboard/assigned-jobs/${request._id}`}
-                    aria-label={`View completed job — ${[device, request.trackingId].filter(Boolean).join(' · ')}`}
-                    className="focus-ring flex items-center justify-between gap-3 border-t border-ds-border bg-ds-muted/20 px-4 py-3 text-sm font-medium text-ds-primary hover:bg-ds-muted/50 sm:px-5"
-                >
-                    View completed job
-                    <ChevronRight aria-hidden="true" className="size-4 shrink-0" />
-                </Link>
-            </article>
-        </Card>
+        <p className="flex flex-wrap items-baseline gap-x-2 text-body-sm">
+            <span className="text-ds-muted-foreground">You receive</span>
+            <span className="ds-numeric font-bold text-ds-success-subtle-foreground">{formatMoney(settlement.technicianReceivable, settlement.currency) || '—'}</span>
+            <span className="text-micro text-ds-muted-foreground">{SETTLEMENT_STATE[settlement.status] || 'Recorded'}</span>
+        </p>
     );
 }
 
@@ -86,8 +48,8 @@ const CompletedJobs = () => {
     if (isCompletedInitialLoading) {
         return (
             <div className="space-y-6">
-                <PageHeader title="Completed Repairs" />
-                <Loading />
+                <PageHeader title="Completed jobs" />
+                <div className="space-y-3">{[0, 1, 2].map((key) => <CardSkeleton key={key} className="h-24" />)}</div>
             </div>
         );
     }
@@ -95,7 +57,7 @@ const CompletedJobs = () => {
     if (isCompletedErrorBeforeData || isCompletedUnavailableBeforeData) {
         return (
             <div className="space-y-6">
-                <PageHeader title="Completed Repairs" />
+                <PageHeader title="Completed jobs" />
                 <ErrorState
                     title="Couldn't load completed repairs"
                     description="We couldn't load your completed repairs right now. Please try again."
@@ -107,36 +69,33 @@ const CompletedJobs = () => {
 
     const description = requests.length === 0
         ? 'Your completed repair history will appear here.'
-        : `${requests.length} completed repair${requests.length === 1 ? '' : 's'}`;
+        : `${requests.length} completed job${requests.length === 1 ? '' : 's'}, newest first`;
+    const sorted = [...requests].sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
 
     return (
         <div className="space-y-6">
-            <PageHeader title="Completed Repairs" description={description} />
+            <PageHeader title="Completed jobs" description={description} />
 
-            <section aria-labelledby="completed-job-history-heading" className="space-y-3">
-                <div>
-                    <p className="ds-label text-ds-primary">Operational history</p>
-                    <h2 id="completed-job-history-heading" className="mt-1 text-xl font-semibold tracking-tight text-ds-foreground">Completed repair jobs</h2>
-                </div>
-
-                {requests.length === 0 ? (
-                    <EmptyState
-                        icon={PackageCheck}
-                        title="No completed repairs yet"
-                        description="Completed repair work will appear here."
-                        className="py-12"
-                        headingLevel={3}
-                    />
-                ) : (
-                    <ul className="grid gap-3 xl:grid-cols-2">
-                        {requests.map((request) => (
+            {requests.length === 0 ? (
+                <EmptyState
+                    icon={PackageCheck}
+                    title="No completed jobs yet"
+                    description="Jobs you finish will be listed here with what each one earned."
+                />
+            ) : (
+                <section aria-labelledby="completed-job-history-heading">
+                    <h2 id="completed-job-history-heading" className="sr-only">Completed repair jobs</h2>
+                    <ul className="space-y-3">
+                        {sorted.map((request) => (
                             <li key={request._id}>
-                                <CompletedJobItem request={request} />
+                                <JobRow job={request}>
+                                    <EarningsLine settlement={request.technicianSettlement} />
+                                </JobRow>
                             </li>
                         ))}
                     </ul>
-                )}
-            </section>
+                </section>
+            )}
         </div>
     );
 };

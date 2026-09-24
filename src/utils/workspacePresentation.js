@@ -138,3 +138,17 @@ export function getSectionVisibility({ request, isOwner, isCancelled }) {
         showRepair: isV2 && ['payment_completed', 'repair_in_progress', 'repair_completed', 'parcel_delivered'].includes(status),
     };
 }
+
+// How far a request has got, as a number, so a stage is shown only once it has
+// been reached (no "not inspected yet" placeholders). A declined quote sits at
+// the quote's rank; an unknown status counts as the start. Cancelled is not
+// ranked - callers decide what a cancelled request shows.
+const STATUS_RANK = {
+    'pending-pickup': 0, assignment_pending: 1, driver_assigned: 2, rider_arriving: 3, parcel_picked_up: 4,
+    inspection_completed: 5, quote_submitted: 6, quote_rejected: 6, quote_approved: 7, payment_completed: 8,
+    repair_in_progress: 9, repair_completed: 10, parcel_delivered: 11,
+};
+
+export function getStatusRank(status) {
+    return STATUS_RANK[status || 'pending-pickup'] ?? 0;
+}

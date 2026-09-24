@@ -15,15 +15,7 @@ import { getStatusPresentation } from '../../config/statusPresentation';
 import { getRequestAction, getRequestGroup, isRequestPaid } from '../../utils/customerRequestPresentation';
 import { getHandoverState } from '../../utils/repairStage';
 import { staggerContainer, staggerItem } from '../../theme/motion';
-
-// How far a request has got, as a number, so a stage is only shown once it has
-// been reached - no "not inspected yet" / "no quote yet" placeholders. A
-// declined quote sits at the quote's rank. Cancelled is handled separately.
-const RANK = {
-    'pending-pickup': 0, assignment_pending: 1, driver_assigned: 2, rider_arriving: 3, parcel_picked_up: 4,
-    inspection_completed: 5, quote_submitted: 6, quote_rejected: 6, quote_approved: 7, payment_completed: 8,
-    repair_in_progress: 9, repair_completed: 10, parcel_delivered: 11,
-};
+import { getStatusRank } from '../../utils/workspacePresentation';
 
 const QUOTE_META = { submitted: 'Waiting for your decision', approved: 'Approved', rejected: 'Declined' };
 
@@ -65,7 +57,7 @@ function nextStepModel(request, action) {
 // server re-authorises everything. Only placement and framing changed.
 function CustomerRequestDetailsView({ request, sections, isV2Request, damageImagesEditable }) {
     const status = request?.deliveryStatus || 'pending-pickup';
-    const rank = RANK[status] ?? 0;
+    const rank = getStatusRank(status);
     const cancelled = status === 'cancelled';
     const action = getRequestAction(request);
     const model = nextStepModel(request, action);

@@ -3,7 +3,7 @@ import { useCompleteRepair } from '../../hooks/useRepairMutations';
 import { validateCompletion, buildCompletionPayload, COMPLETION_SUMMARY_MAX } from '../../utils/repairForm';
 import { notify } from '../../lib/notify';
 import { Textarea } from '../ui/textarea';
-import { Label } from '../ui/label';
+import { FormField } from '../common/FormField';
 import { LoadingButton } from '../common/LoadingButton';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import RepairCompletionEvidence from './RepairCompletionEvidence';
@@ -55,32 +55,29 @@ const RepairCompletionForm = ({ requestId }) => {
 
     return (
         <>
-            <form onSubmit={onSubmit} className="space-y-3">
-                <h4 className="text-sm font-semibold text-ds-foreground">Complete repair</h4>
-                <div className="space-y-1.5">
-                    <Label htmlFor="repairSummary">Completion summary</Label>
+            <form onSubmit={onSubmit} className="space-y-4">
+                <FormField id="repairSummary" label="What you did" required error={errors.summary}>
                     <Textarea
                         id="repairSummary" rows={3} maxLength={COMPLETION_SUMMARY_MAX}
-                        placeholder="Describe the work performed and the outcome."
+                        placeholder="Describe the work performed and the outcome. The customer sees this."
                         value={summary} onChange={(event) => setSummary(event.target.value)}
-                        aria-invalid={errors.summary ? 'true' : 'false'}
-                        aria-describedby={errors.summary ? 'repairSummary-error' : undefined}
                     />
-                    {errors.summary && <p id="repairSummary-error" role="alert" className="text-xs font-medium text-ds-destructive">{errors.summary}</p>}
-                </div>
+                </FormField>
+                <p aria-hidden="true" className="-mt-3 text-right ds-numeric text-micro text-ds-muted-foreground">{summary.length} / {COMPLETION_SUMMARY_MAX}</p>
 
                 <RepairCompletionEvidence requestId={requestId} items={evidence} onChange={setEvidence} disabled={busy} />
                 {errors.evidenceImageIds && <p role="alert" className="text-xs font-medium text-ds-destructive">{errors.evidenceImageIds}</p>}
 
-                <LoadingButton type="submit" loading={busy} loadingText="Completing…">Complete repair</LoadingButton>
+                <LoadingButton type="submit" variant="action" size="lg" loading={busy} loadingText="Completing…">Mark repair complete</LoadingButton>
             </form>
 
             <ConfirmDialog
                 open={confirmOpen}
                 onOpenChange={setConfirmOpen}
                 title="Complete this repair?"
-                description="This marks the repair finished and notifies the customer."
-                confirmLabel="Yes, complete"
+                description="This marks the repair finished and notifies the customer. You can't post more updates afterwards."
+                confirmVariant="action"
+                confirmLabel="Mark complete"
                 busy={busy}
                 onConfirm={confirmComplete}
             />

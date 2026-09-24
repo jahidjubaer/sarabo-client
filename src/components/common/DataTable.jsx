@@ -12,7 +12,10 @@ import { EmptyState } from './EmptyState';
 // this only standardizes structure and the empty/loading handling.
 //
 // `columns`: [{ key, header, cell?(row)=>node, accessor?, headClassName?, cellClassName? }]
-function DataTable({ columns, data, isLoading = false, loadingRows = 5, empty, getRowKey, className }) {
+// `renderMobile(row)` (optional): below md the rows render as a list of cards
+// built by this function instead of a sideways-scrolling table. Callers that
+// don't pass it keep the table at every width.
+function DataTable({ columns, data, isLoading = false, loadingRows = 5, empty, getRowKey, className, renderMobile }) {
     if (isLoading) {
         return <TableSkeleton rows={loadingRows} columns={columns.length} className={className} />;
     }
@@ -21,6 +24,25 @@ function DataTable({ columns, data, isLoading = false, loadingRows = 5, empty, g
         return empty ?? <EmptyState title="Nothing to show" description="There are no records to display yet." />;
     }
 
+    const rowKey = (row, index) => (getRowKey ? getRowKey(row, index) : index);
+
+    if (renderMobile) {
+        return (
+            <>
+                <ul className="space-y-2 md:hidden">
+                    {data.map((row, index) => <li key={rowKey(row, index)}>{renderMobile(row)}</li>)}
+                </ul>
+                <div className="hidden md:block">
+                    <DataTableGrid columns={columns} data={data} rowKey={rowKey} className={className} />
+                </div>
+            </>
+        );
+    }
+
+    return <DataTableGrid columns={columns} data={data} rowKey={rowKey} className={className} />;
+}
+
+function DataTableGrid({ columns, data, rowKey, className }) {
     return (
         <Table className={className}>
             <TableHeader>
@@ -32,7 +54,7 @@ function DataTable({ columns, data, isLoading = false, loadingRows = 5, empty, g
             </TableHeader>
             <TableBody>
                 {data.map((row, index) => (
-                    <TableRow key={getRowKey ? getRowKey(row, index) : index}>
+                    <TableRow key={rowKey(row, index)}>
                         {columns.map((col) => (
                             <TableCell key={col.key} className={col.cellClassName}>
                                 {col.cell ? col.cell(row) : row[col.accessor ?? col.key]}

@@ -6,9 +6,9 @@ export function ReviewStars({ rating }) {
     return (
         <span aria-hidden="true" className="inline-flex shrink-0 gap-1">
             {[0, 1, 2, 3, 4].map((index) => <span key={index} className="relative block size-4">
-                <Star className="size-4 text-ds-muted-foreground" />
+                <Star className="size-4 text-ds-border" />
                 <span className="absolute inset-y-0 left-0 overflow-hidden" style={{ width: `${Math.max(0, Math.min(1, rating - index)) * 100}%` }}>
-                    <Star className="size-4 max-w-none fill-ds-primary text-ds-primary" />
+                    <Star className="size-4 max-w-none fill-ds-action text-ds-action" />
                 </span>
             </span>)}
         </span>
@@ -33,17 +33,17 @@ export default function TechnicianReviewSummary({ averageRating, reviewCount }) 
     // Formatting the server aggregate is not a client-side average calculation.
     const displayedRating = averageRating.toFixed(1);
     return (
-        <div className="flex flex-col gap-3 rounded-ds border border-ds-border bg-ds-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-                <h3 className="text-sm font-medium text-ds-muted-foreground">Average customer rating</h3>
-                <p aria-label={`Average rating: ${displayedRating} out of 5`} className="text-2xl font-semibold tabular-nums">
-                    {displayedRating} <span className="text-sm font-normal text-ds-muted-foreground">/ 5</span>
-                </p>
-            </div>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-ds-lg bg-ds-muted p-4">
+            <h3 className="sr-only">Average customer rating</h3>
+            <p className="ds-numeric text-display leading-none text-ds-foreground">
+                {displayedRating}<span className="sr-only"> out of 5</span>
+                <span aria-hidden="true" className="ml-1 text-body font-normal text-ds-muted-foreground">/ 5</span>
+            </p>
             <div className="space-y-1">
                 <ReviewStars rating={Number(displayedRating)} />
-                <p className="text-sm">{reviewCount} {reviewCount === 1 ? 'review' : 'reviews'}</p>
-                <p className="text-xs text-ds-muted-foreground">Based on visible customer reviews.</p>
+                <p className="text-body-sm text-ds-muted-foreground">
+                    From {reviewCount} {reviewCount === 1 ? 'review' : 'reviews'} by verified customers
+                </p>
             </div>
         </div>
     );

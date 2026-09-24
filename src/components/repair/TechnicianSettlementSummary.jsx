@@ -55,8 +55,8 @@ function TechnicianSettlementSummary({ settlement, compact = false }) {
                     </dd>
                 </div>
                 <div>
-                    <dt className="text-xs text-ds-muted-foreground">Your receivable</dt>
-                    <dd className="ds-numeric mt-0.5 font-semibold text-ds-foreground">
+                    <dt className="text-xs text-ds-muted-foreground">You receive</dt>
+                    <dd className="ds-numeric mt-0.5 text-subhead text-ds-success-subtle-foreground">
                         {formatMoney(settlement.technicianReceivable, settlement.currency) || '—'}
                     </dd>
                 </div>

@@ -157,7 +157,7 @@ const RequestDetails = () => {
             .then(() => {
                 queryClient.invalidateQueries({ queryKey: ['tech-active-jobs', user?.email] });
                 setRejectOpen(false);
-                notify.success('Assignment rejected. The request has been returned for reassignment.');
+                notify.success('Job declined. It will be offered to another technician.');
                 navigate('/dashboard/assigned-jobs', { replace: true });
             })
             .catch((error) => {
@@ -280,13 +280,13 @@ const RequestDetails = () => {
             <ConfirmDialog
                 open={rejectOpen}
                 onOpenChange={setRejectOpen}
-                title="Reject this assignment?"
-                description="Let the team know why you can't take this repair. The request will be returned for reassignment."
-                confirmLabel="Reject assignment"
+                title="Decline this job?"
+                description="Tell the team why you can't take it. It will be offered to another technician."
+                confirmLabel="Decline job"
                 destructive
                 busy={deciding}
                 reason
-                reasonLabel="Reason for rejecting"
+                reasonLabel="Reason"
                 reasonPlaceholder="e.g. Outside my current service area"
                 validateReason={validateRejectionReason}
                 onConfirm={handleRejectConfirm}
