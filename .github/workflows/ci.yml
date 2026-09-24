@@ -27,5 +27,9 @@ jobs:
 
       - run: npm ci
       - run: npm run lint
-      # No VITE_* values: this only proves the app compiles, the build is discarded.
+      # This only proves the app compiles; the build is discarded. vite.config.js
+      # refuses a production build without an https API URL, so CI passes a
+      # reserved .invalid address that can never reach a real server.
       - run: npm run build
+        env:
+          VITE_API_BASE_URL: https://api.invalid
