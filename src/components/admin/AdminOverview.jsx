@@ -1,7 +1,7 @@
+import { lazy, Suspense } from 'react';
 import { Link } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion as Motion, MotionConfig } from 'motion/react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell } from 'recharts';
 import { ArrowRight, Banknote, CircleCheckBig, Flag, ReceiptText, UserCheck, UserCog } from 'lucide-react';
 import useAxiosSecure from '../../hooks/useAxiosSecure';
 import { walletKeys } from '../../hooks/walletKeys';
@@ -9,9 +9,9 @@ import { useAdminFeedbackList } from '../../hooks/useTechnicianFeedback';
 import { PageHeader } from '../common/PageHeader';
 import { ErrorState } from '../common/ErrorState';
 import { CardSkeleton } from '../common/Skeletons';
+import { Skeleton } from '../ui/skeleton';
 import { Section } from '../common/Section';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
-import { ChartContainer, ChartTooltipContent } from '../ui/chart';
 import { buttonVariants } from '../ui/button-variants';
 import {
     summarizeStatusStats, statusChartData, categoryChartData, groupPaymentsByCurrency, summarizeTechnicians,
@@ -25,6 +25,19 @@ import { cn } from '../../lib/utils';
 
 const QUEUE_LIMIT = 6;
 const OVERVIEW_PEEK = { page: 1, limit: 5 };
+
+// recharts is most of this page's download, so the charts load separately
+// and the rest of the overview does not wait for them.
+const RequestBarChart = lazy(() => import('./RequestBarChart'));
+
+function LazyBarChart({ data, labelWidth }) {
+    const height = Math.max(data.length * 40, 200);
+    return (
+        <Suspense fallback={<Skeleton className="w-full" style={{ height }} />}>
+            <RequestBarChart data={data} labelWidth={labelWidth} height={height} />
+        </Suspense>
+    );
+}
 
 function ChartEmpty({ message }) {
     return <p className="py-10 text-center text-sm text-ds-muted-foreground">{message}</p>;
@@ -339,17 +352,7 @@ function AdminOverview() {
                                         {statusData.length === 0 ? (
                                             <ChartEmpty message="No repair requests yet." />
                                         ) : (
-                                            <ChartContainer height={Math.max(statusData.length * 40, 200)}>
-                                                <BarChart data={statusData} layout="vertical" margin={{ left: 8, right: 24, top: 4, bottom: 4 }}>
-                                                    <CartesianGrid horizontal={false} strokeDasharray="3 3" />
-                                                    <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} />
-                                                    <YAxis type="category" dataKey="label" width={150} tickLine={false} axisLine={false} />
-                                                    <Tooltip content={<ChartTooltipContent />} cursor={{ fill: 'var(--ds-muted)', opacity: 0.5 }} />
-                                                    <Bar dataKey="value" name="Requests" radius={[0, 4, 4, 0]} isAnimationActive={false}>
-                                                        {statusData.map((entry) => <Cell key={entry.key} fill={entry.fill} />)}
-                                                    </Bar>
-                                                </BarChart>
-                                            </ChartContainer>
+                                            <LazyBarChart data={statusData} labelWidth={150} />
                                         )}
                                     </CardContent>
                                 </Card>
@@ -376,15 +379,7 @@ function AdminOverview() {
                                         {categoryData.length === 0 ? (
                                             <ChartEmpty message="No categorised requests yet." />
                                         ) : (
-                                            <ChartContainer height={Math.max(categoryData.length * 40, 200)}>
-                                                <BarChart data={categoryData} layout="vertical" margin={{ left: 8, right: 24, top: 4, bottom: 4 }}>
-                                                    <CartesianGrid horizontal={false} strokeDasharray="3 3" />
-                                                    <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} />
-                                                    <YAxis type="category" dataKey="label" width={140} tickLine={false} axisLine={false} />
-                                                    <Tooltip content={<ChartTooltipContent />} cursor={{ fill: 'var(--ds-muted)', opacity: 0.5 }} />
-                                                    <Bar dataKey="value" name="Requests" radius={[0, 4, 4, 0]} fill="var(--ds-primary)" isAnimationActive={false} />
-                                                </BarChart>
-                                            </ChartContainer>
+                                            <LazyBarChart data={categoryData} labelWidth={140} />
                                         )}
                                     </CardContent>
                                 </Card>
