@@ -1,13 +1,13 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
-import { ShieldCheck, ShieldX, Search, UsersRound } from 'lucide-react';
+import { ShieldCheck, ShieldX, Search, Info } from 'lucide-react';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
+import { useUrlFilters } from '../../../hooks/useUrlFilters';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { EmptyState } from '../../../components/common/EmptyState';
 import { ErrorState } from '../../../components/common/ErrorState';
 import { AdminDataTable } from '../../../components/admin/data-table/AdminDataTable';
-import { AdminPageLead } from '../../../components/admin/AdminPageLead';
 import { Avatar, AvatarImage, AvatarFallback } from '../../../components/ui/avatar';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
@@ -19,6 +19,9 @@ import { getUserRoleUpdateErrorMessage } from '../../../utils/userRoleUpdateErro
 import { Select } from '../../../components/ui/select';
 
 const EMPTY_USERS = [];
+// GET /users answers with the newest matches only (the server caps the list
+// at 5). The page says so rather than implying it lists every account.
+const SERVER_RESULT_CAP = 5;
 
 function initials(name) {
     if (!name) return '';
@@ -32,16 +35,20 @@ function initials(name) {
 const UsersManagement = () => {
     const axiosSecure = useAxiosSecure();
     const queryClient = useQueryClient();
-    const [searchInput, setSearchInput] = useState('');
-    const [search, setSearch] = useState('');
-    const [roleFilter, setRoleFilter] = useState('all');
+    const [filters, setFilters] = useUrlFilters({ q: '', role: 'all' });
+    const search = filters.q;
+    const roleFilter = filters.role;
+    const [searchInput, setSearchInput] = useState(search);
     const [pendingUserId, setPendingUserId] = useState(null);
     const [roleChange, setRoleChange] = useState(null);
 
     useEffect(() => {
-        const handle = setTimeout(() => setSearch(searchInput.trim()), 350);
+        const handle = setTimeout(() => {
+            const next = searchInput.trim();
+            if (next !== search) setFilters({ q: next });
+        }, 350);
         return () => clearTimeout(handle);
-    }, [searchInput]);
+    }, [searchInput, search, setFilters]);
 
     const usersQueryKey = ['users', search];
     const { refetch, data, isPending, isPaused, isError } = useQuery({
@@ -199,7 +206,7 @@ const UsersManagement = () => {
                 <Input id="users-search" type="search" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} placeholder="Search users" className="pl-9" />
             </div>
             <Label htmlFor="users-role" className="sr-only">Filter by role</Label>
-            <Select id="users-role" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} size="sm" wrapperClassName="sm:w-52">
+            <Select id="users-role" value={roleFilter} onChange={(e) => setFilters({ role: e.target.value })} size="sm" wrapperClassName="sm:w-52">
                 {ROLE_FILTER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </Select>
         </div>
@@ -207,15 +214,15 @@ const UsersManagement = () => {
 
     return (
         <div className="space-y-6">
-            <PageHeader title="Users" description={isInitialLoading ? 'Loading users...' : `${users.length} user${users.length === 1 ? '' : 's'}`} />
-            <AdminPageLead
-                eyebrow="Access management"
-                title="Manage account roles"
-                description="Find an existing account and use the established confirmation flow to grant or remove Admin access."
-                icon={UsersRound}
-                metric={isInitialLoading ? undefined : users.length}
-                metricLabel="users returned"
-            />
+            <PageHeader title="Users" description="Find an account by name or email to grant or remove Admin access." />
+            {!isInitialLoading && users.length >= SERVER_RESULT_CAP && (
+                <p className="flex items-start gap-2 rounded-ds-lg bg-ds-muted p-3 text-body-sm text-ds-muted-foreground">
+                    <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                    {search
+                        ? `Showing the ${SERVER_RESULT_CAP} newest accounts that match. Make the search more specific to find someone else.`
+                        : `Showing the ${SERVER_RESULT_CAP} newest accounts. Search by name or email to find anyone else.`}
+                </p>
+            )}
             <AdminDataTable
                 caption="User accounts"
                 columns={columns}

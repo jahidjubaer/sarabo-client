@@ -1,6 +1,6 @@
 import { Link } from 'react-router';
 import { motion as Motion } from 'motion/react';
-import { CircleAlert, CircleCheckBig, CircleX, Clock3, UserCog } from 'lucide-react';
+import { UserCog } from 'lucide-react';
 import { Card, CardContent } from '../ui/card';
 import { buttonVariants } from '../ui/button-variants';
 import ServiceSpine from '../spine/ServiceSpine';
@@ -10,187 +10,123 @@ import QuoteSection from '../quote/QuoteSection';
 import RepairSection from '../repair/RepairSection';
 import ReceiptConfirmationSection from '../repair/ReceiptConfirmationSection';
 import TechnicianEarningSettlement from '../repair/TechnicianEarningSettlement';
-import { RepairLifecycleTimeline } from '../workspace/RepairLifecycleTimeline';
+import TechnicianSettlementSummary from '../repair/TechnicianSettlementSummary';
 import { WorkspaceContextPanels } from '../workspace/WorkspaceContextPanels';
+import { NextStepPanel } from '../workspace/NextStepPanel';
+import { StageSection } from '../workspace/StageSection';
 import { getStatusPresentation } from '../../config/statusPresentation';
 import { getHandoverState } from '../../utils/repairStage';
+import { getStatusRank } from '../../utils/workspacePresentation';
 import { staggerContainer, staggerItem } from '../../theme/motion';
-import { cn } from '../../lib/utils';
 
-const ATTENTION_STYLES = {
-    action: { wrap: 'border-ds-warning/40 bg-ds-warning/5', icon: 'bg-ds-warning/15 text-ds-warning', Icon: CircleAlert },
-    waiting: { wrap: 'border-ds-primary/25 bg-ds-primary/5', icon: 'bg-ds-primary/10 text-ds-primary', Icon: Clock3 },
-    done: { wrap: 'border-ds-success/30 bg-ds-success/5', icon: 'bg-ds-success/10 text-ds-success', Icon: CircleCheckBig },
-    terminal: { wrap: 'border-ds-border bg-ds-muted/30', icon: 'bg-ds-muted text-ds-muted-foreground', Icon: CircleX },
-};
+const QUOTE_META = { submitted: 'Waiting for the customer', approved: 'Approved by the customer', rejected: 'Declined by the customer' };
 
-function getAdminAttention(request) {
-    const presentation = getStatusPresentation(request?.deliveryStatus);
-
-    if (request?.deliveryStatus === 'pending-pickup') {
-        return {
-            tone: 'action',
-            eyebrow: 'Admin action required',
-            title: 'Assign a Technician',
-            description: 'This repair request is waiting for an eligible Technician assignment.',
-            action: { kind: 'route', label: 'Find technicians', to: `/dashboard/assign-technicians?request=${request._id}`, Icon: UserCog },
-        };
+// The admin's top panel. Only one state has an admin action - assigning a
+// technician; everything else says plainly where the repair is and who it is
+// waiting on. (The old "record settlement" state was retired in Phase 9:
+// settlements are automatic and payouts go through Withdrawals.)
+function nextStepModel(request) {
+    const status = request?.deliveryStatus || 'pending-pickup';
+    const presentation = getStatusPresentation(status);
+    if (status === 'pending-pickup') {
+        return { tone: 'action', eyebrow: 'Needs you', title: 'Assign a technician', description: 'This request is waiting for an eligible technician. Sarabo lists only the technicians it matches.', assign: true };
     }
-    // RETIRED (Phase 9): the "Record Technician settlement" attention state.
-    // A completed repair no longer asks an admin to settle anything here -
-    // the technician's 90% is snapshotted automatically at payment and paid
-    // out from /dashboard/withdrawal-requests when they request it. Keeping
-    // this as an action item would have pointed at a control that no longer
-    // exists and an endpoint that no longer answers.
-    if (request?.deliveryStatus === 'cancelled' || request?.deliveryStatus === 'quote_rejected') {
+    if (status === 'repair_completed' || status === 'parcel_delivered') {
+        return { tone: 'done', eyebrow: 'Done', title: presentation.label, description: presentation.customerDescription };
+    }
+    if (status === 'cancelled' || status === 'quote_rejected') {
         return {
-            tone: 'terminal',
-            eyebrow: 'Workflow update',
+            tone: 'closed',
+            eyebrow: 'No admin action',
             title: presentation.label,
-            description: request.deliveryStatus === 'quote_rejected' ? 'The Customer declined the repair quote. No Admin workflow action is available.' : presentation.customerDescription,
+            description: status === 'quote_rejected' ? 'The customer declined the quote. The technician can revise it or close the job.' : presentation.customerDescription,
         };
     }
-    if (request?.deliveryStatus === 'repair_completed' || request?.deliveryStatus === 'parcel_delivered') {
-        return {
-            tone: 'done',
-            eyebrow: 'Workflow update',
-            title: presentation.label,
-            description: presentation.customerDescription,
-        };
-    }
-    return {
-        tone: 'waiting',
-        eyebrow: 'Operational status',
-        title: presentation.label,
-        description: presentation.technicianDescription || presentation.customerDescription || 'No Admin action is available for this workflow state.',
-    };
+    return { tone: 'waiting', eyebrow: 'No admin action', title: presentation.label, description: presentation.technicianDescription || presentation.customerDescription };
 }
 
-function AdminAttentionPanel({ request }) {
-    const attention = getAdminAttention(request);
-    const style = ATTENTION_STYLES[attention.tone];
-    const Icon = style.Icon;
-    const ActionIcon = attention.action?.Icon;
-    const actionClassName = cn(buttonVariants({ variant: 'action', size: 'sm' }), 'mt-4 w-full sm:w-auto');
-
-    return (
-        <section aria-labelledby="admin-request-attention-heading" className={cn('rounded-ds-lg border p-5 sm:p-6', style.wrap)}>
-            <div className="flex items-start gap-3">
-                <span className={cn('flex size-10 shrink-0 items-center justify-center rounded-full', style.icon)}>
-                    <Icon aria-hidden="true" className="size-5" />
-                </span>
-                <div className="min-w-0 flex-1">
-                    <p className="ds-label text-ds-muted-foreground">{attention.eyebrow}</p>
-                    <h2 id="admin-request-attention-heading" className="mt-1 text-xl font-semibold tracking-tight text-ds-foreground">{attention.title}</h2>
-                    <p className="mt-1 max-w-2xl text-sm text-ds-muted-foreground">{attention.description}</p>
-                    {attention.action?.kind === 'route' && (
-                        <Link to={attention.action.to} className={actionClassName}>
-                            <ActionIcon aria-hidden="true" /> {attention.action.label}
-                        </Link>
-                    )}
-                </div>
-            </div>
-        </section>
-    );
-}
-
-function SectionCard({ id, eyebrow, title, children }) {
-    return (
-        <section id={id} aria-labelledby={`${id}-heading`} className="scroll-mt-24">
-            <Card>
-                <CardContent className="space-y-4 p-5 sm:p-6">
-                    {eyebrow && <p className="ds-label text-ds-primary">{eyebrow}</p>}
-                    <h2 id={`${id}-heading`} className="text-base font-semibold text-ds-foreground">{title}</h2>
-                    {children}
-                </CardContent>
-            </Card>
-        </section>
-    );
-}
-
+// Admin composition of the shared repair workspace (Phase 5): the same
+// tracker, next-step panel, collapsible stage sections and side column the
+// customer and technician see, all read-only. Every section keeps its own
+// data and read rules; the server re-authorises everything. The separate
+// lifecycle timeline is gone - it listed the same steps as the tracker,
+// without dates.
 function AdminRequestDetailsView({ request, sections, isV2Request }) {
+    const status = request?.deliveryStatus || 'pending-pickup';
+    const rank = getStatusRank(status);
+    const cancelled = status === 'cancelled';
     const handover = getHandoverState(request);
-    // Shown for any repair that carries a legacy earning, paid or not - it is a
-    // historical record now, not a queue, so hiding the unsettled ones would
-    // hide exactly the rows an admin is most likely to be asked about.
-    const hasLegacyEarning = !!request.technicianEarning;
+    const model = nextStepModel(request);
 
     return (
-        <Motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-6">
-            <Motion.div variants={staggerItem}>
-                <AdminAttentionPanel request={request} />
-            </Motion.div>
-
+        <Motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-5">
             <Motion.div variants={staggerItem}>
                 <Card>
-                    <CardContent className="space-y-4 p-5 sm:p-6">
-                        <div>
-                            <p className="ds-label text-ds-primary">Service spine</p>
-                            <h2 className="mt-1 text-base font-semibold text-ds-foreground">Repair lifecycle</h2>
-                        </div>
+                    <CardContent className="p-5 sm:p-6">
                         <ServiceSpine request={request} />
-                        {handover && (
-                            <div className="border-t border-ds-border pt-4">
-                                <p className="ds-label text-ds-muted-foreground">Customer handover</p>
-                                <p className="mt-0.5 text-sm font-medium text-ds-foreground">{handover.label}</p>
-                            </div>
-                        )}
                     </CardContent>
                 </Card>
             </Motion.div>
 
-            <Motion.div variants={staggerItem} className="grid gap-6 lg:grid-cols-3 lg:items-start">
-                <div className="space-y-6 lg:col-span-2">
-                    {sections.showInspection && (
-                        <SectionCard id="admin-inspection" title="Inspection context">
-                            <InspectionSection requestId={request._id} canInspect={false} isAssignedTechnicianView={false} />
-                        </SectionCard>
-                    )}
+            <Motion.div variants={staggerItem} className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+                <div className="min-w-0 space-y-4">
+                    <NextStepPanel tone={model.tone} eyebrow={model.eyebrow} title={model.title} description={model.description}>
+                        {model.assign && (
+                            <Link to={`/dashboard/assign-technicians?request=${request._id}`} className={buttonVariants({ variant: 'action', size: 'lg' })}>
+                                <UserCog aria-hidden="true" /> Find technicians
+                            </Link>
+                        )}
+                    </NextStepPanel>
 
-                    {sections.showQuote && (
-                        <SectionCard id="admin-quote" title="Quote and payment context">
-                            <QuoteSection requestId={request._id} isOwner={false} canSubmitQuote={false} isAssignedTechnicianView={false} />
-                        </SectionCard>
-                    )}
-
-                    {sections.showRepair && (
-                        <SectionCard id="admin-repair" title="Repair context">
-                            <RepairSection requestId={request._id} canManage={false} deliveryStatus={request.deliveryStatus} />
-                        </SectionCard>
-                    )}
-
-                    {handover && (
-                        <SectionCard id="admin-handover" title="Customer handover">
-                            <ReceiptConfirmationSection requestId={request._id} request={request} isOwner={false} />
-                        </SectionCard>
-                    )}
-
-                    {hasLegacyEarning && (
-                        <SectionCard id="admin-settlement" eyebrow="Internal accounting" title="Technician settlement">
-                            <TechnicianEarningSettlement earning={request.technicianEarning} />
-                        </SectionCard>
-                    )}
-
-                    {sections.showDamage && (
-                        <SectionCard id="admin-evidence" title="Damage and repair evidence">
+                    {isV2Request && sections.showDamage && (
+                        <StageSection id="admin-request" title="Customer's request" meta={request.damage?.description || 'Device details and photos'} state="done" defaultOpen={rank <= 4}>
                             <DamageImageManager requestId={request._id} canEdit={false} />
-                        </SectionCard>
+                        </StageSection>
                     )}
-
+                    {sections.showInspection && (cancelled || rank >= 5) && (
+                        <StageSection id="admin-inspection" title="Inspection" meta="The technician's findings" state="done" defaultOpen={rank === 5}>
+                            <InspectionSection requestId={request._id} canInspect={false} isAssignedTechnicianView={false} />
+                        </StageSection>
+                    )}
+                    {sections.showQuote && (cancelled || rank >= 6) && (
+                        <StageSection id="admin-quote" title="Quote and payment" meta={QUOTE_META[request.quote?.status] || 'Repair quote'} state={request.quote?.status === 'rejected' ? 'info' : 'done'} defaultOpen={rank === 6 || rank === 7}>
+                            <QuoteSection requestId={request._id} isOwner={false} canSubmitQuote={false} isAssignedTechnicianView={false} />
+                        </StageSection>
+                    )}
+                    {sections.showRepair && (
+                        <StageSection id="admin-repair" title="Repair" meta={getStatusPresentation(status).technicianDescription} state={rank >= 10 ? 'done' : 'current'} defaultOpen={rank === 8 || rank === 9}>
+                            <RepairSection requestId={request._id} canManage={false} deliveryStatus={status} />
+                        </StageSection>
+                    )}
+                    {handover && (
+                        <StageSection id="admin-handover" title="Handover" meta={handover.label} state={handover.confirmed ? 'done' : 'current'}>
+                            <ReceiptConfirmationSection requestId={request._id} request={request} isOwner={false} />
+                        </StageSection>
+                    )}
+                    {request.technicianSettlement && (
+                        <StageSection id="admin-settlement" title="Technician earnings" meta="Commission and what the technician receives" state="info">
+                            <TechnicianSettlementSummary settlement={request.technicianSettlement} />
+                        </StageSection>
+                    )}
+                    {/* Shown for any repair with a legacy earning, paid or not:
+                        it is a historical record an admin may be asked about. */}
+                    {request.technicianEarning && (
+                        <StageSection id="admin-legacy-settlement" title="Technician settlement (earlier system)" meta="Internal accounting record" state="info">
+                            <TechnicianEarningSettlement earning={request.technicianEarning} />
+                        </StageSection>
+                    )}
                     {!isV2Request && (
-                        <SectionCard id="admin-legacy" title="Repair request">
-                            <p className="text-sm text-ds-muted-foreground">This earlier repair request uses the legacy workflow and does not include the newer inspection, quote, and repair records.</p>
-                        </SectionCard>
+                        <StageSection id="admin-legacy" title="Earlier request" meta="Created before quotes and inspections" defaultOpen>
+                            <p className="text-body-sm text-ds-muted-foreground">
+                                This request uses the earlier workflow, so it has no inspection, quote or repair records.
+                            </p>
+                            {sections.showDamage && <div className="mt-4"><DamageImageManager requestId={request._id} canEdit={false} /></div>}
+                        </StageSection>
                     )}
                 </div>
 
-                <aside aria-labelledby="admin-request-context-heading" className="space-y-4 lg:sticky lg:top-24">
-                    <div>
-                        <p className="ds-label text-ds-primary">Operational context</p>
-                        <h2 id="admin-request-context-heading" className="mt-1 text-base font-semibold text-ds-foreground">Request and assignment details</h2>
-                    </div>
+                <aside aria-label="Request details" className="space-y-4 lg:sticky lg:top-24">
                     <WorkspaceContextPanels request={request} showCustomer />
-                    <RepairLifecycleTimeline request={request} />
                 </aside>
             </Motion.div>
         </Motion.div>

@@ -3,11 +3,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { Search, UserCog, MapPin, Award, Star, Briefcase, Wrench } from 'lucide-react';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
+import { useUrlFilters } from '../../../hooks/useUrlFilters';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { EmptyState } from '../../../components/common/EmptyState';
 import { ErrorState } from '../../../components/common/ErrorState';
 import { AdminDataTable } from '../../../components/admin/data-table/AdminDataTable';
-import { AdminPageLead } from '../../../components/admin/AdminPageLead';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
@@ -33,7 +33,8 @@ const EMPTY_REQUESTS = [];
 const AssignTechnicians = () => {
     const axiosSecure = useAxiosSecure();
     const queryClient = useQueryClient();
-    const [search, setSearch] = useState('');
+    const [filters, setFilters] = useUrlFilters({ q: '' });
+    const search = filters.q;
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [assigningId, setAssigningId] = useState(null);
     const [searchParams, setSearchParams] = useSearchParams();
@@ -133,7 +134,7 @@ const AssignTechnicians = () => {
             id: 'actions', header: '', enableSorting: false, enableHiding: false,
             cell: ({ row }) => (
                 <div className="flex justify-end">
-                    <Button size="sm" onClick={() => setSelectedRequest(row.original)}><UserCog aria-hidden="true" />Find technicians</Button>
+                    <Button variant="primary" size="sm" onClick={() => setSelectedRequest(row.original)}><UserCog aria-hidden="true" />Find technicians</Button>
                 </div>
             ),
             meta: { label: 'Actions', headClassName: 'text-right', cellClassName: 'text-right' },
@@ -143,7 +144,7 @@ const AssignTechnicians = () => {
     if (isUnavailableBeforeData) {
         return (
             <div className="space-y-6">
-                <PageHeader title="Assign Technicians" />
+                <PageHeader title="Assign technicians" />
                 <ErrorState title="Couldn't load requests" description="We couldn't load requests awaiting assignment right now. Please try again." onRetry={retryPendingRequests} />
             </div>
         );
@@ -175,21 +176,19 @@ const AssignTechnicians = () => {
         <div className="relative min-w-0 flex-1 sm:max-w-xs">
             <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ds-muted-foreground" />
             <Label htmlFor="assign-search" className="sr-only">Search requests</Label>
-            <Input id="assign-search" type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by device or district" className="pl-9" />
+            <Input id="assign-search" type="search" value={search} onChange={(e) => setFilters({ q: e.target.value })} placeholder="Search by device or district" className="pl-9" />
         </div>
     );
 
     return (
         <div className="space-y-6">
-            <PageHeader title="Assign Technicians" description={isInitialLoading ? 'Loading requests awaiting assignment...' : `${requests.length} request${requests.length === 1 ? '' : 's'} awaiting assignment`} />
-            <AdminPageLead
-                eyebrow="Assignment queue"
-                title={isInitialLoading ? 'Checking requests awaiting assignment' : requests.length > 0 ? `${requests.length} request${requests.length === 1 ? '' : 's'} need a Technician` : 'No requests need assignment'}
-                description="Open a request, review the existing server-matched Technician list, and assign one eligible Technician."
-                icon={UserCog}
-                tone={requests.length > 0 ? 'action' : 'clear'}
-                metric={isInitialLoading ? undefined : requests.length}
-                metricLabel="awaiting assignment"
+            <PageHeader
+                title="Assign technicians"
+                description={isInitialLoading
+                    ? 'Loading requests awaiting assignment…'
+                    : requests.length > 0
+                        ? `${requests.length} request${requests.length === 1 ? '' : 's'} need${requests.length === 1 ? 's' : ''} a technician. Only technicians Sarabo matches as eligible are offered.`
+                        : 'No requests are waiting for a technician.'}
             />
             <AdminDataTable
                 caption="Repair requests awaiting a technician"

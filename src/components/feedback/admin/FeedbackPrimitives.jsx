@@ -6,6 +6,7 @@ import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
 import { ErrorState } from '../../common/ErrorState';
 import { REPORT_STATUSES, REVIEW_VISIBILITY, validFeedbackId } from '../../../utils/technicianFeedback';
+import { useTechnicianDirectory } from '../../../hooks/useTechnicianDirectory';
 import { formatAbsoluteDateTime } from '../../../utils/relativeTime';
 import { StatusBadge } from '../../common/StatusBadge';
 import { Select } from '../../ui/select';
@@ -19,6 +20,22 @@ export function FeedbackBadge({ value }) {
 
 export function FeedbackReference({ value }) {
     return <span className="break-all font-mono text-xs text-ds-muted-foreground">{value || 'Not recorded'}</span>;
+}
+
+// A technician's name with their reference underneath. Records only carry the
+// id; the name comes from the admin technician list. If that list is not
+// available (or the technician record is gone) the reference alone is shown,
+// exactly as before.
+export function TechnicianName({ id }) {
+    const { byId } = useTechnicianDirectory();
+    const technician = id ? byId.get(String(id)) : null;
+    if (!technician) return <FeedbackReference value={id} />;
+    return (
+        <span className="block min-w-0">
+            <span className="block truncate text-body-sm font-semibold text-ds-foreground">{technician.name || 'Unnamed technician'}</span>
+            <span className="block truncate text-micro text-ds-muted-foreground">{technician.email}</span>
+        </span>
+    );
 }
 
 export function FeedbackDate({ value }) {
@@ -42,14 +59,20 @@ export function FeedbackRefreshState({ query }) {
     return query.isFetching ? <p role="status" className="text-sm text-ds-muted-foreground">Refreshing…</p> : null;
 }
 
+// Filters for the moderation lists. The technician is picked from the admin
+// technician list; if that list can't be loaded, the old exact-id field is
+// offered instead so filtering by technician still works.
 export function FeedbackFilters({ kind, filters, onChange }) {
     const id = useId();
+    const directory = useTechnicianDirectory();
     const [technician, setTechnician] = useState(filters.technicianId ?? '');
     const [error, setError] = useState('');
     const field = kind === 'reports' ? 'status' : 'visibility';
     const labels = kind === 'reports' ? REPORT_STATUSES : REVIEW_VISIBILITY;
+    const hasFilters = !!(filters[field] || filters.technicianId);
+    const selectedKnown = !filters.technicianId || directory.byId.has(filters.technicianId);
     return (
-        <form className="grid gap-3 rounded-ds-lg border border-ds-border bg-ds-card p-4 sm:grid-cols-2 xl:grid-cols-[1fr_2fr_auto_auto] xl:items-end"
+        <form className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[14rem_minmax(0,20rem)_auto] lg:items-end"
             onSubmit={(event) => {
                 event.preventDefault();
                 const value = technician.trim();
@@ -65,14 +88,30 @@ export function FeedbackFilters({ kind, filters, onChange }) {
                     {Object.entries(labels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                 </Select>
             </div>
-            <div className="min-w-0 space-y-1.5">
-                <Label htmlFor={`${id}-technician`}>Exact Technician ID (optional)</Label>
-                <Input id={`${id}-technician`} value={technician} onChange={(event) => { setTechnician(event.target.value); setError(''); }} maxLength={24}
-                    autoComplete="off" spellCheck={false} aria-invalid={!!error} aria-describedby={`${id}-help`} />
-                <p id={`${id}-help`} className={error ? 'text-xs text-ds-destructive' : 'text-xs text-ds-muted-foreground'}>{error || 'Use the Technician reference shown in a record. No complaint-text search.'}</p>
-            </div>
-            <Button type="submit" variant="outline">Apply Technician filter</Button>
-            <Button type="button" variant="ghost" onClick={() => { setTechnician(''); setError(''); onChange({ page: 1, limit: 20 }); }}>Clear filters</Button>
+            {directory.isReady ? (
+                <div className="min-w-0 space-y-1.5">
+                    <Label htmlFor={`${id}-technician`}>Technician</Label>
+                    <Select id={`${id}-technician`} value={filters.technicianId ?? ''}
+                        onChange={(event) => onChange({ ...filters, page: 1, technicianId: event.target.value || undefined })}>
+                        <option value="">All technicians</option>
+                        {!selectedKnown && <option value={filters.technicianId}>Technician {filters.technicianId}</option>}
+                        {directory.technicians.map((t) => <option key={t._id} value={t._id}>{t.name || 'Unnamed technician'}{t.email ? ` (${t.email})` : ''}</option>)}
+                    </Select>
+                </div>
+            ) : (
+                <div className="min-w-0 space-y-1.5">
+                    <Label htmlFor={`${id}-technician`}>Exact Technician ID (optional)</Label>
+                    <div className="flex gap-2">
+                        <Input id={`${id}-technician`} value={technician} onChange={(event) => { setTechnician(event.target.value); setError(''); }} maxLength={24}
+                            autoComplete="off" spellCheck={false} aria-invalid={!!error} aria-describedby={`${id}-help`} />
+                        <Button type="submit" variant="outline">Apply</Button>
+                    </div>
+                    <p id={`${id}-help`} className={error ? 'text-xs text-ds-destructive' : 'text-xs text-ds-muted-foreground'}>{error || 'The technician list is unavailable, so enter the reference shown in a record.'}</p>
+                </div>
+            )}
+            {hasFilters && (
+                <Button type="button" variant="ghost" onClick={() => { setTechnician(''); setError(''); onChange({ page: 1, limit: 20 }); }}>Clear filters</Button>
+            )}
         </form>
     );
 }

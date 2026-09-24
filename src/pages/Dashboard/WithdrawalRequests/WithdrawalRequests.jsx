@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { Banknote, Check, X } from 'lucide-react';
+import { Banknote, Check, Info, X } from 'lucide-react';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
+import { useUrlFilters } from '../../../hooks/useUrlFilters';
 import { walletKeys } from '../../../hooks/walletKeys';
 import { notify } from '../../../lib/notify';
 import { formatMoney } from '../../../utils/currency';
@@ -11,8 +12,6 @@ import { EmptyState } from '../../../components/common/EmptyState';
 import { ErrorState } from '../../../components/common/ErrorState';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
 import { AdminDataTable } from '../../../components/admin/data-table/AdminDataTable';
-import { AdminPageLead } from '../../../components/admin/AdminPageLead';
-import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Label } from '../../../components/ui/label';
 import { cn } from '../../../lib/utils';
@@ -71,8 +70,9 @@ const WithdrawalRequests = () => {
     const axiosSecure = useAxiosSecure();
     const queryClient = useQueryClient();
 
-    const [status, setStatus] = useState('requested');
-    const [page, setPage] = useState(1);
+    const [urlFilters, setUrlFilters] = useUrlFilters({ status: 'requested', page: '1' });
+    const status = STATUS_OPTIONS.some((option) => option.value === urlFilters.status) ? urlFilters.status : 'requested';
+    const { page } = urlFilters;
     // A single dialog driven by { withdrawal, action } rather than two booleans,
     // so mark-paid and reject can never both be open and the busy state always
     // belongs to the row actually being processed.
@@ -202,7 +202,7 @@ const WithdrawalRequests = () => {
     if (isUnavailableBeforeData) {
         return (
             <div className="space-y-6">
-                <PageHeader title="Withdrawal Requests" />
+                <PageHeader title="Withdrawals" />
                 <ErrorState
                     title="Couldn't load withdrawal requests"
                     description={error?.response?.data?.message || "We couldn't load the withdrawal queue right now. Please try again."}
@@ -244,7 +244,7 @@ const WithdrawalRequests = () => {
             </dl>
             {withdrawal.status === 'requested' && (
                 <div className="mt-3 flex gap-2">
-                    <Button size="sm" onClick={() => setPending({ withdrawal, action: 'paid' })}><Check aria-hidden="true" />Mark paid</Button>
+                    <Button variant="primary" size="sm" onClick={() => setPending({ withdrawal, action: 'paid' })}><Check aria-hidden="true" />Mark paid</Button>
                     <Button variant="outline" size="sm" onClick={() => setPending({ withdrawal, action: 'rejected' })}><X aria-hidden="true" />Reject</Button>
                 </div>
             )}
@@ -257,7 +257,7 @@ const WithdrawalRequests = () => {
             <Select
                 id="withdrawal-status"
                 value={status}
-                onChange={(event) => { setStatus(event.target.value); setPage(1); }} size="sm" wrapperClassName="sm:w-52"
+                onChange={(event) => setUrlFilters({ status: event.target.value, page: 1 })} size="sm" wrapperClassName="sm:w-52"
             >
                 {STATUS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </Select>
@@ -269,17 +269,13 @@ const WithdrawalRequests = () => {
     return (
         <div className="space-y-6">
             <PageHeader
-                title="Withdrawal Requests"
-                description={isInitialLoading ? 'Loading withdrawal requests...' : `${total} withdrawal${total === 1 ? '' : 's'} in this view`}
+                title="Withdrawals"
+                description={isInitialLoading ? 'Loading withdrawal requests…' : `${total} withdrawal${total === 1 ? '' : 's'} in this view`}
             />
-            <AdminPageLead
-                eyebrow="Technician payouts"
-                title="Settle the money first, then record it here"
-                description="Each row is a technician asking for a share of the receivable Sarabo already owes them. Marking one paid records a payout you have made yourself - it does not send any money."
-                icon={Banknote}
-                metric={isInitialLoading ? undefined : total}
-                metricLabel="withdrawals"
-            />
+            <p className="flex items-start gap-2 rounded-ds-lg bg-ds-muted p-3 text-body-sm text-ds-muted-foreground">
+                <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                <span><strong className="font-semibold text-ds-foreground">Pay first, then record it here.</strong> Marking a withdrawal paid records a payout you have already made. Sarabo does not send any money.</span>
+            </p>
             <p className={cn("text-sm text-ds-muted-foreground transition-opacity", isFetching ? "opacity-100" : "opacity-0")} role="status" aria-live="polite">
                 Updating results…
             </p>
@@ -297,7 +293,7 @@ const WithdrawalRequests = () => {
                 manualPagination
                 pageCount={totalPages}
                 pageIndex={currentPage - 1}
-                onPageChange={(index) => setPage(index + 1)}
+                onPageChange={(index) => setUrlFilters({ page: index + 1 })}
                 emptyState={
                     <EmptyState
                         icon={Banknote}
@@ -306,7 +302,7 @@ const WithdrawalRequests = () => {
                             ? 'Withdrawal requests appear here as technicians ask to be paid out.'
                             : 'No withdrawals match this filter.'}
                         action={status !== 'requested'
-                            ? <Button variant="outline" size="sm" onClick={() => { setStatus('requested'); setPage(1); }}>Show awaiting processing</Button>
+                            ? <Button variant="outline" size="sm" onClick={() => setUrlFilters({ status: 'requested', page: 1 })}>Show awaiting processing</Button>
                             : undefined}
                     />
                 }

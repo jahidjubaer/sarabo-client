@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useUrlFilters } from '../../../hooks/useUrlFilters';
 import { useQueryClient } from '@tanstack/react-query';
 import useAuth from '../../../hooks/useAuth';
 import { useAdminFeedbackList } from '../../../hooks/useTechnicianFeedback';
@@ -7,14 +8,25 @@ import { PageHeader } from '../../../components/common/PageHeader';
 import { EmptyState } from '../../../components/common/EmptyState';
 import { Button } from '../../../components/ui/button';
 import { AdminDataTable } from '../../../components/admin/data-table/AdminDataTable';
-import { FeedbackBadge, FeedbackDate, FeedbackFilters, FeedbackReference, FeedbackRefreshState, FeedbackUnavailable } from '../../../components/feedback/admin/FeedbackPrimitives';
+import { FeedbackBadge, FeedbackDate, FeedbackFilters, FeedbackReference, FeedbackRefreshState, FeedbackUnavailable, TechnicianName } from '../../../components/feedback/admin/FeedbackPrimitives';
 import ReportDetailSheet from '../../../components/feedback/admin/ReportDetailSheet';
 import ReviewDetailSheet from '../../../components/feedback/admin/ReviewDetailSheet';
-import { feedbackReadState, hasFeedbackPage, REPORT_REASONS, REPORT_STATUSES, REVIEW_VISIBILITY } from '../../../utils/technicianFeedback';
+import { feedbackReadState, hasFeedbackPage, REPORT_REASONS, REPORT_STATUSES, REVIEW_VISIBILITY, validFeedbackId } from '../../../utils/technicianFeedback';
 
 function FeedbackWorkspace({ kind }) {
     const reports = kind === 'reports';
-    const [filters, setFilters] = useState({ page: 1, limit: 20 });
+    const stateField = reports ? 'status' : 'visibility';
+    const stateLabels = reports ? REPORT_STATUSES : REVIEW_VISIBILITY;
+    // Filters live in the URL (Phase 5). Only known values reach the API; a
+    // hand-edited URL with anything else is treated as unfiltered.
+    const [url, setUrl] = useUrlFilters({ [stateField]: '', technician: '', page: '1' });
+    const filters = {
+        page: url.page,
+        limit: 20,
+        ...(url[stateField] in stateLabels ? { [stateField]: url[stateField] } : {}),
+        ...(validFeedbackId(url.technician) ? { technicianId: url.technician } : {}),
+    };
+    const setFilters = (next) => setUrl({ [stateField]: next[stateField] ?? '', technician: next.technicianId ?? '', page: next.page ?? 1 });
     const [selectedId, setSelectedId] = useState(null);
     const returnFocus = useRef(null);
     const fallbackFocus = useRef(null);
@@ -26,26 +38,26 @@ function FeedbackWorkspace({ kind }) {
     const items = page?.items ?? [];
     const canModerate = !!page && !query.isFetching && !query.isError && query.fetchStatus !== 'paused';
     const openDetail = (record, event) => { returnFocus.current = event.currentTarget; setSelectedId(record._id); };
-    const action = (record) => <Button variant="outline" size="sm" aria-label={`Inspect ${reports ? 'report' : 'review'} ${record._id}`} onClick={(event) => openDetail(record, event)}>Inspect</Button>;
+    const action = (record) => <Button variant="outline" size="sm" aria-label={`Open ${reports ? 'report' : 'review'} ${record._id}`} onClick={(event) => openDetail(record, event)}>Open</Button>;
     const columns = (reports ? [
         { id: 'report', header: 'Report / reason', cell: ({ row: { original: r } }) => <div className="max-w-48 space-y-1"><p className="whitespace-normal font-medium">{REPORT_REASONS[r.reason]}</p><FeedbackReference value={r._id} /></div> },
-        { id: 'accounts', header: 'Account references', cell: ({ row: { original: r } }) => <div className="max-w-44 space-y-2"><p className="text-xs">Technician<br /><FeedbackReference value={r.technicianId} /></p><p className="text-xs">Customer<br /><FeedbackReference value={r.customerId} /></p></div> },
+        { id: 'technician', header: 'Technician', cell: ({ row: { original: r } }) => <div className="max-w-52"><TechnicianName id={r.technicianId} /></div> },
         { id: 'state', header: 'Status', cell: ({ row }) => <FeedbackBadge value={row.original.status} /> },
         { id: 'created', header: 'Created', cell: ({ row }) => <FeedbackDate value={row.original.createdAt} /> },
         { id: 'updated', header: 'Updated', cell: ({ row }) => <FeedbackDate value={row.original.updatedAt} /> },
     ] : [
-        { id: 'rating', header: 'Rating', cell: ({ row }) => <span className="whitespace-nowrap font-medium">{row.original.rating} / 5</span> },
+        { id: 'rating', header: 'Rating', cell: ({ row }) => <span className="ds-numeric whitespace-nowrap font-semibold">{row.original.rating}<span className="text-ds-muted-foreground"> / 5</span></span> },
         { id: 'comment', header: 'Comment', cell: ({ row }) => <p className="max-w-xs whitespace-normal break-words [overflow-wrap:anywhere]">{row.original.comment ? `${row.original.comment.slice(0, 120)}${row.original.comment.length > 120 ? '…' : ''}` : 'No comment'}</p> },
-        { id: 'technician', header: 'Technician reference', cell: ({ row }) => <div className="max-w-44"><FeedbackReference value={row.original.technicianId} /></div> },
+        { id: 'technician', header: 'Technician', cell: ({ row }) => <div className="max-w-52"><TechnicianName id={row.original.technicianId} /></div> },
         { id: 'visibility', header: 'Visibility', cell: ({ row }) => <FeedbackBadge value={row.original.visibility} /> },
         { id: 'created', header: 'Created', cell: ({ row }) => <FeedbackDate value={row.original.createdAt} /> },
-    ]).concat([{ id: 'action', header: 'Action', cell: ({ row }) => action(row.original) }]).map((column) => ({ ...column, enableSorting: false }));
+    ]).concat([{ id: 'action', header: '', meta: { label: 'Action', headClassName: 'text-right', cellClassName: 'text-right' }, cell: ({ row }) => action(row.original) }]).map((column) => ({ ...column, enableSorting: false }));
     const renderCard = (record) => (
         <article className="space-y-3 rounded-ds-lg border border-ds-border bg-ds-card p-4">
             <div className="flex flex-wrap items-start justify-between gap-2"><h2 className="text-sm font-semibold">{reports ? REPORT_REASONS[record.reason] : `Rating: ${record.rating} / 5`}</h2><FeedbackBadge value={reports ? record.status : record.visibility} /></div>
             <dl className="space-y-2 text-sm">
                 <div><dt className="text-xs font-medium">{reports ? 'Report' : 'Review'} reference</dt><dd><FeedbackReference value={record._id} /></dd></div>
-                <div><dt className="text-xs font-medium">Technician reference</dt><dd><FeedbackReference value={record.technicianId} /></dd></div>
+                <div><dt className="text-xs font-medium">Technician</dt><dd><TechnicianName id={record.technicianId} /></dd></div>
                 {reports && <div><dt className="text-xs font-medium">Customer reference</dt><dd><FeedbackReference value={record.customerId} /></dd></div>}
                 <div><dt className="text-xs font-medium">Created</dt><dd><FeedbackDate value={record.createdAt} /></dd></div>
                 {reports && <div><dt className="text-xs font-medium">Updated</dt><dd><FeedbackDate value={record.updatedAt} /></dd></div>}
@@ -54,14 +66,14 @@ function FeedbackWorkspace({ kind }) {
             {action(record)}
         </article>
     );
-    const selectedFilter = reports ? REPORT_STATUSES[filters.status] : REVIEW_VISIBILITY[filters.visibility];
+    const selectedFilter = stateLabels[filters[stateField]];
     return (
         <div className="min-w-0 space-y-6">
             <PageHeader title={reports ? 'Technician reports' : 'Technician reviews'}
-                description={reports ? 'Private reports for Admin review. Handling a report does not change assignments, accounts, payments, or earnings.' : 'Review customer feedback and moderate visibility. Original ratings and comments remain unchanged.'} />
+                description={reports ? 'Private reports from customers. Handling a report does not change assignments, accounts, payments or earnings.' : 'Customer reviews of technicians. You can hide or restore a review; its rating and comment never change.'} />
             <FeedbackFilters kind={kind} filters={filters} onChange={(next) => { setSelectedId(null); setFilters(next); }} />
             <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm text-ds-muted-foreground">{page ? `${page.total} matching ${kind} · Page ${page.page}` : 'Moderation records'} · Newest first · 20 per page</p>
+                <p className="text-body-sm text-ds-muted-foreground">{page ? `${page.total} ${kind}` : 'Moderation records'} · newest first</p>
                 <Button ref={fallbackFocus} variant="outline" size="sm" disabled={query.isFetching}
                     onClick={() => client.invalidateQueries({ queryKey: query.queryKey, exact: true })}>Refresh list</Button>
             </div>

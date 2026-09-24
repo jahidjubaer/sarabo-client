@@ -1,11 +1,13 @@
 import { useId, useRef, useState } from 'react';
+import { Link } from 'react-router';
+import { ArrowRight } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '../../ui/sheet';
 import { Button } from '../../ui/button';
 import { Textarea } from '../../ui/textarea';
 import { Label } from '../../ui/label';
 import { useAdminReport, useFeedbackMutation } from '../../../hooks/useTechnicianFeedback';
 import { allowedReportTransitions, feedbackMutationError, feedbackReadState, hasReportDetail, REPORT_ACTIONS, REPORT_REASONS, REPORT_STATUSES, validateModerationText } from '../../../utils/technicianFeedback';
-import { FeedbackBadge, FeedbackDate, FeedbackReference, FeedbackRefreshState, FeedbackUnavailable } from './FeedbackPrimitives';
+import { FeedbackBadge, FeedbackDate, FeedbackReference, FeedbackRefreshState, FeedbackUnavailable, TechnicianName } from './FeedbackPrimitives';
 import ModerationDialog from './ModerationDialog';
 
 export default function ReportDetailSheet({ id, onClose, returnFocusRef, fallbackFocusRef }) {
@@ -64,6 +66,17 @@ export default function ReportDetailSheet({ id, onClose, returnFocusRef, fallbac
                             <p role="status" className="text-sm text-ds-primary">{message}</p>
                         </section>
                         <dl className="grid gap-4 rounded-ds-lg border border-ds-border bg-ds-card p-4 text-sm sm:grid-cols-2">
+                            <div className="min-w-0 sm:col-span-2"><dt className="mb-1 font-medium">Technician</dt><dd><TechnicianName id={report.technicianId} /></dd></div>
+                            {report.repairRequestId && (
+                                <div className="min-w-0 sm:col-span-2">
+                                    <dt className="sr-only">Repair</dt>
+                                    <dd>
+                                        <Link to={`/dashboard/manage-repair-requests/${report.repairRequestId}`} className="focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-ds text-body-sm font-semibold text-ds-primary hover:underline">
+                                            Open the repair, with customer details <ArrowRight aria-hidden="true" className="size-4" />
+                                        </Link>
+                                    </dd>
+                                </div>
+                            )}
                             {[['Report reference', report._id], ['Repair reference', report.repairRequestId], ['Technician reference', report.technicianId], ['Customer reference', report.customerId], ['Assignment reference', report.assignmentId]].map(([label, value]) =>
                                 <div key={label} className="min-w-0"><dt className="mb-1 font-medium">{label}</dt><dd><FeedbackReference value={value} /></dd></div>)}
                             <div><dt className="mb-1 font-medium">Version</dt><dd>{report.version}</dd></div>

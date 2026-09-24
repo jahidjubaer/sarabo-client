@@ -4,6 +4,6 @@
 // module so consumers stay component-only for React Fast Refresh.
 export const ROLE_SHORTCUTS = {
     user: { label: 'My Repair Requests', to: '/dashboard/my-requests' },
-    rider: { label: 'Assigned Repairs', to: '/dashboard/assigned-jobs' },
+    rider: { label: 'Assigned jobs', to: '/dashboard/assigned-jobs' },
     admin: { label: 'Manage Repair Requests', to: '/dashboard/manage-repair-requests' },
 };

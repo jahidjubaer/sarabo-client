@@ -1,17 +1,18 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
-import { Check, X, Eye, Search, UserCheck } from 'lucide-react';
+import { Check, X, Search } from 'lucide-react';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
+import { useUrlFilters } from '../../../hooks/useUrlFilters';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { EmptyState } from '../../../components/common/EmptyState';
 import { ErrorState } from '../../../components/common/ErrorState';
 import { AdminDataTable } from '../../../components/admin/data-table/AdminDataTable';
-import { AdminPageLead } from '../../../components/admin/AdminPageLead';
+import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '../../../components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetFooter, SheetTitle, SheetDescription } from '../../../components/ui/sheet';
 import { notify } from '../../../lib/notify';
 import { humanizeSlug } from '../../../utils/serviceDefinitionCatalog';
 import { getWorkStatusLabel, getWorkStatusTone, getExpertiseBadges, isTechnicianMatchable } from '../../../utils/adminPresentation';
@@ -79,17 +80,23 @@ function TechnicianExpertiseDetails({ technician }) {
     );
 }
 
-// Phase 7.5: technician management on the design-system data table. The
-// approve/reject mutation (PATCH /technicians/:id) and its error mapper are
-// PRESERVED - only presentation, a details Sheet, expertise badges, and
-// Toastify feedback changed. No workStatus is guessed; only stored values shown.
+// Technician applications (Phase 5). The approve/reject mutation
+// (PATCH /technicians/:id) and its error mapper are unchanged. What changed:
+// a decision is made from the details sheet, with the applicant's expertise
+// in view, and each one is confirmed first - approve and reject used to fire
+// from a single icon click in the table. Filters live in the URL. No
+// workStatus is guessed; only stored values are shown.
 const ApproveTechnicians = () => {
     const axiosSecure = useAxiosSecure();
     const queryClient = useQueryClient();
-    const [search, setSearch] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all');
+    const [filters, setFilters] = useUrlFilters({ q: '', status: 'all' });
+    const search = filters.q;
+    const statusFilter = filters.status;
     const [pendingAction, setPendingAction] = useState(null);
-    const [detailsFor, setDetailsFor] = useState(null);
+    // The sheet follows the record by id, so it shows the refreshed status
+    // after a decision instead of a stale copy.
+    const [detailsId, setDetailsId] = useState(null);
+    const [decision, setDecision] = useState(null);
 
     const techniciansQueryKey = ['technicians', 'all'];
     const { refetch, data, isPending, isPaused, isError } = useQuery({
@@ -102,7 +109,13 @@ const ApproveTechnicians = () => {
     const isUnavailableBeforeData = !hasUsableTechnicians && (isPaused || isError);
     const retryTechnicians = () => queryClient.resetQueries({ queryKey: techniciansQueryKey });
 
-    const statusOptions = useMemo(() => [...new Set(technicians.map((t) => t.status).filter(Boolean))], [technicians]);
+    // Includes the URL's status even when no record has it right now, so a
+    // linked filter (e.g. ?status=pending from the operations home) still
+    // shows its own option instead of a blank select.
+    const statusOptions = useMemo(() => [...new Set([
+        ...technicians.map((t) => t.status),
+        statusFilter !== 'all' ? statusFilter : null,
+    ].filter(Boolean))], [technicians, statusFilter]);
 
     const filtered = useMemo(() => technicians.filter((tech) => {
         const term = search.trim().toLowerCase();
@@ -111,6 +124,7 @@ const ApproveTechnicians = () => {
         return matchesSearch && matchesStatus;
     }), [technicians, search, statusFilter]);
     const pendingApplicationCount = technicians.filter((technician) => technician.status === 'pending').length;
+    const detailsFor = detailsId ? technicians.find((technician) => technician._id === detailsId) || null : null;
 
     const updateStatus = (technician, status) => {
         if (pendingAction) return;
@@ -125,7 +139,7 @@ const ApproveTechnicians = () => {
                 notify.error(getTechnicianApprovalErrorMessage(error));
                 refetch();
             })
-            .finally(() => setPendingAction(null));
+            .finally(() => { setPendingAction(null); setDecision(null); });
     };
 
     const columns = useMemo(() => [
@@ -146,29 +160,21 @@ const ApproveTechnicians = () => {
         { id: 'work', header: 'Work status', enableSorting: false, cell: ({ row }) => <Badge tone={getWorkStatusTone(row.original.workStatus)}>{getWorkStatusLabel(row.original.workStatus)}</Badge>, meta: { label: 'Work status' } },
         {
             id: 'actions', header: '', enableSorting: false, enableHiding: false,
-            cell: ({ row }) => {
-                const tech = row.original;
-                const busy = pendingAction?.id === tech._id;
-                const matchable = isTechnicianMatchable(tech);
-                return (
-                    <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" aria-label={`View ${tech.name}`} onClick={() => setDetailsFor(tech)}><Eye aria-hidden="true" className="size-4" /></Button>
-                        {tech.status !== 'approved' && (
-                            <Button variant="ghost" size="icon" className="text-ds-success hover:text-ds-success"
-                                aria-label={matchable ? `Approve ${tech.name}` : `Cannot approve ${tech.name} — incomplete matching profile`}
-                                title={matchable ? undefined : 'Incomplete matching profile — expertise and service area must be completed first'}
-                                disabled={busy || !matchable} onClick={() => updateStatus(tech, 'approved')}><Check aria-hidden="true" className="size-4" /></Button>
-                        )}
-                        {tech.status !== 'rejected' && (
-                            <Button variant="ghost" size="icon" className="text-ds-destructive hover:text-ds-destructive" aria-label={`Reject ${tech.name}`} disabled={busy} onClick={() => updateStatus(tech, 'rejected')}><X aria-hidden="true" className="size-4" /></Button>
-                        )}
-                    </div>
-                );
-            },
+            cell: ({ row }) => (
+                <div className="flex justify-end">
+                    <Button
+                        variant={row.original.status === 'pending' ? 'primary' : 'outline'}
+                        size="sm"
+                        aria-label={`${row.original.status === 'pending' ? 'Review application from' : 'View'} ${row.original.name}`}
+                        onClick={() => setDetailsId(row.original._id)}
+                    >
+                        {row.original.status === 'pending' ? 'Review' : 'View'}
+                    </Button>
+                </div>
+            ),
             meta: { label: 'Actions', headClassName: 'text-right', cellClassName: 'text-right' },
         },
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    ], [pendingAction]);
+    ], []);
 
     if (isUnavailableBeforeData) {
         return (
@@ -179,44 +185,37 @@ const ApproveTechnicians = () => {
         );
     }
 
-    const renderCard = (tech) => {
-        const busy = pendingAction?.id === tech._id;
-        const matchable = isTechnicianMatchable(tech);
-        return (
-            <div className="rounded-ds-lg border border-ds-border bg-ds-card p-4">
-                <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-ds-foreground">{tech.name}</p>
-                        <p className="truncate text-xs text-ds-muted-foreground">{tech.email}</p>
-                    </div>
-                    <ApplicationBadge status={tech.status} />
+    const renderCard = (tech) => (
+        <div className="rounded-ds-lg border border-ds-border bg-ds-card p-4">
+            <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                    <p className="truncate text-body-sm font-bold text-ds-foreground">{tech.name}</p>
+                    <p className="truncate text-micro text-ds-muted-foreground">{tech.email}</p>
                 </div>
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-ds-muted-foreground">
-                    <span>{tech.district || '—'}</span>
-                    <Badge tone={getWorkStatusTone(tech.workStatus)}>{getWorkStatusLabel(tech.workStatus)}</Badge>
-                </div>
-                <div className="mt-2"><ExpertiseBadges technician={tech} /></div>
-                {!matchable && tech.status !== 'approved' && (
-                    <p className="mt-2 text-xs text-ds-muted-foreground">Complete the expertise and service area before approving.</p>
-                )}
-                <div className="mt-3 flex flex-wrap justify-end gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setDetailsFor(tech)}><Eye aria-hidden="true" />View</Button>
-                    {tech.status !== 'approved' && <Button size="sm" disabled={busy || !matchable} title={matchable ? undefined : 'Incomplete matching profile'} onClick={() => updateStatus(tech, 'approved')}><Check aria-hidden="true" />Approve</Button>}
-                    {tech.status !== 'rejected' && <Button variant="outline" size="sm" className="text-ds-destructive hover:text-ds-destructive" disabled={busy} onClick={() => updateStatus(tech, 'rejected')}><X aria-hidden="true" />Reject</Button>}
-                </div>
+                <ApplicationBadge status={tech.status} />
             </div>
-        );
-    };
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-micro text-ds-muted-foreground">
+                <span>{tech.district || '—'}</span>
+                <Badge tone={getWorkStatusTone(tech.workStatus)}>{getWorkStatusLabel(tech.workStatus)}</Badge>
+            </div>
+            <div className="mt-2"><ExpertiseBadges technician={tech} /></div>
+            <div className="mt-3 flex justify-end">
+                <Button variant={tech.status === 'pending' ? 'primary' : 'outline'} size="sm" onClick={() => setDetailsId(tech._id)}>
+                    {tech.status === 'pending' ? 'Review application' : 'View details'}
+                </Button>
+            </div>
+        </div>
+    );
 
     const toolbar = (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative min-w-0 flex-1 sm:max-w-xs">
                 <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ds-muted-foreground" />
                 <Label htmlFor="tech-search" className="sr-only">Search technicians</Label>
-                <Input id="tech-search" type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or email" className="pl-9" />
+                <Input id="tech-search" type="search" value={search} onChange={(e) => setFilters({ q: e.target.value })} placeholder="Search by name or email" className="pl-9" />
             </div>
             <Label htmlFor="tech-status" className="sr-only">Filter by application status</Label>
-            <Select id="tech-status" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} size="sm" wrapperClassName="sm:w-52">
+            <Select id="tech-status" value={statusFilter} onChange={(e) => setFilters({ status: e.target.value })} size="sm" wrapperClassName="sm:w-52">
                 <option value="all">All applications</option>
                 {statusOptions.map((s) => <option key={s} value={s}>{humanizeSlug(s)}</option>)}
             </Select>
@@ -225,15 +224,11 @@ const ApproveTechnicians = () => {
 
     return (
         <div className="space-y-6">
-            <PageHeader title="Technicians" description={isInitialLoading ? 'Loading technician applications...' : `${technicians.length} technician application${technicians.length === 1 ? '' : 's'}`} />
-            <AdminPageLead
-                eyebrow="Application decisions"
-                title={isInitialLoading ? 'Checking the application queue' : pendingApplicationCount > 0 ? `${pendingApplicationCount} application${pendingApplicationCount === 1 ? '' : 's'} need review` : 'No applications need review'}
-                description="Review each applicant's recorded expertise and service area before approving or rejecting the application."
-                icon={UserCheck}
-                tone={pendingApplicationCount > 0 ? 'action' : 'clear'}
-                metric={isInitialLoading ? undefined : pendingApplicationCount}
-                metricLabel="pending"
+            <PageHeader
+                title="Technicians"
+                description={isInitialLoading
+                    ? 'Loading technician applications…'
+                    : `${technicians.length} technician${technicians.length === 1 ? '' : 's'} · ${pendingApplicationCount > 0 ? `${pendingApplicationCount} application${pendingApplicationCount === 1 ? '' : 's'} to review` : 'no applications to review'}`}
             />
             <AdminDataTable
                 caption="Technicians and their applications"
@@ -252,14 +247,14 @@ const ApproveTechnicians = () => {
                 }
             />
 
-            <Sheet open={!!detailsFor} onOpenChange={(open) => { if (!open) setDetailsFor(null); }}>
+            <Sheet open={!!detailsFor} onOpenChange={(open) => { if (!open && !pendingAction) setDetailsId(null); }}>
                 <SheetContent side="right" className="w-full max-w-md">
                     <SheetHeader className="border-b border-ds-border">
                         <SheetTitle>{detailsFor?.name}</SheetTitle>
-                        <SheetDescription>Technician application details</SheetDescription>
+                        <SheetDescription>{detailsFor?.status === 'pending' ? 'Check the expertise and service area, then decide.' : 'Technician details'}</SheetDescription>
                     </SheetHeader>
                     {detailsFor && (
-                        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 text-sm">
+                        <dl className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 text-body-sm">
                             {[
                                 ['Email', detailsFor.email],
                                 ['Region', detailsFor.region],
@@ -295,10 +290,42 @@ const ApproveTechnicians = () => {
                                 <dt className="text-ds-muted-foreground">Expertise</dt>
                                 <dd><TechnicianExpertiseDetails technician={detailsFor} /></dd>
                             </div>
-                        </div>
+                        </dl>
+                    )}
+                    {detailsFor && (
+                        <SheetFooter className="border-t border-ds-border">
+                            {detailsFor.status !== 'approved' && !isTechnicianMatchable(detailsFor) && (
+                                <p className="text-micro text-ds-muted-foreground">Can't approve yet: the applicant's expertise and service area must be complete.</p>
+                            )}
+                            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                                {detailsFor.status !== 'rejected' && (
+                                    <Button variant="destructiveGhost" disabled={!!pendingAction} onClick={() => setDecision({ tech: detailsFor, status: 'rejected' })}>
+                                        <X aria-hidden="true" />{detailsFor.status === 'approved' ? 'Revoke approval' : 'Reject'}
+                                    </Button>
+                                )}
+                                {detailsFor.status !== 'approved' && (
+                                    <Button variant="primary" disabled={!!pendingAction || !isTechnicianMatchable(detailsFor)} onClick={() => setDecision({ tech: detailsFor, status: 'approved' })}>
+                                        <Check aria-hidden="true" />Approve
+                                    </Button>
+                                )}
+                            </div>
+                        </SheetFooter>
                     )}
                 </SheetContent>
             </Sheet>
+
+            <ConfirmDialog
+                open={!!decision}
+                onOpenChange={(open) => { if (!open && !pendingAction) setDecision(null); }}
+                title={decision?.status === 'approved' ? `Approve ${decision?.tech.name}?` : `Reject ${decision?.tech.name}?`}
+                description={decision?.status === 'approved'
+                    ? 'They can then be matched to repair requests in their service area.'
+                    : 'They will not be offered any repair requests. You can approve them later.'}
+                confirmLabel={decision?.status === 'approved' ? 'Approve technician' : 'Reject application'}
+                destructive={decision?.status === 'rejected'}
+                busy={!!pendingAction}
+                onConfirm={() => updateStatus(decision.tech, decision.status)}
+            />
         </div>
     );
 };

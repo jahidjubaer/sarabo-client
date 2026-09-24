@@ -1,15 +1,14 @@
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { Eye, UserCog, Search, X, ClipboardList } from 'lucide-react';
+import { Eye, UserCog, Search, X } from 'lucide-react';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
+import { useUrlFilters } from '../../../hooks/useUrlFilters';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { EmptyState } from '../../../components/common/EmptyState';
 import { ErrorState } from '../../../components/common/ErrorState';
 import { AdminDataTable } from '../../../components/admin/data-table/AdminDataTable';
-import { AdminPageLead } from '../../../components/admin/AdminPageLead';
 import { StatusBadge } from '../../../components/common/StatusBadge';
-import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { buttonVariants } from '../../../components/ui/button-variants';
 import { Input } from '../../../components/ui/input';
@@ -58,19 +57,23 @@ const ManageRepairRequests = () => {
     const queryClient = useQueryClient();
     const navigate = useNavigate();
 
-    const [searchInput, setSearchInput] = useState('');
-    const [debouncedSearch, setDebouncedSearch] = useState('');
-    const [status, setStatus] = useState('all');
-    const [paymentStatus, setPaymentStatus] = useState('all');
-    const [page, setPage] = useState(1);
+    // Filters live in the URL (Phase 5): a filtered list survives refresh and
+    // back, and the operations home links straight into one.
+    const [filters, setFilters] = useUrlFilters({ q: '', status: 'all', payment: 'all', page: '1' });
+    const { q: debouncedSearch, page } = filters;
+    // An unknown status in a hand-edited URL falls back to all, as the server
+    // would otherwise ignore it and return every row under a wrong label.
+    const status = STATUS_OPTIONS.some((o) => o.value === filters.status) ? filters.status : 'all';
+    const paymentStatus = PAYMENT_OPTIONS.some((o) => o.value === filters.payment) ? filters.payment : 'all';
+    const [searchInput, setSearchInput] = useState(debouncedSearch);
 
     useEffect(() => {
         const handle = setTimeout(() => {
-            setDebouncedSearch(searchInput.trim());
-            setPage(1);
+            const next = searchInput.trim();
+            if (next !== debouncedSearch) setFilters({ q: next, page: 1 });
         }, SEARCH_DEBOUNCE_MS);
         return () => clearTimeout(handle);
-    }, [searchInput]);
+    }, [searchInput, debouncedSearch, setFilters]);
 
     const repairRequestsQueryKey = ['adminRepairRequests', { page, search: debouncedSearch, status, paymentStatus }];
     const { data, isPending, isPaused, isError, error, isFetching } = useQuery({
@@ -95,10 +98,7 @@ const ManageRepairRequests = () => {
 
     const handleResetFilters = () => {
         setSearchInput('');
-        setDebouncedSearch('');
-        setStatus('all');
-        setPaymentStatus('all');
-        setPage(1);
+        setFilters({ q: '', status: 'all', payment: 'all', page: 1 });
     };
 
     const columns = useMemo(() => [
@@ -164,7 +164,7 @@ const ManageRepairRequests = () => {
     if (isUnavailableBeforeData) {
         return (
             <div className="space-y-6">
-                <PageHeader title="Repair Requests" />
+                <PageHeader title="Repair requests" />
                 <ErrorState
                     title="Couldn't load repair requests"
                     description={isError ? getManageRepairRequestsErrorMessage(error) : "We couldn't load repair requests right now. Please try again."}
@@ -210,11 +210,11 @@ const ManageRepairRequests = () => {
                 <Input id="manage-search" type="search" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} placeholder="Search tracking, customer, device" className="pl-9" />
             </div>
             <Label htmlFor="manage-status" className="sr-only">Filter by status</Label>
-            <Select id="manage-status" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} size="sm" wrapperClassName="sm:w-52">
+            <Select id="manage-status" value={status} onChange={(e) => setFilters({ status: e.target.value, page: 1 })} size="sm" wrapperClassName="sm:w-52">
                 {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </Select>
             <Label htmlFor="manage-payment" className="sr-only">Filter by payment</Label>
-            <Select id="manage-payment" value={paymentStatus} onChange={(e) => { setPaymentStatus(e.target.value); setPage(1); }} size="sm" wrapperClassName="sm:w-52">
+            <Select id="manage-payment" value={paymentStatus} onChange={(e) => setFilters({ payment: e.target.value, page: 1 })} size="sm" wrapperClassName="sm:w-52">
                 {PAYMENT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </Select>
             {hasActiveFilters && (
@@ -225,14 +225,9 @@ const ManageRepairRequests = () => {
 
     return (
         <div className="space-y-6">
-            <PageHeader title="Repair Requests" description={isInitialLoading ? 'Loading repair requests...' : `${pagination.totalItems} request${pagination.totalItems === 1 ? '' : 's'} across every stage`} />
-            <AdminPageLead
-                eyebrow="Repair operations"
-                title="Scan workflow state before intervening"
-                description="Search and filter the existing request record, then open details or route an assignable request to the assignment workflow."
-                icon={ClipboardList}
-                metric={isInitialLoading ? undefined : pagination.totalItems}
-                metricLabel="matching requests"
+            <PageHeader
+                title="Repair requests"
+                description={isInitialLoading ? 'Loading repair requests…' : `${pagination.totalItems}${hasActiveFilters ? ' matching' : ''} request${pagination.totalItems === 1 ? '' : 's'}`}
             />
             <p className={cn("text-sm text-ds-muted-foreground transition-opacity", isFetching ? "opacity-100" : "opacity-0")} role="status" aria-live="polite">Updating results…</p>
             <AdminDataTable
@@ -249,7 +244,7 @@ const ManageRepairRequests = () => {
                 manualPagination
                 pageCount={pagination.totalPages}
                 pageIndex={pagination.page - 1}
-                onPageChange={(index) => setPage(index + 1)}
+                onPageChange={(index) => setFilters({ page: index + 1 })}
                 emptyState={
                     <EmptyState
                         title={hasActiveFilters ? 'No matching requests' : 'No repair requests yet'}

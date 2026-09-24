@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '../../ui/sheet';
 import { Button } from '../../ui/button';
 import { useFeedbackMutation } from '../../../hooks/useTechnicianFeedback';
-import { FeedbackBadge, FeedbackDate, FeedbackReference } from './FeedbackPrimitives';
+import { FeedbackBadge, FeedbackDate, FeedbackReference, TechnicianName } from './FeedbackPrimitives';
 import ModerationDialog from './ModerationDialog';
 import { notify } from '../../../lib/notify';
 
@@ -24,6 +24,7 @@ export default function ReviewDetailSheet({ review, canModerate, onClose, return
                             <p className="whitespace-pre-wrap break-words text-sm [overflow-wrap:anywhere]">{review.comment || 'No comment provided.'}</p>
                         </section>
                         <dl className="grid gap-4 rounded-ds-lg border border-ds-border bg-ds-card p-4 text-sm sm:grid-cols-2">
+                            <div className="min-w-0 sm:col-span-2"><dt className="mb-1 font-medium">Technician</dt><dd><TechnicianName id={review.technicianId} /></dd></div>
                             <div className="min-w-0"><dt className="mb-1 font-medium">Review reference</dt><dd><FeedbackReference value={review._id} /></dd></div>
                             <div className="min-w-0"><dt className="mb-1 font-medium">Technician reference</dt><dd><FeedbackReference value={review.technicianId} /></dd></div>
                             <div><dt className="mb-1 font-medium">Created</dt><dd><FeedbackDate value={review.createdAt} /></dd></div>
