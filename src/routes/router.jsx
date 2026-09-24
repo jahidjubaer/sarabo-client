@@ -46,6 +46,7 @@ const NotificationsPage = lazy(() => import("../pages/Dashboard/Notifications/No
 const Wallet = lazy(() => import("../pages/Dashboard/Wallet/Wallet"));
 const WithdrawalRequests = lazy(() => import("../pages/Dashboard/WithdrawalRequests/WithdrawalRequests"));
 const AdminFeedbackPage = lazy(() => import("../pages/Dashboard/TechnicianFeedback/AdminFeedbackPage"));
+const ServiceCatalogue = lazy(() => import("../pages/Dashboard/ServiceCatalogue/ServiceCatalogue"));
 
 export const router = createBrowserRouter([
   {
@@ -245,6 +246,11 @@ export const router = createBrowserRouter([
         // technician-earning control on the request detail view.
         path: 'withdrawal-requests',
         element: <AdminRoute><WithdrawalRequests></WithdrawalRequests></AdminRoute>
+      },
+      {
+        // Admin service catalogue: prices and on/off for each repair service.
+        path: 'service-catalogue',
+        element: <AdminRoute><ServiceCatalogue></ServiceCatalogue></AdminRoute>
       }
     ]
       }

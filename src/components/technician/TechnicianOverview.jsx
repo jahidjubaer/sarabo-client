@@ -1,8 +1,9 @@
 import { Link } from 'react-router';
 import { motion as Motion } from 'motion/react';
-import { ArrowRight, Briefcase, Star } from 'lucide-react';
+import { ArrowRight, Briefcase, Star, Wrench } from 'lucide-react';
 import { useTechnicianJobs } from '../../hooks/useTechnicianJobs';
 import { useTechnicianWallet } from '../../hooks/useTechnicianWallet';
+import { useTechnicianProfile } from '../../hooks/useTechnicianProfile';
 import { useTechnicianReviews } from '../../hooks/useTechnicianFeedback';
 import { PageHeader } from '../common/PageHeader';
 import { EmptyState } from '../common/EmptyState';
@@ -58,6 +59,27 @@ function QueueStrip({ activeCount }) {
 //   In repair            repairs under way - a Continue link, no alarm
 //   Waiting on customer  quote decisions and payments
 // Completed jobs live on their own page.
+// Shown until the technician records what they repair: matching only offers
+// technicians with expertise, so without it no job can ever reach them.
+function CompleteProfileBanner() {
+    const { data } = useTechnicianProfile('rider');
+    if (!data || (Array.isArray(data.expertise) && data.expertise.length > 0)) return null;
+    return (
+        <section aria-labelledby="complete-profile-title" className="flex flex-col gap-3 rounded-ds-lg bg-ds-attention-subtle p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+            <div className="flex items-start gap-3">
+                <Wrench aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-ds-attention-subtle-foreground" />
+                <div>
+                    <h2 id="complete-profile-title" className="text-body font-bold text-ds-foreground">Complete your profile to receive jobs</h2>
+                    <p className="mt-0.5 text-body-sm text-ds-foreground/80">Add the products and repairs you handle. You won't be matched to any repair until you do.</p>
+                </div>
+            </div>
+            <Link to="/dashboard/profile?edit=expertise" className={buttonVariants({ variant: 'action', size: 'sm' })}>
+                Add your expertise <ArrowRight aria-hidden="true" />
+            </Link>
+        </section>
+    );
+}
+
 function TechnicianOverview() {
     const { jobs, isInitialLoading, isUnavailableBeforeData, retry, pending, advance, accept, decline } = useTechnicianJobs();
 
@@ -101,6 +123,8 @@ function TechnicianOverview() {
                 description={description}
                 actions={<Link to="/dashboard/completed-jobs" className={buttonVariants({ variant: 'outline' })}>Completed jobs</Link>}
             />
+
+            <CompleteProfileBanner />
 
             <QueueStrip activeCount={active} />
 

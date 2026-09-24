@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
-import { Check, X, Search } from 'lucide-react';
+import { Check, X, Search, RefreshCw } from 'lucide-react';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import { useUrlFilters } from '../../../hooks/useUrlFilters';
 import { PageHeader } from '../../../components/common/PageHeader';
@@ -21,6 +21,22 @@ import { StatusBadge } from '../../../components/common/StatusBadge';
 import { Select } from '../../../components/ui/select';
 
 const EMPTY_TECHNICIANS = [];
+
+// Marked busy although no active repair names them (GET /technicians adds
+// hasActiveAssignment). Such a technician can never be matched until the
+// status is corrected - the recheck action below does that.
+function isStuckBusy(technician) {
+    return technician?.workStatus === 'in_delivery' && technician?.hasActiveAssignment === false;
+}
+
+function WorkStatusBadges({ technician }) {
+    return (
+        <span className="inline-flex flex-wrap items-center gap-1">
+            <Badge tone={getWorkStatusTone(technician.workStatus)}>{getWorkStatusLabel(technician.workStatus)}</Badge>
+            {isStuckBusy(technician) && <Badge tone="warning">No active job</Badge>}
+        </span>
+    );
+}
 
 function ApplicationBadge({ status }) {
     return <StatusBadge domain="application" status={status} audience="admin" />;
@@ -142,6 +158,21 @@ const ApproveTechnicians = () => {
             .finally(() => { setPendingAction(null); setDecision(null); });
     };
 
+    // POST /technicians/:id/recheck-availability - corrects a stale "busy"
+    // status against the technician's real assignments (server-side rule).
+    const [rechecking, setRechecking] = useState(false);
+    const recheckAvailability = (technician) => {
+        if (rechecking) return;
+        setRechecking(true);
+        axiosSecure.post(`/technicians/${technician._id}/recheck-availability`)
+            .then((res) => {
+                refetch();
+                notify.success(res.data?.changed ? `${technician.name} is available for matching again.` : 'Availability is already correct.');
+            })
+            .catch(() => notify.error('Availability could not be rechecked. Please try again.'))
+            .finally(() => setRechecking(false));
+    };
+
     const columns = useMemo(() => [
         {
             id: 'name', header: 'Technician', enableSorting: true, enableHiding: false,
@@ -157,7 +188,7 @@ const ApproveTechnicians = () => {
         { id: 'district', header: 'District', enableSorting: true, accessorFn: (row) => row.district || '', cell: ({ row }) => row.original.district || '—', meta: { label: 'District' } },
         { id: 'expertise', header: 'Expertise', enableSorting: false, cell: ({ row }) => <ExpertiseBadges technician={row.original} />, meta: { label: 'Expertise' } },
         { id: 'application', header: 'Application', enableSorting: false, cell: ({ row }) => <ApplicationBadge status={row.original.status} />, meta: { label: 'Application' } },
-        { id: 'work', header: 'Work status', enableSorting: false, cell: ({ row }) => <Badge tone={getWorkStatusTone(row.original.workStatus)}>{getWorkStatusLabel(row.original.workStatus)}</Badge>, meta: { label: 'Work status' } },
+        { id: 'work', header: 'Work status', enableSorting: false, cell: ({ row }) => <WorkStatusBadges technician={row.original} />, meta: { label: 'Work status' } },
         {
             id: 'actions', header: '', enableSorting: false, enableHiding: false,
             cell: ({ row }) => (
@@ -196,7 +227,7 @@ const ApproveTechnicians = () => {
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-micro text-ds-muted-foreground">
                 <span>{tech.district || '—'}</span>
-                <Badge tone={getWorkStatusTone(tech.workStatus)}>{getWorkStatusLabel(tech.workStatus)}</Badge>
+                <WorkStatusBadges technician={tech} />
             </div>
             <div className="mt-2"><ExpertiseBadges technician={tech} /></div>
             <div className="mt-3 flex justify-end">
@@ -284,7 +315,18 @@ const ApproveTechnicians = () => {
                             </div>
                             <div className="grid grid-cols-3 gap-2">
                                 <dt className="text-ds-muted-foreground">Work status</dt>
-                                <dd className="col-span-2"><Badge tone={getWorkStatusTone(detailsFor.workStatus)}>{getWorkStatusLabel(detailsFor.workStatus)}</Badge></dd>
+                                <dd className="col-span-2 space-y-2">
+                                    <WorkStatusBadges technician={detailsFor} />
+                                    {isStuckBusy(detailsFor) && (
+                                        <div className="space-y-2">
+                                            <p className="text-micro text-ds-muted-foreground">Marked busy, but no active repair names this technician, so they can't be matched to new jobs.</p>
+                                            <Button variant="outline" size="sm" disabled={rechecking} onClick={() => recheckAvailability(detailsFor)}>
+                                                <RefreshCw aria-hidden="true" className={rechecking ? 'animate-spin' : undefined} />
+                                                {rechecking ? 'Rechecking…' : 'Recheck availability'}
+                                            </Button>
+                                        </div>
+                                    )}
+                                </dd>
                             </div>
                             <div className="space-y-1.5">
                                 <dt className="text-ds-muted-foreground">Expertise</dt>
