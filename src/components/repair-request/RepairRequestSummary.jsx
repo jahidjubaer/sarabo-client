@@ -1,4 +1,4 @@
-import { Smartphone, Wrench, MapPin } from 'lucide-react';
+import { Smartphone, Wrench, MapPin, CalendarClock } from 'lucide-react';
 
 // Read-only recap of what the customer is submitting / just submitted (Phase
 // 6.4 Unit 3A, redesigned ds-* in 7.7). Built entirely from local form values
@@ -37,6 +37,12 @@ const RepairRequestSummary = ({ review }) => {
                 <Row icon={MapPin} label="Service location">
                     <p>{review.locationText || '—'}</p>
                 </Row>
+
+                {review.pickupText && (
+                    <Row icon={CalendarClock} label="Pickup">
+                        <p>{review.pickupText}</p>
+                    </Row>
+                )}
 
                 <Row icon={Wrench} label="Issue">
                     <p className="whitespace-pre-line break-words">{review.issue || '—'}</p>

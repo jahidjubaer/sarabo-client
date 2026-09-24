@@ -1,12 +1,13 @@
 import { createElement, useState } from 'react';
 import { Link } from 'react-router';
-import { Clock, MapPin, ReceiptText } from 'lucide-react';
+import { CalendarClock, Clock, MapPin, ReceiptText } from 'lucide-react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { LoadingButton } from '../common/LoadingButton';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { getProductSummary } from '../../utils/customerRequestPresentation';
 import { getJobLocation } from '../../utils/technicianJobPresentation';
+import { formatPickupSlot } from '../../utils/pickupSlots';
 import { getProductCategoryIcon } from '../../utils/productCategoryIcons';
 import { validateRejectionReason, REJECTION_REASON_MAX } from '../../utils/assignmentDecision';
 import { formatMoneyRange } from '../../utils/currency';
@@ -21,6 +22,7 @@ function OfferCard({ job, onAccept, onDecline, pending }) {
     const [declineOpen, setDeclineOpen] = useState(false);
     const { device, category } = getProductSummary(job);
     const location = getJobLocation(job);
+    const pickup = formatPickupSlot(job.pickupSlot);
     const pricing = job?.pricing;
     const estimate = pricing && typeof pricing.estimateMin === 'number' && typeof pricing.estimateMax === 'number'
         ? formatMoneyRange(pricing.estimateMin, pricing.estimateMax, pricing.currency)
@@ -48,6 +50,7 @@ function OfferCard({ job, onAccept, onDecline, pending }) {
                     )}
                     <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-body-sm text-ds-muted-foreground">
                         {location && <span className="inline-flex items-center gap-1.5"><MapPin aria-hidden="true" className="size-4" />{location}</span>}
+                        {pickup && <span className="inline-flex items-center gap-1.5"><CalendarClock aria-hidden="true" className="size-4" />Pickup <span className="font-semibold text-ds-foreground">{pickup}</span></span>}
                         {estimate && <span className="inline-flex items-center gap-1.5"><ReceiptText aria-hidden="true" className="size-4" />Estimate <span className="ds-numeric font-semibold text-ds-foreground">{estimate}</span></span>}
                         {job.updatedAt && <span className="inline-flex items-center gap-1.5"><Clock aria-hidden="true" className="size-4" />Offered {formatRelativeTime(job.updatedAt)}</span>}
                     </p>

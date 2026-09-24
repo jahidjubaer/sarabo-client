@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
-import { Search, UserCog, MapPin, Award, Star, Briefcase, Wrench } from 'lucide-react';
+import { Search, UserCog, MapPin, Award, Star, Briefcase, Wrench, CalendarClock, CircleSlash } from 'lucide-react';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import { useUrlFilters } from '../../../hooks/useUrlFilters';
 import { PageHeader } from '../../../components/common/PageHeader';
@@ -17,7 +17,8 @@ import { Skeleton } from '../../../components/ui/skeleton';
 import { notify } from '../../../lib/notify';
 import { humanizeSlug } from '../../../utils/serviceDefinitionCatalog';
 import { getProductSummary, getDeviceLabel } from '../../../utils/customerRequestPresentation';
-import { getWorkStatusLabel, getWorkStatusTone, formatRecommendationReasons, getServiceAreaLabel } from '../../../utils/adminPresentation';
+import { getWorkStatusLabel, getWorkStatusTone, formatRecommendationReasons, getServiceAreaLabel, getIneligibleReasonLabels } from '../../../utils/adminPresentation';
+import { formatPickupSlot } from '../../../utils/pickupSlots';
 import { formatAbsoluteDateTime } from '../../../utils/relativeTime';
 import { getAssignmentErrorMessage } from '../../../utils/assignmentErrorMessage';
 
@@ -26,7 +27,9 @@ const EMPTY_REQUESTS = [];
 // Phase 7.5: technician assignment rebuilt around the EXPERTISE-AWARE backend.
 // The assignment Sheet uses the authoritative eligible-technicians endpoint
 // (GET /repair-requests/:id/eligible-technicians) - only server-eligible, server-ranked
-// technicians are shown, with the server's own recommendation reasons. No
+// technicians can be assigned, with the server's own recommendation reasons.
+// Its diagnostic mode also lists everyone else as "Not available" with the
+// server's reasons (wrong device or repair, level, busy, other region). No
 // client-side suitability scoring. Assignment still goes through the existing
 // PATCH /repair-requests/:id (which re-validates eligibility server-side); no business
 // logic changes.
@@ -56,7 +59,7 @@ const AssignTechnicians = () => {
     const eligibleQuery = useQuery({
         queryKey: eligibleTechniciansQueryKey,
         enabled: !!selectedRequest?._id,
-        queryFn: async () => (await axiosSecure.get(`/repair-requests/${selectedRequest._id}/eligible-technicians`)).data,
+        queryFn: async () => (await axiosSecure.get(`/repair-requests/${selectedRequest._id}/eligible-technicians`, { params: { diagnostic: 'true' } })).data,
     });
     const hasUsableEligibleTechnicians = Array.isArray(eligibleQuery.data?.technicians);
     const isEligibleInitialLoading = eligibleQuery.isPending && !eligibleQuery.isPaused && !hasUsableEligibleTechnicians;
@@ -129,6 +132,13 @@ const AssignTechnicians = () => {
         },
         { id: 'customer', header: 'Customer', enableSorting: false, cell: ({ row }) => <span className="truncate">{row.original.senderName || '—'}</span>, meta: { label: 'Customer' } },
         { id: 'district', header: 'District', enableSorting: true, accessorFn: (row) => row.senderDistrict || row.serviceLocation?.district || '', cell: ({ row }) => row.original.senderDistrict || row.original.serviceLocation?.district || '—', meta: { label: 'District' } },
+        {
+            id: 'pickup', header: 'Pickup', enableSorting: true,
+            // Unscheduled (older) requests sort last.
+            accessorFn: (row) => (row.pickupSlot?.startsAt ? new Date(row.pickupSlot.startsAt).getTime() : Number.MAX_SAFE_INTEGER),
+            cell: ({ row }) => <span className="whitespace-nowrap">{formatPickupSlot(row.original.pickupSlot) || <span className="text-ds-muted-foreground">Not scheduled</span>}</span>,
+            meta: { label: 'Pickup' },
+        },
         { id: 'created', header: 'Requested', enableSorting: false, cell: ({ row }) => <span className="whitespace-nowrap text-ds-muted-foreground">{row.original.createdAt ? formatAbsoluteDateTime(row.original.createdAt) : ''}</span>, meta: { label: 'Requested' } },
         {
             id: 'actions', header: '', enableSorting: false, enableHiding: false,
@@ -152,6 +162,14 @@ const AssignTechnicians = () => {
 
     const summary = hasUsableEligibleTechnicians ? eligibleQuery.data.requestSummary : undefined;
     const eligibleTechnicians = hasUsableEligibleTechnicians ? eligibleQuery.data.technicians : [];
+    // Applicants who are not approved yet are not technicians, so they are
+    // left out. Closest matches (fewest reasons) first.
+    const unavailableTechnicians = hasUsableEligibleTechnicians && Array.isArray(eligibleQuery.data.ineligibleTechnicians)
+        ? eligibleQuery.data.ineligibleTechnicians
+            .filter((tech) => !tech.reasonCodes?.includes('TECHNICIAN_NOT_APPROVED'))
+            .sort((a, b) => (a.reasonCodes?.length ?? 0) - (b.reasonCodes?.length ?? 0))
+        : [];
+    const selectedPickup = formatPickupSlot(selectedRequest?.pickupSlot);
 
     const renderCard = (request) => {
         const { device, category } = getProductSummary(request);
@@ -165,6 +183,12 @@ const AssignTechnicians = () => {
                     <MapPin aria-hidden="true" className="size-3.5" />
                     {request.senderDistrict || request.serviceLocation?.district || '—'}
                 </div>
+                {request.pickupSlot && (
+                    <div className="mt-1 flex items-center gap-2 text-xs text-ds-muted-foreground">
+                        <CalendarClock aria-hidden="true" className="size-3.5" />
+                        Pickup {formatPickupSlot(request.pickupSlot)}
+                    </div>
+                )}
                 <div className="mt-3 flex justify-end">
                     <Button size="sm" onClick={() => setSelectedRequest(request)}><UserCog aria-hidden="true" />Find technicians</Button>
                 </div>
@@ -213,6 +237,7 @@ const AssignTechnicians = () => {
                         <SheetDescription>
                             {selectedRequest ? getProductSummary(selectedRequest).device : ''}
                             {summary?.serviceArea?.district ? ` · ${summary.serviceArea.district}` : ''}
+                            {selectedPickup ? ` · Pickup ${selectedPickup}` : ''}
                         </SheetDescription>
                     </SheetHeader>
 
@@ -235,7 +260,7 @@ const AssignTechnicians = () => {
                                 headingLevel={3}
                             />
                         ) : eligibleTechnicians.length === 0 ? (
-                            <EmptyState title="No eligible technicians" description="No approved, available technician currently matches this request's expertise and service area." headingLevel={3} />
+                            <EmptyState title="No eligible technicians" description="No available technician in this region matches this request's device and repair. The reasons for each technician are listed below." headingLevel={3} />
                         ) : (
                             <ul className="space-y-3">
                                 {eligibleTechnicians.map((tech, index) => (
@@ -272,6 +297,30 @@ const AssignTechnicians = () => {
                                     </li>
                                 ))}
                             </ul>
+                        )}
+
+                        {unavailableTechnicians.length > 0 && (
+                            <section aria-labelledby="unavailable-technicians-heading" className="mt-6">
+                                <h3 id="unavailable-technicians-heading" className="text-body-sm font-bold text-ds-foreground">
+                                    Not available ({unavailableTechnicians.length})
+                                </h3>
+                                <p className="mt-0.5 text-micro text-ds-muted-foreground">These technicians can't take this request.</p>
+                                <ul className="mt-3 space-y-2">
+                                    {unavailableTechnicians.map((tech) => (
+                                        <li key={tech.technicianId} className="rounded-ds-lg border border-ds-border bg-ds-muted/40 p-3">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <p className="min-w-0 truncate text-body-sm font-medium text-ds-foreground">{tech.displayName || 'Unnamed technician'}</p>
+                                                <Badge tone="neutral"><CircleSlash aria-hidden="true" />Not available</Badge>
+                                            </div>
+                                            <ul className="mt-1.5 flex flex-wrap gap-1" aria-label="Reasons">
+                                                {getIneligibleReasonLabels(tech).map((label) => (
+                                                    <li key={label}><Badge tone="attention">{label}</Badge></li>
+                                                ))}
+                                            </ul>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </section>
                         )}
                     </div>
                 </SheetContent>

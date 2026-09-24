@@ -7,6 +7,7 @@ import { buttonVariants } from '../ui/button-variants';
 import { StatusBadge } from '../common/StatusBadge';
 import { getProductSummary, getRequestStatus } from '../../utils/customerRequestPresentation';
 import { getTechnicianAttention, getJobLocation } from '../../utils/technicianJobPresentation';
+import { formatPickupSlot, PICKUP_CHANGEABLE_STATUSES } from '../../utils/pickupSlots';
 import { getProductCategoryIcon } from '../../utils/productCategoryIcons';
 import { formatRelativeTime } from '../../utils/relativeTime';
 import { cn } from '../../lib/utils';
@@ -22,6 +23,8 @@ function JobRow({ job, onAdvance, pending, children }) {
     const status = getRequestStatus(job);
     const attention = getTechnicianAttention(job);
     const location = getJobLocation(job);
+    // Only useful until the device is collected.
+    const pickup = PICKUP_CHANGEABLE_STATUSES.includes(job.deliveryStatus) ? formatPickupSlot(job.pickupSlot) : '';
     const detailsTo = `/dashboard/assigned-jobs/${job._id}`;
     const busy = pending?.id === job._id;
     const needsYou = attention.kind === 'action';
@@ -55,6 +58,7 @@ function JobRow({ job, onAdvance, pending, children }) {
                     <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-micro text-ds-muted-foreground">
                         {category && <span>{category}</span>}
                         {location && <span>{location}</span>}
+                        {pickup && <span className="font-semibold text-ds-foreground">Pickup {pickup}</span>}
                         {job.trackingId && <span className="ds-numeric">{job.trackingId}</span>}
                         {job.updatedAt && <span>Updated {formatRelativeTime(job.updatedAt)}</span>}
                     </p>

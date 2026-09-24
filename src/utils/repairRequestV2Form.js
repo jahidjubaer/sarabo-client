@@ -1,3 +1,5 @@
+import { parsePickupChoice } from './pickupSlots';
+
 // Client-side visibility/UX validation only (Phase 6.4 Unit 3A) - mirrors
 // sarabo-server's utils/repairRequestV2.js bounds exactly (same min/max
 // lengths) so a rejection here matches what the server would say anyway,
@@ -63,6 +65,10 @@ export function validateRepairRequestV2Form(values, definitions) {
         errors['serviceLocation.address'] = `Service address must be ${LOCATION_FIELD_MAX_LENGTH} characters or fewer.`;
     }
 
+    if (!parsePickupChoice(values.pickupChoice)) {
+        errors.pickupChoice = 'Please choose a pickup time.';
+    }
+
     return { valid: Object.keys(errors).length === 0, errors };
 }
 
@@ -70,8 +76,8 @@ export function validateRepairRequestV2Form(values, definitions) {
 // no unexpected/injected key (e.g. a MongoDB operator smuggled in via a
 // crafted form field name) can ever reach the request body. Matches
 // sarabo-server's exact createRepairRequestV2 contract: product/
-// serviceDefinitionId/damage/serviceLocation only - no senderEmail, role, or
-// pricing field of any kind.
+// serviceDefinitionId/damage/serviceLocation/pickupSlot only - no senderEmail,
+// role, or pricing field of any kind.
 export function buildRepairRequestV2Payload(values) {
     const product = { categorySlug: values.productCategorySlug.trim() };
     if (!isBlank(values.productBrand)) product.brand = values.productBrand.trim();
@@ -91,5 +97,7 @@ export function buildRepairRequestV2Payload(values) {
             district: values.serviceLocation.district.trim(),
             address: values.serviceLocation.address.trim(),
         },
+        // { date, slotId } only; the server works out the exact times.
+        pickupSlot: parsePickupChoice(values.pickupChoice),
     };
 }

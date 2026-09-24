@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion as Motion } from 'motion/react';
 import ServiceSpine from '../spine/ServiceSpine';
 import DamageImageManager from '../damage-images/DamageImageManager';
@@ -8,6 +9,9 @@ import RepairSection from '../repair/RepairSection';
 import ReceiptConfirmationSection from '../repair/ReceiptConfirmationSection';
 import CustomerTechnicianFeedback from '../feedback/customer/CustomerTechnicianFeedback';
 import { WorkspaceContextPanels } from '../workspace/WorkspaceContextPanels';
+import { PickupRescheduleSheet } from '../pickup/PickupRescheduleSheet';
+import { Button } from '../ui/button';
+import { canChangePickup } from '../../utils/pickupSlots';
 import { NextStepPanel } from '../workspace/NextStepPanel';
 import { StageSection } from '../workspace/StageSection';
 import { Card, CardContent } from '../ui/card';
@@ -60,6 +64,12 @@ function CustomerRequestDetailsView({ request, sections, isV2Request, damageImag
     const rank = getStatusRank(status);
     const cancelled = status === 'cancelled';
     const action = getRequestAction(request);
+    const [pickupSheetOpen, setPickupSheetOpen] = useState(false);
+    const pickupAction = canChangePickup(request) ? (
+        <Button variant="outline" size="sm" onClick={() => setPickupSheetOpen(true)}>
+            {request.pickupSlot ? 'Change' : 'Choose time'}
+        </Button>
+    ) : null;
     const model = nextStepModel(request, action);
     const handover = getHandoverState(request);
     const paid = isRequestPaid(request);
@@ -178,8 +188,9 @@ function CustomerRequestDetailsView({ request, sections, isV2Request, damageImag
                 </div>
 
                 <aside aria-label="Repair details" className="space-y-4 lg:sticky lg:top-24">
-                    <WorkspaceContextPanels request={request} showCustomer={false} />
+                    <WorkspaceContextPanels request={request} showCustomer={false} pickupAction={pickupAction} />
                 </aside>
+                <PickupRescheduleSheet open={pickupSheetOpen} onOpenChange={setPickupSheetOpen} request={request} />
             </Motion.div>
         </Motion.div>
     );

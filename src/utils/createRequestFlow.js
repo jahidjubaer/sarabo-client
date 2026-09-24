@@ -8,6 +8,7 @@
 // submitted payload (that is buildRepairRequestV2Payload's frozen contract).
 
 import { findDefinitionById, formatEstimateRange } from './serviceDefinitionCatalog';
+import { formatPickupChoice } from './pickupSlots';
 
 function nonBlank(value) {
     return typeof value === 'string' && value.trim().length > 0;
@@ -47,6 +48,7 @@ export function buildReviewModel(values, definitions, productCategories) {
         estimateText: definition ? formatEstimateRange(definition.pricingEstimate) : '',
         issue: nonBlank(values?.damageDescription) ? values.damageDescription.trim() : '',
         locationText,
+        pickupText: formatPickupChoice(values?.pickupChoice),
         definition,
     };
 }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLoaderData, useNavigate, useSearchParams, Link } from 'react-router';
 import { motion as Motion, MotionConfig } from 'motion/react';
@@ -33,6 +33,9 @@ import { MobileActionBar } from '../layout/MobileActionBar';
 import { FormAlert } from '../common/FormAlert';
 import { Card } from '../ui/card';
 import { Select } from '../ui/select';
+import { PickupSlotPicker } from '../pickup/PickupSlotPicker';
+import { pickupSlotKeys } from '../../hooks/usePickupSlots';
+import { formatPickupChoice, STALE_PICKUP_CODES } from '../../utils/pickupSlots';
 
 
 // One numbered part of the form: a numbered heading and the fields beneath.
@@ -89,7 +92,7 @@ function SummaryRow({ label, value }) {
 // the malformed-response handling are all preserved exactly.
 const RepairRequestV2Form = () => {
     const {
-        register, handleSubmit, control, setValue, reset, formState: { errors },
+        register, handleSubmit, control, setValue, setError, reset, formState: { errors },
     } = useForm();
     const axiosSecure = useAxiosSecure();
     const queryClient = useQueryClient();
@@ -160,6 +163,8 @@ const RepairRequestV2Form = () => {
     useEffect(() => {
         if (previousRegionRef.current !== undefined && previousRegionRef.current !== selectedRegion) {
             setValue('serviceLocation.district', '');
+            // Pickup times are per region, so a chosen time no longer applies.
+            setValue('pickupChoice', '');
         }
         previousRegionRef.current = selectedRegion;
     }, [selectedRegion, setValue]);
@@ -203,6 +208,14 @@ const RepairRequestV2Form = () => {
             if (error?.isMalformedSuccessResponse) {
                 setAmbiguousFailure(true);
                 return;
+            }
+            // The chosen time was taken or closed meanwhile: reload the times
+            // and ask for another, keeping everything else the customer typed.
+            if (STALE_PICKUP_CODES.includes(error?.response?.data?.code)) {
+                queryClient.invalidateQueries({ queryKey: pickupSlotKeys.all });
+                setValue('pickupChoice', '');
+                setError('pickupChoice', { message: 'That time is no longer available. Please choose another.' }, { shouldFocus: false });
+                document.getElementById('request-pickup-heading')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
             notify.error(getCreateRequestErrorMessage(error));
         },
@@ -330,7 +343,7 @@ const RepairRequestV2Form = () => {
             <div className="mx-auto w-full max-w-6xl space-y-6 pb-24 lg:pb-0">
                 <PageHeader
                     title="Request a repair"
-                    description="Three short steps. No payment is needed to submit."
+                    description="Four short steps. No payment is needed to submit."
                 />
 
                 {submitProblem !== 0 && (
@@ -488,6 +501,24 @@ const RepairRequestV2Form = () => {
                                 </div>
                         </SectionShell>
 
+                        <SectionShell step={4} stepId="pickup" title="When to collect it" description="Choose a 2-hour pickup window. You can change it until the device is collected.">
+                            <Controller
+                                name="pickupChoice"
+                                control={control}
+                                defaultValue=""
+                                rules={{ validate: (v) => !!v || 'Please choose a pickup time.' }}
+                                render={({ field }) => (
+                                    <PickupSlotPicker
+                                        region={selectedRegion}
+                                        value={field.value}
+                                        onChange={field.onChange}
+                                        error={errors.pickupChoice?.message}
+                                        errorId="pickup-error"
+                                    />
+                                )}
+                            />
+                        </SectionShell>
+
                         <div className="lg:hidden">
                             <Link to="/dashboard/my-requests" className={buttonVariants({ variant: 'ghost' })}>Cancel</Link>
                         </div>
@@ -500,6 +531,7 @@ const RepairRequestV2Form = () => {
                                 <SummaryRow label="Device" value={[liveReview.productCategoryLabel, liveReview.deviceLabel].filter(Boolean).join(' · ')} />
                                 <SummaryRow label="Repair" value={liveReview.serviceLabel} />
                                 <SummaryRow label="Location" value={selectedServiceArea} />
+                                <SummaryRow label="Pickup" value={formatPickupChoice(watchedValues?.pickupChoice)} />
                                 <SummaryRow label="Estimate" value={estimateText} />
                             </dl>
                             <div className="mt-4 space-y-2">

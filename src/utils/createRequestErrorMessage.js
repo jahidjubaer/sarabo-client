@@ -23,6 +23,11 @@ const V2_ERROR_MESSAGES = {
     DAMAGE_DESCRIPTION_REQUIRED: 'Please describe the issue with your device.',
     INVALID_DAMAGE_DESCRIPTION: 'Please describe the issue in more detail.',
     INVALID_SERVICE_LOCATION: 'Please complete the service location fields.',
+    INVALID_PICKUP_SLOT: 'Please choose a pickup time.',
+    PICKUP_SLOT_FULL: 'That pickup time was just booked up. Please choose another.',
+    PICKUP_SLOT_TOO_SOON: 'That pickup time has passed or starts too soon. Please choose a later one.',
+    PICKUP_SLOT_TOO_FAR: 'Pickups can be booked up to 7 days ahead. Please choose an earlier day.',
+    PICKUP_DAY_CLOSED: 'We do not collect on that day. Please choose another.',
     AUTHENTICATION_REQUIRED: 'Your session has expired. Please log in again.',
     FORBIDDEN: 'You are not authorized to create a repair request.',
 };
