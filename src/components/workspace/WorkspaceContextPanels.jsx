@@ -9,12 +9,22 @@ import { isLegacyRequest } from '../../utils/workspacePresentation';
 // Money keeps its own stored currency (no FX, no combined totals): a v2 request
 // shows its BDT pricing estimate, a legacy request its historical USD cost.
 
-function Row({ label, value }) {
+// `stacked` puts a long value (a problem description, an address) under its
+// label instead of squeezing it into a right-aligned column.
+function Row({ label, value, stacked = false }) {
     if (value === undefined || value === null || value === '') return null;
+    if (stacked) {
+        return (
+            <div className="py-2 text-body-sm">
+                <dt className="text-ds-muted-foreground">{label}</dt>
+                <dd className="mt-0.5 break-words text-ds-foreground">{value}</dd>
+            </div>
+        );
+    }
     return (
-        <div className="flex justify-between gap-3 py-1 text-sm">
+        <div className="flex justify-between gap-3 py-2 text-body-sm">
             <dt className="shrink-0 text-ds-muted-foreground">{label}</dt>
-            <dd className="min-w-0 break-words text-right text-ds-foreground">{value}</dd>
+            <dd className="min-w-0 break-words text-right font-semibold text-ds-foreground">{value}</dd>
         </div>
     );
 }
@@ -22,9 +32,9 @@ function Row({ label, value }) {
 function Panel({ title, children }) {
     return (
         <Card>
-            <CardContent className="p-4">
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ds-muted-foreground">{title}</h3>
-                <dl className="divide-y divide-ds-border">{children}</dl>
+            <CardContent className="p-5">
+                <h3 className="text-body-sm font-bold text-ds-foreground">{title}</h3>
+                <dl className="mt-1 divide-y divide-ds-border">{children}</dl>
             </CardContent>
         </Card>
     );
@@ -61,14 +71,14 @@ function WorkspaceContextPanels({ request, showCustomer }) {
                         <Row label="Category" value={request.product?.categorySlug ? humanizeSlug(request.product.categorySlug) : null} />
                         <Row label="Brand" value={request.product?.brand} />
                         <Row label="Model" value={request.product?.model} />
-                        <Row label="Problem" value={request.damage?.description} />
+                        <Row label="Problem" value={request.damage?.description} stacked />
                     </>
                 )}
             </Panel>
 
             <Panel title="Service">
                 {legacy ? (
-                    <Row label="Address" value={[request.senderAddress, request.senderDistrict, request.senderRegion].filter(Boolean).join(', ') || null} />
+                    <Row label="Address" value={[request.senderAddress, request.senderDistrict, request.senderRegion].filter(Boolean).join(', ') || null} stacked />
                 ) : (
                     <Row label="Location" value={[request.serviceLocation?.district, request.serviceLocation?.region].filter(Boolean).join(', ') || null} />
                 )}
@@ -83,9 +93,9 @@ function WorkspaceContextPanels({ request, showCustomer }) {
                 </Panel>
             )}
 
-            <Panel title="Financial">
+            <Panel title="Money">
                 {estimate && <Row label={legacy ? 'Cost' : 'Estimate'} value={estimate} />}
-                {approvedQuote && <Row label="Approved quote" value={approvedQuote} />}
+                {approvedQuote && <Row label="Approved quote" value={<span className="ds-numeric">{approvedQuote}</span>} />}
                 <Row label="Payment" value={isPaid ? 'Paid' : 'Unpaid'} />
             </Panel>
         </div>

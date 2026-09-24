@@ -5,6 +5,7 @@ import { Button } from '../ui/button';
 import QuoteForm from './QuoteForm';
 import QuoteSummary from './QuoteSummary';
 import QuoteDecisionActions from './QuoteDecisionActions';
+import { formatMoney } from '../../utils/currency';
 
 // Orchestrates the quote area inside the repair workspace (Phase 6.4 Unit 5).
 // Server truth decides which of form / summary (+ owner decision) / hint shows;
@@ -37,7 +38,7 @@ const QuoteSection = ({ requestId, isOwner, canSubmitQuote, isAssignedTechnician
         return (
             <div>
                 <QuoteSummary quote={quote} audience={audience} />
-                {isOwner && <QuoteDecisionActions requestId={requestId} />}
+                {isOwner && <QuoteDecisionActions requestId={requestId} total={formatMoney(quote.totalAmount, quote.currency || 'BDT')} />}
             </div>
         );
     }

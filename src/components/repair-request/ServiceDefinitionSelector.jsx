@@ -1,40 +1,13 @@
-import { Smartphone, Laptop, Tablet, Tv, Refrigerator, AirVent, WashingMachine, Watch, Headphones, Wrench, Boxes, CircleCheck } from 'lucide-react';
+import { Wrench, CircleCheck } from 'lucide-react';
+import CategoryImage from '../public/CategoryImage';
+import EstimateCard from './EstimateCard';
 import { humanizeSlug } from '../../utils/serviceDefinitionCatalog';
 import { ErrorState } from '../common/ErrorState';
 import { EmptyState } from '../common/EmptyState';
 import { Skeleton } from '../ui/skeleton';
 import { cn } from '../../lib/utils';
 
-// Decorative-only icon lookup (Phase 7.7). This is NOT a taxonomy: it maps a
-// server-provided product-category slug to a Lucide glyph purely for visual
-// affordance, and falls back to a generic icon for any slug it does not
-// recognize - so a new server category always renders safely without this
-// client ever inventing or gating a category of its own.
-const CATEGORY_ICONS = {
-    'smartphone': Smartphone,
-    'mobile-phone': Smartphone,
-    'phone': Smartphone,
-    'laptop': Laptop,
-    'computer': Laptop,
-    'tablet': Tablet,
-    'television': Tv,
-    'tv': Tv,
-    'refrigerator': Refrigerator,
-    'fridge': Refrigerator,
-    'air-conditioner': AirVent,
-    'ac': AirVent,
-    'washing-machine': WashingMachine,
-    'smartwatch': Watch,
-    'watch': Watch,
-    'headphones': Headphones,
-    'earphones': Headphones,
-};
-
-function categoryIcon(slug) {
-    return CATEGORY_ICONS[slug] || Boxes;
-}
-
-const TILE_BASE = 'focus-within:ring-2 focus-within:ring-ds-ring focus-within:ring-offset-1 focus-within:ring-offset-ds-background relative flex min-w-0 cursor-pointer flex-col rounded-ds-lg border border-ds-border bg-ds-background p-4 transition-colors hover:border-ds-primary/50 hover:bg-ds-muted/30 has-[:checked]:border-ds-primary has-[:checked]:bg-ds-primary/5 has-[:checked]:shadow-sm';
+const TILE_BASE = 'has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ds-ring has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-ds-background relative flex min-w-0 cursor-pointer flex-col rounded-ds-lg border border-ds-border bg-ds-card p-4 transition-colors hover:border-ds-input has-[:checked]:border-ds-primary has-[:checked]:ring-2 has-[:checked]:ring-ds-primary';
 
 // Presentational, controlled-by-parent catalogue selector. `register`/`errors` come
 // from the parent's react-hook-form instance (no Controller, no new form
@@ -57,6 +30,7 @@ const ServiceDefinitionSelector = ({
     productCategories,
     servicesForSelectedProduct,
     selectedProductCategorySlug,
+    selectedDefinition,
 }) => {
     if (part === 'category') {
         if (isLoading) {
@@ -92,29 +66,31 @@ const ServiceDefinitionSelector = ({
                     Device category <span aria-hidden="true" className="text-ds-destructive">*</span>
                     <span className="sr-only"> (required)</span>
                 </legend>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    {productCategories.map((category) => {
-                        const Icon = categoryIcon(category.slug);
-                        return (
-                            <label key={category.slug} className={cn(TILE_BASE, 'items-start')}>
-                                <input
-                                    type="radio"
-                                    value={category.slug}
-                                    {...register('productCategorySlug', { required: 'Please select a product category.' })}
-                                    className="peer sr-only"
-                                    aria-invalid={errors.productCategorySlug ? 'true' : 'false'}
-                                    aria-required="true"
-                                    aria-describedby={errors.productCategorySlug ? 'productCategorySlug-error' : undefined}
-                                />
-                                <CircleCheck aria-hidden="true" className="pointer-events-none absolute right-2 top-2 size-4 text-ds-primary opacity-0 peer-checked:opacity-100" />
-                                <Icon aria-hidden="true" className="mb-2 size-6 text-ds-primary" />
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    {productCategories.map((category) => (
+                        <label
+                            key={category.slug}
+                            className="group relative flex min-w-0 cursor-pointer flex-col overflow-hidden rounded-ds-lg border border-ds-border bg-ds-card transition-colors hover:border-ds-input has-[:checked]:border-ds-primary has-[:checked]:ring-2 has-[:checked]:ring-ds-primary has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ds-ring has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-ds-background"
+                        >
+                            <input
+                                type="radio"
+                                value={category.slug}
+                                {...register('productCategorySlug', { required: 'Please select a product category.' })}
+                                className="peer sr-only"
+                                aria-invalid={errors.productCategorySlug ? 'true' : 'false'}
+                                aria-required="true"
+                                aria-describedby={errors.productCategorySlug ? 'productCategorySlug-error' : undefined}
+                            />
+                            <CategoryImage slug={category.slug} className="aspect-[4/3] w-full" iconClassName="size-8" />
+                            <span className="flex items-center justify-between gap-2 p-3">
                                 <span className="break-words text-body-sm font-semibold text-ds-foreground">{category.label}</span>
-                            </label>
-                        );
-                    })}
+                                <CircleCheck aria-hidden="true" className="size-5 shrink-0 text-ds-primary opacity-0 peer-checked:opacity-100 group-has-[:checked]:opacity-100" />
+                            </span>
+                        </label>
+                    ))}
                 </div>
                 {errors.productCategorySlug && (
-                    <p id="productCategorySlug-error" role="alert" className="mt-2 text-xs font-medium text-ds-destructive">{errors.productCategorySlug.message}</p>
+                    <p id="productCategorySlug-error" role="alert" className="mt-2 text-body-sm font-medium text-ds-destructive">{errors.productCategorySlug.message}</p>
                 )}
             </fieldset>
         );
@@ -170,8 +146,9 @@ const ServiceDefinitionSelector = ({
                 ))}
             </div>
             {errors.serviceDefinitionId && (
-                <p id="serviceDefinitionId-error" role="alert" className="mt-2 text-xs font-medium text-ds-destructive">{errors.serviceDefinitionId.message}</p>
+                <p id="serviceDefinitionId-error" role="alert" className="mt-2 text-body-sm font-medium text-ds-destructive">{errors.serviceDefinitionId.message}</p>
             )}
+            {selectedDefinition && <EstimateCard definition={selectedDefinition} className="mt-4" />}
         </fieldset>
     );
 };

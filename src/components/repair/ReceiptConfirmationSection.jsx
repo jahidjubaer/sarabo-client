@@ -44,12 +44,12 @@ const ReceiptConfirmationSection = ({ requestId, request, isOwner }) => {
 
     if (isConfirmed) {
         return (
-            <div className="flex items-start gap-3 rounded-ds border border-ds-border bg-ds-muted/30 p-4">
+            <div className="flex items-start gap-3">
                 <CircleCheckBig aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-ds-success" />
                 <div className="space-y-0.5">
-                    <p className="text-sm font-semibold text-ds-foreground">Device received</p>
+                    <p className="text-body-sm font-semibold text-ds-foreground">Device received</p>
                     {confirmation.confirmedAt && (
-                        <p className="text-xs text-ds-muted-foreground">Confirmed on {formatAbsoluteDateTime(confirmation.confirmedAt)}</p>
+                        <p className="text-micro text-ds-muted-foreground">Confirmed {formatAbsoluteDateTime(confirmation.confirmedAt)}</p>
                     )}
                 </div>
             </div>
@@ -59,9 +59,9 @@ const ReceiptConfirmationSection = ({ requestId, request, isOwner }) => {
     // Pending, non-owner (admin / assigned technician): read-only status, no action.
     if (!isOwner) {
         return (
-            <div className="flex items-center gap-2 rounded-ds border border-ds-border bg-ds-muted/20 p-4">
+            <div className="flex items-center gap-2">
                 <PackageCheck aria-hidden="true" className="size-5 shrink-0 text-ds-muted-foreground" />
-                <p className="text-sm text-ds-muted-foreground">Pending customer confirmation of receipt.</p>
+                <p className="text-body-sm text-ds-muted-foreground">Waiting for the customer to confirm they have the device.</p>
             </div>
         );
     }
@@ -69,15 +69,9 @@ const ReceiptConfirmationSection = ({ requestId, request, isOwner }) => {
     // Pending, owner: the confirmation action.
     return (
         <>
-            <div className="space-y-3 rounded-ds border border-ds-border p-4">
-                <div className="space-y-1">
-                    <p className="text-sm font-semibold text-ds-foreground">Have you received your repaired device?</p>
-                    <p className="text-xs text-ds-muted-foreground">Confirm once you have received your repaired device.</p>
-                </div>
-                <Button variant="action" size="sm" onClick={() => setOpen(true)} disabled={busy}>
-                    <PackageCheck aria-hidden="true" /> Confirm Device Received
-                </Button>
-            </div>
+            <Button variant="action" size="lg" onClick={() => setOpen(true)} disabled={busy}>
+                <PackageCheck aria-hidden="true" /> Confirm device received
+            </Button>
 
             <ConfirmDialog
                 open={open}

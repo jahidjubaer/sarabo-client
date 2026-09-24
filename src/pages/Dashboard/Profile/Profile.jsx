@@ -123,12 +123,12 @@ const Profile = () => {
     return (
         <div className="space-y-6">
             <PageHeader
-                title="My Profile"
-                description="Review your account identity and update the basic profile information supported by Sarabo."
+                title="Profile"
+                description="Your account details and sign-in."
             />
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                <div className="lg:col-span-2">
+                <div className="min-w-0 space-y-6 lg:col-span-2">
                     <Card className="p-5 sm:p-6">
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                             <Avatar className="size-20 text-xl">
@@ -145,10 +145,6 @@ const Profile = () => {
                         </div>
 
                         <dl className="mt-6 grid grid-cols-1 gap-4 border-t border-ds-border pt-6 sm:grid-cols-2">
-                            <div className="min-w-0">
-                                <dt className="ds-label text-ds-muted-foreground">Email address</dt>
-                                <dd className="mt-1.5 min-w-0 break-all text-body-sm text-ds-foreground">{user?.email}</dd>
-                            </div>
                             <div className="min-w-0">
                                 <dt className="ds-label text-ds-muted-foreground">Role</dt>
                                 <dd className="mt-1.5 text-body-sm text-ds-foreground">{roleDisplayText}</dd>
@@ -219,12 +215,12 @@ const Profile = () => {
                             </form>
                         )}
                     </Card>
-                </div>
 
-                {/* Phase 9.2: the technician's real stored professional record.
-                    Self-guards on role, so customer/admin profiles are
-                    untouched and no request is made for them. */}
-                <div className="min-w-0 space-y-6 lg:col-span-2">
+                    {/* Phase 9.2: the technician's real stored professional
+                        record. Self-guards on role, so customer/admin profiles
+                        render nothing here and make no request. Kept in the
+                        main column - as its own grid row it left an empty band
+                        above the side column for every customer. */}
                     <TechnicianProfileCard role={role} />
                     <TechnicianReviewList role={role} />
                 </div>

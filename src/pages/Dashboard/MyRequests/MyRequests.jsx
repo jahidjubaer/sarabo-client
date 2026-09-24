@@ -19,7 +19,7 @@ import { getCancellationErrorMessage } from '../../../utils/cancellationErrorMes
 import { getDeletionErrorMessage } from '../../../utils/deletionErrorMessage';
 import { deleteRepairRequest } from '../../../api/repairRequests';
 import { removeDeletedRequestCaches } from '../../../utils/removeDeletedRequestCaches';
-import { applyRequestView } from '../../../utils/customerRequestPresentation';
+import { applyRequestView, getRequestGroup } from '../../../utils/customerRequestPresentation';
 import { isUserEmailVerified } from '../../../utils/emailVerification';
 import { createV2Checkout } from '../../../api/payments';
 
@@ -176,16 +176,16 @@ const MyRequests = () => {
     };
 
     const newRequestAction = (
-        <Link to="/dashboard/create-request" className={buttonVariants({ size: 'sm' })}>
+        <Link to="/dashboard/create-request" className={buttonVariants({ variant: 'primary' })}>
             <Plus aria-hidden="true" />
-            New Repair Request
+            New request
         </Link>
     );
 
     if (isInitialLoading) {
         return (
             <div className="space-y-6">
-                <PageHeader title="My Requests" actions={newRequestAction} />
+                <PageHeader title="My repairs" actions={newRequestAction} />
                 <div className="space-y-3">
                     {[0, 1, 2, 3].map((key) => <CardSkeleton key={key} className="h-24" />)}
                 </div>
@@ -196,7 +196,7 @@ const MyRequests = () => {
     if (isError || isUnavailableBeforeData) {
         return (
             <div className="space-y-6">
-                <PageHeader title="My Requests" actions={newRequestAction} />
+                <PageHeader title="My repairs" actions={newRequestAction} />
                 <ErrorState
                     title="Couldn't load your requests"
                     description="We couldn't load your repair requests right now. Please try again."
@@ -207,6 +207,10 @@ const MyRequests = () => {
     }
 
     const total = requests.length;
+    const groupCounts = requests.reduce((counts, request) => {
+        const key = getRequestGroup(request);
+        return { ...counts, [key]: (counts[key] || 0) + 1 };
+    }, { all: total, 'needs-action': 0, active: 0, completed: 0, closed: 0 });
     const description = total === 0
         ? 'You have not created any repair requests yet.'
         : `${total} repair request${total === 1 ? '' : 's'}`;
@@ -214,7 +218,7 @@ const MyRequests = () => {
     return (
         <MotionConfig reducedMotion="user">
             <div className="space-y-6">
-                <PageHeader title="My Requests" description={description} actions={newRequestAction} />
+                <PageHeader title="My repairs" description={description} actions={newRequestAction} />
 
                 {total === 0 ? (
                     <EmptyState
@@ -231,6 +235,7 @@ const MyRequests = () => {
                 ) : (
                     <>
                         <RequestFilters
+                            counts={groupCounts}
                             search={search}
                             onSearchChange={setSearch}
                             group={group}
@@ -238,6 +243,9 @@ const MyRequests = () => {
                             sort={sort}
                             onSortChange={setSort}
                         />
+                        <p role="status" className="sr-only">
+                            {visibleRequests.length} of {total} request{total === 1 ? '' : 's'} shown
+                        </p>
                         <RequestList
                             requests={visibleRequests}
                             onClearFilters={clearFilters}

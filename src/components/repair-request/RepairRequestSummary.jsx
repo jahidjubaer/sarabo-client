@@ -1,5 +1,4 @@
 import { Smartphone, Wrench, MapPin } from 'lucide-react';
-import EstimateCard from './EstimateCard';
 
 // Read-only recap of what the customer is submitting / just submitted (Phase
 // 6.4 Unit 3A, redesigned ds-* in 7.7). Built entirely from local form values
@@ -12,8 +11,8 @@ function Row({ icon: Icon, label, children }) {
         <div className="flex items-start gap-3">
             {Icon ? <Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-ds-muted-foreground" /> : null}
             <div className="min-w-0">
-                <p className="text-xs font-medium uppercase tracking-wide text-ds-muted-foreground">{label}</p>
-                <div className="text-sm text-ds-foreground">{children}</div>
+                <p className="text-micro font-semibold text-ds-muted-foreground">{label}</p>
+                <div className="text-body-sm text-ds-foreground">{children}</div>
             </div>
         </div>
     );
@@ -44,7 +43,6 @@ const RepairRequestSummary = ({ review }) => {
                 </Row>
             </div>
 
-            {review.definition && <EstimateCard definition={review.definition} />}
         </div>
     );
 };

@@ -69,13 +69,26 @@ body {
   background-size: 40px 40px;
 }
 
-/* Space reserved at the bottom of the viewport by the dashboard's mobile tab
- * bar (components/layout/MobileTabBar). Floating UI adds this to its offset. */
+/* Space reserved at the bottom of the viewport below lg by the dashboard's
+ * mobile tab bar (components/layout/MobileTabBar) and a page's sticky action
+ * bar (components/layout/MobileActionBar). Floating UI (the support button)
+ * adds --app-bottom-inset to its offset; the action bar sits on top of the tab
+ * bar using --tabbar-offset. Both collapse to zero from lg, where neither bar
+ * is shown. */
 .has-tabbar {
+  --tabbar-offset: calc(4rem + env(safe-area-inset-bottom));
   --app-bottom-inset: 4.5rem;
 }
+.has-actionbar {
+  --app-bottom-inset: 5rem;
+}
+.has-tabbar.has-actionbar {
+  --app-bottom-inset: 9.5rem;
+}
 @media (min-width: 1024px) {
-  .has-tabbar {
+  .has-tabbar,
+  .has-actionbar {
+    --tabbar-offset: 0px;
     --app-bottom-inset: 0px;
   }
 }

@@ -15,9 +15,7 @@ import {
     validateRepairRequestV2Form, buildRepairRequestV2Payload,
     DAMAGE_DESCRIPTION_MIN_LENGTH, DAMAGE_DESCRIPTION_MAX_LENGTH, BRAND_MODEL_MAX_LENGTH,
 } from '../../utils/repairRequestV2Form';
-import {
-    deriveFlowProgress, buildReviewModel, getSuccessActions,
-} from '../../utils/createRequestFlow';
+import { buildReviewModel, getSuccessActions } from '../../utils/createRequestFlow';
 import { getCreateRequestErrorMessage } from '../../utils/createRequestErrorMessage';
 import { notify } from '../../lib/notify';
 import { PageHeader } from '../common/PageHeader';
@@ -31,32 +29,46 @@ import { slideUp } from '../../theme/motion';
 import ServiceDefinitionSelector from './ServiceDefinitionSelector';
 import RepairRequestSummary from './RepairRequestSummary';
 import PostCreationDamageStep from './PostCreationDamageStep';
-import RequestFlowSteps from './RequestFlowSteps';
-import RequestContextRail from './RequestContextRail';
+import { MobileActionBar } from '../layout/MobileActionBar';
+import { FormAlert } from '../common/FormAlert';
+import { Card } from '../ui/card';
 import { Select } from '../ui/select';
 
 
-function SectionShell({ innerRef, step, stepId, title, description, onActivate, children }) {
+// One numbered part of the form: a numbered heading and the fields beneath.
+function SectionShell({ step, stepId, title, description, children }) {
     const headingId = `request-${stepId}-heading`;
     return (
-        <section
-            ref={innerRef}
-            aria-labelledby={headingId}
-            onFocusCapture={onActivate}
-            onPointerDown={onActivate}
-            className="scroll-mt-28 overflow-hidden rounded-ds-lg border border-ds-border bg-ds-card shadow-sm"
-        >
-            <div className="border-b border-ds-border bg-ds-muted/35 px-5 py-4 sm:px-6">
-                <div className="flex items-start gap-4">
-                    <span aria-hidden="true" className="ds-label mt-1 shrink-0 text-ds-primary">{String(step).padStart(2, '0')}</span>
-                    <div className="min-w-0">
-                        <h2 id={headingId} className="text-heading text-ds-foreground">{title}</h2>
-                        {description ? <p className="mt-1 text-body-sm text-ds-muted-foreground">{description}</p> : null}
-                    </div>
+        <section aria-labelledby={headingId} className="rounded-ds-lg border border-ds-border bg-ds-card p-5 sm:p-6">
+            <div className="mb-5 flex items-start gap-3">
+                <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded-full bg-ds-ink text-body-sm font-extrabold text-ds-ink-foreground">
+                    {step}
+                </span>
+                <div className="min-w-0 pt-0.5">
+                    <h2 id={headingId} className="text-heading text-ds-foreground">{title}</h2>
+                    {description ? <p className="mt-0.5 text-body-sm text-ds-muted-foreground">{description}</p> : null}
                 </div>
             </div>
-            <div className="p-5 sm:p-6">{children}</div>
+            {children}
         </section>
+    );
+}
+
+// Counts the fields react-hook-form flagged, for the error summary.
+function countFieldErrors(errors) {
+    if (!errors || typeof errors !== 'object') return 0;
+    if (typeof errors.message === 'string') return 1;
+    return Object.values(errors).reduce((total, value) => total + countFieldErrors(value), 0);
+}
+
+// The request so far, beside the form on desktop: each choice as it is made,
+// the estimate, and the one submit button.
+function SummaryRow({ label, value }) {
+    return (
+        <div className="py-2.5">
+            <dt className="text-micro font-semibold text-ds-muted-foreground">{label}</dt>
+            <dd className={value ? 'mt-0.5 break-words text-body-sm font-semibold text-ds-foreground' : 'mt-0.5 text-body-sm text-ds-muted-foreground'}>{value || 'Not chosen yet'}</dd>
+        </div>
     );
 }
 
@@ -121,9 +133,9 @@ const RepairRequestV2Form = () => {
         }
     }, [productCategories, setValue]);
 
-    // Live section-completion snapshot for the stepper (presentation only).
+    // Live values for the summary card (presentation only).
     const watchedValues = useWatch({ control });
-    const progress = deriveFlowProgress(watchedValues || {});
+    const descriptionLength = (watchedValues?.damageDescription || '').length;
     const liveReview = buildReviewModel(watchedValues || {}, definitions, productCategories);
     const selectedServiceArea = [
         watchedValues?.serviceLocation?.district,
@@ -169,19 +181,11 @@ const RepairRequestV2Form = () => {
     const [createdRequestId, setCreatedRequestId] = useState(null);
     const [ambiguousFailure, setAmbiguousFailure] = useState(false);
     const [imageBusy, setImageBusy] = useState(false);
-    const [activeStep, setActiveStep] = useState('device');
     const submittedValuesRef = useRef(null);
-
-    const sectionRefs = {
-        device: useRef(null),
-        service: useRef(null),
-        location: useRef(null),
-        review: useRef(null),
-    };
-    const scrollToStep = (id) => {
-        setActiveStep(id);
-        sectionRefs[id]?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    };
+    // Shown at the top of the form after a failed submit: a count of fields to
+    // fix (react-hook-form also moves focus to the first one), or -1 when the
+    // final catalogue re-check failed.
+    const [submitProblem, setSubmitProblem] = useState(0);
 
     const mutation = useMutation({
         mutationFn: (payload) => createRepairRequestV2(axiosSecure, payload),
@@ -211,14 +215,18 @@ const RepairRequestV2Form = () => {
 
         const finalCheck = validateRepairRequestV2Form(values, definitions);
         if (!finalCheck.valid) {
-            notify.error('Some details still need to be corrected before you can submit.');
+            setSubmitProblem(-1);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
             return;
         }
+        setSubmitProblem(0);
 
         submittedValuesRef.current = values;
         const payload = buildRepairRequestV2Payload(values);
         mutation.mutate(payload);
     };
+
+    const onInvalid = (formErrors) => setSubmitProblem(countFieldErrors(formErrors));
 
     const goToRequestDetails = () => {
         if (imageBusy) {
@@ -247,7 +255,7 @@ const RepairRequestV2Form = () => {
         submittedValuesRef.current = null;
         setCreatedRequestId(null);
         setStage('form');
-        setActiveStep('device');
+        setSubmitProblem(0);
         setStaleServiceNotice(false);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -276,11 +284,11 @@ const RepairRequestV2Form = () => {
         return (
             <MotionConfig reducedMotion="user">
                 <Motion.div variants={slideUp} initial="hidden" animate="show" className="space-y-6">
-                    <div className="flex items-start gap-3 rounded-ds-lg border border-ds-success/30 bg-ds-success/10 p-4">
+                    <div className="flex items-start gap-3 rounded-ds-lg bg-ds-success-subtle p-5">
                         <CircleCheckBig aria-hidden="true" className="mt-0.5 size-6 shrink-0 text-ds-success" />
                         <div>
-                            <h1 className="text-lg font-semibold text-ds-foreground">Repair request created</h1>
-                            <p className="text-sm text-ds-muted-foreground">Your request is in and waiting for review. You can add photos now or later.</p>
+                            <h1 id="page-title" tabIndex={-1} className="text-title text-ds-foreground outline-none">Request created</h1>
+                            <p className="mt-1 text-body-sm text-ds-muted-foreground">We will assign an approved technician. Photos help them prepare, so add some now or later.</p>
                         </div>
                     </div>
 
@@ -302,29 +310,40 @@ const RepairRequestV2Form = () => {
     }
 
     // ---- Form --------------------------------------------------------------
+    const estimateText = liveReview.estimateText;
+    const submitButton = (fullWidth) => (
+        <LoadingButton
+            type="submit"
+            form="repair-request-form"
+            variant="action"
+            size="lg"
+            loading={mutation.isPending}
+            loadingText="Creating…"
+            className={fullWidth ? 'w-full' : 'shrink-0'}
+        >
+            Create request
+        </LoadingButton>
+    );
+
     return (
         <MotionConfig reducedMotion="user">
-            <div className="mx-auto w-full max-w-[1280px] space-y-6">
+            <div className="mx-auto w-full max-w-6xl space-y-6 pb-24 lg:pb-0">
                 <PageHeader
-                    title="Request a Repair"
-                    description="Share your device, repair need, and service location. No payment is required to submit."
+                    title="Request a repair"
+                    description="Three short steps. No payment is needed to submit."
                 />
 
-                <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
-                    <div className="min-w-0 space-y-5">
-                        <div className="z-20 lg:sticky lg:top-20">
-                            <RequestFlowSteps progress={progress} activeStep={activeStep} onSelect={scrollToStep} />
-                        </div>
+                {submitProblem !== 0 && (
+                    <FormAlert
+                        alert={submitProblem === -1
+                            ? { tone: 'danger', title: 'Some details need another look', text: 'A choice may no longer be available. Check the device and service, then try again.' }
+                            : { tone: 'danger', title: `Check ${submitProblem} field${submitProblem === 1 ? '' : 's'}`, text: 'Fix the highlighted fields, then create your request.' }}
+                    />
+                )}
 
-                        <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
-                            <SectionShell
-                                innerRef={sectionRefs.device}
-                                step={1}
-                                stepId="device"
-                                title="Device details"
-                                description="Choose the device category, then add any identifiers you know."
-                                onActivate={() => setActiveStep('device')}
-                            >
+                <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+                    <form id="repair-request-form" onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate className="min-w-0 space-y-5">
+                        <SectionShell step={1} stepId="device" title="Your device" description="Choose the device, then add the brand and model if you know them.">
                                 <div className="space-y-6">
                                     <ServiceDefinitionSelector
                                         part="category"
@@ -369,16 +388,9 @@ const RepairRequestV2Form = () => {
                                         </FormField>
                                     </div>
                                 </div>
-                            </SectionShell>
+                        </SectionShell>
 
-                            <SectionShell
-                                innerRef={sectionRefs.service}
-                                step={2}
-                                stepId="service"
-                                title="Repair details"
-                                description="Select the repair service and describe what is happening."
-                                onActivate={() => setActiveStep('service')}
-                            >
+                        <SectionShell step={2} stepId="service" title="What is wrong" description="Pick the repair and describe the problem.">
                                 <div className="space-y-6">
                                     {staleServiceNotice && (
                                         <div className="flex items-start gap-2 rounded-ds border border-ds-warning/30 bg-ds-warning/10 p-3 text-sm text-ds-foreground" role="alert">
@@ -395,6 +407,7 @@ const RepairRequestV2Form = () => {
                                         isError={catalogueUnavailable}
                                         servicesForSelectedProduct={servicesForSelectedProduct}
                                         selectedProductCategorySlug={selectedProductCategorySlug}
+                                        selectedDefinition={selectedDefinition}
                                     />
 
                                     <FormField
@@ -402,7 +415,7 @@ const RepairRequestV2Form = () => {
                                         label="Describe the issue"
                                         required
                                         error={errors.damageDescription?.message}
-                                        hint={`Please describe the problem in ${DAMAGE_DESCRIPTION_MIN_LENGTH}-${DAMAGE_DESCRIPTION_MAX_LENGTH} characters.`}
+                                        hint={`${descriptionLength} / ${DAMAGE_DESCRIPTION_MAX_LENGTH} characters, at least ${DAMAGE_DESCRIPTION_MIN_LENGTH}`}
                                     >
                                         <Textarea
                                             id="damageDescription"
@@ -425,16 +438,9 @@ const RepairRequestV2Form = () => {
                                         />
                                     </FormField>
                                 </div>
-                            </SectionShell>
+                        </SectionShell>
 
-                            <SectionShell
-                                innerRef={sectionRefs.location}
-                                step={3}
-                                stepId="location"
-                                title="Service location"
-                                description="Provide the existing region, district, and service address for this request."
-                                onActivate={() => setActiveStep('location')}
-                            >
+                        <SectionShell step={3} stepId="location" title="Where to collect it" description="Your technician collects the device from this address.">
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                     <FormField id="region" label="Region" required error={errors.serviceLocation?.region?.message}>
                                         <Select
@@ -454,12 +460,13 @@ const RepairRequestV2Form = () => {
                                         <Select
                                             id="district"
                                             defaultValue=""
+                                            disabled={!selectedRegion}
                                             aria-invalid={errors.serviceLocation?.district ? 'true' : 'false'}
                                             aria-required="true"
                                             aria-describedby={errors.serviceLocation?.district ? 'district-error' : undefined}
                                             {...register('serviceLocation.district', { validate: (v) => !!v || 'Please select a district.' })}
                                         >
-                                            <option value="" disabled>Pick a district</option>
+                                            <option value="" disabled>{selectedRegion ? 'Pick a district' : 'Pick a region first'}</option>
                                             {districtsByRegion(selectedRegion).map((d, i) => <option key={i} value={d}>{d}</option>)}
                                         </Select>
                                     </FormField>
@@ -479,54 +486,39 @@ const RepairRequestV2Form = () => {
                                         />
                                     </FormField>
                                 </div>
-                            </SectionShell>
+                        </SectionShell>
 
-                            <SectionShell
-                                innerRef={sectionRefs.review}
-                                step={4}
-                                stepId="review"
-                                title="Review & create"
-                                description="Check the request details before creating one repair request."
-                                onActivate={() => setActiveStep('review')}
-                            >
-                                <div className="space-y-5">
-                                    {progress.review ? (
-                                        <RepairRequestSummary review={liveReview} />
-                                    ) : (
-                                        <p className="rounded-ds-lg border border-dashed border-ds-border bg-ds-muted/20 px-4 py-8 text-center text-body-sm text-ds-muted-foreground">
-                                            Complete the three detail sections to see the full request summary.
-                                        </p>
-                                    )}
+                        <div className="lg:hidden">
+                            <Link to="/dashboard/my-requests" className={buttonVariants({ variant: 'ghost' })}>Cancel</Link>
+                        </div>
+                    </form>
 
-                                    <div className="border-t border-ds-border pt-5">
-                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                                            <LoadingButton
-                                                type="submit"
-                                                variant="action"
-                                                size="lg"
-                                                loading={mutation.isPending}
-                                                loadingText="Creating request..."
-                                                className="w-full sm:w-auto"
-                                            >
-                                                Create repair request
-                                            </LoadingButton>
-                                            <Link to="/dashboard/my-requests" className={`${buttonVariants({ variant: 'ghost', size: 'lg' })} w-full sm:w-auto`}>Cancel</Link>
-                                        </div>
-                                        <p className="mt-3 text-micro text-ds-muted-foreground">No payment is required to submit a repair request.</p>
-                                    </div>
-                                </div>
-                            </SectionShell>
-                        </form>
-                    </div>
-
-                    <RequestContextRail
-                        categoryLabel={liveReview.productCategoryLabel}
-                        serviceLabel={liveReview.serviceLabel}
-                        serviceAreaLabel={selectedServiceArea}
-                        selectedDefinition={selectedDefinition}
-                    />
+                    <aside aria-labelledby="request-summary-heading" className="hidden lg:sticky lg:top-24 lg:block">
+                        <Card className="p-5">
+                            <h2 id="request-summary-heading" className="text-subhead text-ds-foreground">Your request</h2>
+                            <dl className="mt-2 divide-y divide-ds-border">
+                                <SummaryRow label="Device" value={[liveReview.productCategoryLabel, liveReview.deviceLabel].filter(Boolean).join(' · ')} />
+                                <SummaryRow label="Repair" value={liveReview.serviceLabel} />
+                                <SummaryRow label="Location" value={selectedServiceArea} />
+                                <SummaryRow label="Estimate" value={estimateText} />
+                            </dl>
+                            <div className="mt-4 space-y-2">
+                                {submitButton(true)}
+                                <Link to="/dashboard/my-requests" className={`${buttonVariants({ variant: 'ghost' })} w-full`}>Cancel</Link>
+                            </div>
+                            <p className="mt-3 text-micro text-ds-muted-foreground">No payment is needed to submit.</p>
+                        </Card>
+                    </aside>
                 </div>
             </div>
+
+            <MobileActionBar>
+                <div className="min-w-0 flex-1">
+                    <p className="text-micro font-semibold text-ds-muted-foreground">{estimateText ? 'Estimated' : 'No payment to submit'}</p>
+                    <p className="ds-numeric truncate text-body-sm font-bold text-ds-foreground">{estimateText || 'Free to request'}</p>
+                </div>
+                {submitButton(false)}
+            </MobileActionBar>
         </MotionConfig>
     );
 };

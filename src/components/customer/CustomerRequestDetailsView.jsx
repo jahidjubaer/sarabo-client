@@ -1,7 +1,4 @@
 import { motion as Motion } from 'motion/react';
-import { ArrowDown, CircleAlert, CircleCheckBig, CircleX, Clock3 } from 'lucide-react';
-import { Card, CardContent } from '../ui/card';
-import { buttonVariants } from '../ui/button-variants';
 import ServiceSpine from '../spine/ServiceSpine';
 import DamageImageManager from '../damage-images/DamageImageManager';
 import InspectionSection from '../inspection/InspectionSection';
@@ -11,205 +8,184 @@ import RepairSection from '../repair/RepairSection';
 import ReceiptConfirmationSection from '../repair/ReceiptConfirmationSection';
 import CustomerTechnicianFeedback from '../feedback/customer/CustomerTechnicianFeedback';
 import { WorkspaceContextPanels } from '../workspace/WorkspaceContextPanels';
+import { NextStepPanel } from '../workspace/NextStepPanel';
+import { StageSection } from '../workspace/StageSection';
+import { Card, CardContent } from '../ui/card';
 import { getStatusPresentation } from '../../config/statusPresentation';
-import { getRequestAction, getRequestGroup } from '../../utils/customerRequestPresentation';
+import { getRequestAction, getRequestGroup, isRequestPaid } from '../../utils/customerRequestPresentation';
 import { getHandoverState } from '../../utils/repairStage';
-import { formatAbsoluteDateTime } from '../../utils/relativeTime';
 import { staggerContainer, staggerItem } from '../../theme/motion';
-import { cn } from '../../lib/utils';
 
-const ATTENTION_TONES = {
-    action: { wrap: 'border-ds-warning/40 bg-ds-warning/5', icon: 'bg-ds-warning/15 text-ds-warning', Icon: CircleAlert },
-    waiting: { wrap: 'border-ds-primary/25 bg-ds-primary/5', icon: 'bg-ds-primary/10 text-ds-primary', Icon: Clock3 },
-    done: { wrap: 'border-ds-success/30 bg-ds-success/5', icon: 'bg-ds-success/10 text-ds-success', Icon: CircleCheckBig },
-    terminal: { wrap: 'border-ds-border bg-ds-muted/30', icon: 'bg-ds-muted text-ds-muted-foreground', Icon: CircleX },
+// How far a request has got, as a number, so a stage is only shown once it has
+// been reached - no "not inspected yet" / "no quote yet" placeholders. A
+// declined quote sits at the quote's rank. Cancelled is handled separately.
+const RANK = {
+    'pending-pickup': 0, assignment_pending: 1, driver_assigned: 2, rider_arriving: 3, parcel_picked_up: 4,
+    inspection_completed: 5, quote_submitted: 6, quote_rejected: 6, quote_approved: 7, payment_completed: 8,
+    repair_in_progress: 9, repair_completed: 10, parcel_delivered: 11,
 };
 
-function attentionModel(request) {
+const QUOTE_META = { submitted: 'Waiting for your decision', approved: 'Approved', rejected: 'Declined' };
+
+// The top panel: the action itself when the customer has one, otherwise a
+// plain statement of where the repair is and who it is waiting on.
+function nextStepModel(request, action) {
     const presentation = getStatusPresentation(request?.deliveryStatus);
-    const action = getRequestAction(request);
     const group = getRequestGroup(request);
     const handover = getHandoverState(request);
 
-    if (action) {
-        return {
-            tone: 'action',
-            eyebrow: 'Action required',
-            title: action.label,
-            description: action.kind === 'handover'
-                ? 'Your repair is complete. Confirm once your repaired device is back in your hands.'
-                : presentation.customerNextStep,
-            action,
-        };
+    if (action?.kind === 'quote-review') {
+        return { tone: 'action', eyebrow: 'Your next step', title: 'Review and decide on your quote', description: 'Your technician has inspected the device. Approve to go ahead, or decline.' };
+    }
+    if (action?.kind === 'payment') {
+        return { tone: 'action', eyebrow: 'Your next step', title: 'Pay to start the repair', description: 'You approved the quote. The repair starts once payment is confirmed.' };
+    }
+    if (action?.kind === 'handover') {
+        return { tone: 'action', eyebrow: 'Your next step', title: 'Confirm you have your device', description: 'Your repair is complete. Confirm once the device is back in your hands.' };
     }
     if (group === 'completed') {
-        return {
-            tone: 'done',
-            eyebrow: 'Repair update',
-            title: handover?.confirmed ? 'Device received' : presentation.label,
-            description: handover?.confirmed ? 'Your device handover has been confirmed.' : presentation.customerDescription,
-            action: null,
-        };
+        return { tone: 'done', eyebrow: 'Done', title: handover?.confirmed ? 'Device received' : presentation.label, description: handover?.confirmed ? 'Thanks for confirming. You can review your technician below.' : presentation.customerDescription };
     }
     if (group === 'closed') {
-        return {
-            tone: 'terminal',
-            eyebrow: 'Request update',
-            title: presentation.label,
-            description: presentation.customerDescription,
-            action: null,
-        };
+        return { tone: 'closed', eyebrow: 'Closed', title: presentation.label, description: presentation.customerDescription };
     }
-    return {
-        tone: 'waiting',
-        eyebrow: 'No action required',
-        title: presentation.label,
-        description: presentation.customerDescription,
-        action: null,
-    };
+    return { tone: 'waiting', eyebrow: 'Nothing needed from you', title: presentation.label, description: presentation.customerDescription };
 }
 
-function AttentionPanel({ request }) {
-    const model = attentionModel(request);
-    const tone = ATTENTION_TONES[model.tone];
-    const Icon = tone.Icon;
-    const target = model.action?.kind === 'quote-review'
-        ? '#repair-quote'
-        : model.action?.kind === 'handover'
-            ? '#repair-handover'
-            : null;
-
-    return (
-        <section aria-labelledby="customer-next-action-heading" className={cn('rounded-ds-lg border p-5 sm:p-6', tone.wrap)}>
-            <div className="flex items-start gap-3">
-                <span className={cn('mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-full', tone.icon)}>
-                    <Icon aria-hidden="true" className="size-5" />
-                </span>
-                <div className="min-w-0 flex-1">
-                    <p className="ds-label text-ds-muted-foreground">{model.eyebrow}</p>
-                    <h2 id="customer-next-action-heading" className="mt-1 text-xl font-semibold tracking-tight text-ds-foreground">{model.title}</h2>
-                    {model.description && <p className="mt-1 max-w-2xl text-sm text-ds-muted-foreground">{model.description}</p>}
-                    {target && (
-                        <a href={target} className={cn(buttonVariants({ size: 'sm' }), 'mt-4')}>
-                            {model.action.label}
-                            <ArrowDown aria-hidden="true" />
-                        </a>
-                    )}
-                </div>
-            </div>
-        </section>
-    );
-}
-
-function SectionCard({ id, eyebrow, title, children }) {
-    return (
-        <section id={id} aria-labelledby={`${id}-heading`} className="scroll-mt-24">
-            <Card>
-                <CardContent className="space-y-4 p-5 sm:p-6">
-                    {eyebrow && <p className="ds-label text-ds-primary">{eyebrow}</p>}
-                    <h2 id={`${id}-heading`} className="text-base font-semibold text-ds-foreground">{title}</h2>
-                    {children}
-                </CardContent>
-            </Card>
-        </section>
-    );
-}
-
-// Customer-only composition for the shared RequestDetails route. All reads,
-// mutations, visibility flags, and nested section components remain the same;
-// only their Customer source order and hierarchy change.
+// Customer composition of the shared repair workspace (Phase 3).
+//
+//   tracker          the four stages, once
+//   next step        the live control (quote decision / payment / receipt)
+//                    or a plain status line
+//   stage sections   in the order they happened, each collapsible; a stage
+//                    appears only once reached, past ones start collapsed
+//   side column      device, service and money details
+//
+// Every section component still owns its data, validation and mutation; the
+// server re-authorises everything. Only placement and framing changed.
 function CustomerRequestDetailsView({ request, sections, isV2Request, damageImagesEditable }) {
+    const status = request?.deliveryStatus || 'pending-pickup';
+    const rank = RANK[status] ?? 0;
+    const cancelled = status === 'cancelled';
     const action = getRequestAction(request);
+    const model = nextStepModel(request, action);
     const handover = getHandoverState(request);
-    const quoteIsFocused = action?.kind === 'quote-review';
-    const paymentIsFocused = action?.kind === 'payment';
-    const handoverIsFocused = action?.kind === 'handover';
+    const paid = isRequestPaid(request);
+    const focus = action?.kind; // quote-review | payment | handover | undefined
 
-    const quoteSection = sections.showQuote ? (
-        <SectionCard id="repair-quote" eyebrow={quoteIsFocused ? 'Your decision' : undefined} title={quoteIsFocused ? 'Review repair quote' : 'Repair quote'}>
-            <QuoteSection requestId={request._id} isOwner canSubmitQuote={false} isAssignedTechnicianView={false} />
-        </SectionCard>
-    ) : null;
-
-    const paymentSection = sections.showPayment ? (
-        <div id="repair-payment" className="scroll-mt-24">
-            <V2PaymentSection requestId={request._id} />
-        </div>
-    ) : null;
-
-    const handoverSection = (
-        <SectionCard id="repair-handover" eyebrow={handoverIsFocused ? 'Handover' : undefined} title="Device handover">
-            <ReceiptConfirmationSection requestId={request._id} request={request} isOwner />
-        </SectionCard>
-    );
-    const feedbackSection = <CustomerTechnicianFeedback requestId={request._id} />;
+    const show = {
+        request: isV2Request,
+        inspection: sections.showInspection && (cancelled || rank >= 5),
+        quote: sections.showQuote && (cancelled || rank >= 6) && focus !== 'quote-review',
+        payment: sections.showPayment && rank >= 7 && focus !== 'payment',
+        repair: sections.showRepair,
+        handover: rank >= 10 && focus !== 'handover',
+        feedback: isV2Request,
+    };
 
     return (
-        <Motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-6">
-            <Motion.div variants={staggerItem}>
-                <AttentionPanel request={request} />
-            </Motion.div>
-
-            {quoteIsFocused && <Motion.div variants={staggerItem}>{quoteSection}</Motion.div>}
-            {paymentIsFocused && <Motion.div variants={staggerItem}>{paymentSection}</Motion.div>}
-            {handoverIsFocused && <Motion.div variants={staggerItem} className="space-y-6">{handoverSection}{feedbackSection}</Motion.div>}
-
+        <Motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-5">
             <Motion.div variants={staggerItem}>
                 <Card>
-                    <CardContent className="space-y-4 p-5 sm:p-6">
-                        <div>
-                            <p className="ds-label text-ds-primary">Service spine</p>
-                            <h2 className="mt-1 text-base font-semibold text-ds-foreground">Repair lifecycle</h2>
-                        </div>
+                    <CardContent className="p-5 sm:p-6">
                         <ServiceSpine request={request} />
-                        {handover && (
-                            <div className="flex flex-col gap-1 border-t border-ds-border pt-4 sm:flex-row sm:items-center sm:justify-between">
-                                <div>
-                                    <p className="ds-label text-ds-muted-foreground">Device handover</p>
-                                    <p className="mt-0.5 text-sm font-medium text-ds-foreground">{handover.label}</p>
-                                </div>
-                                {handover.confirmedAt && <p className="text-xs text-ds-muted-foreground">Confirmed {formatAbsoluteDateTime(handover.confirmedAt)}</p>}
-                            </div>
-                        )}
                     </CardContent>
                 </Card>
             </Motion.div>
 
-            <Motion.div variants={staggerItem} className="grid gap-6 lg:grid-cols-3 lg:items-start">
-                <div className="space-y-6 lg:col-span-2">
-                    {sections.showInspection && (
-                        <SectionCard id="repair-inspection" title="Inspection">
+            <Motion.div variants={staggerItem} className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+                <div className="min-w-0 space-y-4">
+                    <NextStepPanel tone={model.tone} eyebrow={model.eyebrow} title={model.title} description={model.description}>
+                        {focus === 'quote-review' && (
+                            <QuoteSection requestId={request._id} isOwner canSubmitQuote={false} isAssignedTechnicianView={false} />
+                        )}
+                        {focus === 'payment' && <V2PaymentSection requestId={request._id} bare />}
+                        {focus === 'handover' && <ReceiptConfirmationSection requestId={request._id} request={request} isOwner />}
+                    </NextStepPanel>
+
+                    {show.request && (
+                        <StageSection
+                            id="repair-request"
+                            title="Your request"
+                            meta={request.damage?.description || 'Device details and photos'}
+                            state={rank >= 5 ? 'done' : 'current'}
+                            defaultOpen={rank <= 4 && damageImagesEditable}
+                        >
+                            {sections.showDamage && <DamageImageManager requestId={request._id} canEdit={damageImagesEditable} />}
+                        </StageSection>
+                    )}
+
+                    {show.inspection && (
+                        <StageSection
+                            id="repair-inspection"
+                            title="Inspection"
+                            meta={rank >= 5 ? 'Findings from your technician' : 'Not inspected'}
+                            state={rank >= 5 ? 'done' : 'info'}
+                            // Open when the quote is waiting, so the findings that
+                            // justify the price are right there.
+                            defaultOpen={focus === 'quote-review' || rank === 5}
+                        >
                             <InspectionSection requestId={request._id} canInspect={false} isAssignedTechnicianView={false} />
-                        </SectionCard>
+                        </StageSection>
                     )}
-                    {!quoteIsFocused && quoteSection}
-                    {!paymentIsFocused && paymentSection}
-                    {sections.showRepair && (
-                        <SectionCard id="repair-work" title="Repair">
-                            <RepairSection requestId={request._id} canManage={false} deliveryStatus={request.deliveryStatus} />
-                        </SectionCard>
+
+                    {show.quote && (
+                        <StageSection
+                            id="repair-quote"
+                            title="Quote"
+                            meta={QUOTE_META[request.quote?.status] || 'Repair quote'}
+                            state={request.quote?.status === 'rejected' ? 'info' : 'done'}
+                            defaultOpen={status === 'quote_rejected'}
+                        >
+                            <QuoteSection requestId={request._id} isOwner canSubmitQuote={false} isAssignedTechnicianView={false} />
+                        </StageSection>
                     )}
-                    {!handoverIsFocused && handover && handoverSection}
-                    {!handoverIsFocused && feedbackSection}
-                    {sections.showDamage && (
-                        <SectionCard id="repair-photos" title="Damage photos">
-                            <DamageImageManager requestId={request._id} canEdit={damageImagesEditable} />
-                        </SectionCard>
+
+                    {show.payment && (
+                        <StageSection id="repair-payment" title="Payment" meta={paid ? 'Paid' : 'Due'} state={paid ? 'done' : 'current'}>
+                            <V2PaymentSection requestId={request._id} bare />
+                        </StageSection>
                     )}
+
+                    {show.repair && (
+                        <StageSection
+                            id="repair-work"
+                            title="Repair"
+                            meta={getStatusPresentation(status).customerDescription}
+                            state={rank >= 10 ? 'done' : 'current'}
+                            defaultOpen={rank === 8 || rank === 9}
+                        >
+                            <RepairSection requestId={request._id} canManage={false} deliveryStatus={status} />
+                        </StageSection>
+                    )}
+
+                    {show.handover && (
+                        <StageSection id="repair-handover" title="Handover" meta={handover?.label || 'Device handover'} state={handover?.confirmed ? 'done' : 'current'}>
+                            <ReceiptConfirmationSection requestId={request._id} request={request} isOwner />
+                        </StageSection>
+                    )}
+
+                    {show.feedback && (
+                        <StageSection
+                            id="repair-feedback"
+                            title="Review or report your technician"
+                            meta="Share how the repair went, or raise a concern"
+                            defaultOpen={rank >= 10}
+                        >
+                            <CustomerTechnicianFeedback requestId={request._id} />
+                        </StageSection>
+                    )}
+
                     {!isV2Request && (
-                        <SectionCard id="repair-legacy" title="Repair request">
-                            <p className="text-sm text-ds-muted-foreground">
-                                This is an earlier repair request. Inspection, quotes, and the newer repair workflow are available for requests created after the latest update.
+                        <StageSection id="repair-legacy" title="Earlier request" meta="Created before quotes and inspections" defaultOpen>
+                            <p className="text-body-sm text-ds-muted-foreground">
+                                This request was made before the current repair workflow, so it has no inspection or quote.
                             </p>
-                        </SectionCard>
+                        </StageSection>
                     )}
                 </div>
 
-                <aside aria-labelledby="customer-request-context-heading" className="space-y-3 lg:sticky lg:top-24">
-                    <div>
-                        <p className="ds-label text-ds-primary">Supporting information</p>
-                        <h2 id="customer-request-context-heading" className="mt-1 text-base font-semibold text-ds-foreground">Request details</h2>
-                    </div>
+                <aside aria-label="Repair details" className="space-y-4 lg:sticky lg:top-24">
                     <WorkspaceContextPanels request={request} showCustomer={false} />
                 </aside>
             </Motion.div>

@@ -21,7 +21,7 @@ function decisionErrorMessage(error) {
 // design-system dialogs instead of SweetAlert. The API payload and validation
 // (validateRejectionReason, { decision, reason }) are unchanged; the server is
 // always authoritative and revalidates ownership + one-decision-only.
-const QuoteDecisionActions = ({ requestId }) => {
+const QuoteDecisionActions = ({ requestId, total }) => {
     const mutation = useDecideQuote(requestId);
     const busy = mutation.isPending;
     const [approveOpen, setApproveOpen] = useState(false);
@@ -42,20 +42,27 @@ const QuoteDecisionActions = ({ requestId }) => {
     };
 
     return (
-        <div className="mt-3 flex flex-wrap gap-3">
-            <Button variant="action" onClick={() => setApproveOpen(true)} disabled={busy}>
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+            <Button variant="action" size="lg" onClick={() => setApproveOpen(true)} disabled={busy}>
                 <Check aria-hidden="true" /> Approve quote
             </Button>
-            <Button variant="outline" className="text-ds-destructive hover:text-ds-destructive" onClick={() => setDeclineOpen(true)} disabled={busy}>
-                <X aria-hidden="true" /> Decline quote
+            <Button variant="outline" size="lg" onClick={() => setDeclineOpen(true)} disabled={busy}>
+                <X aria-hidden="true" /> Decline
             </Button>
 
             <ConfirmDialog
                 open={approveOpen}
                 onOpenChange={setApproveOpen}
                 title="Approve this quote?"
-                description="This confirms you accept the quoted repair cost."
-                confirmLabel="Yes, approve"
+                description="You pay next, by secure card payment. The repair starts once payment is confirmed."
+                summary={total ? (
+                    <div className="flex items-baseline justify-between gap-4">
+                        <span className="text-body-sm font-semibold text-ds-muted-foreground">Total to pay</span>
+                        <span className="ds-numeric text-heading text-ds-foreground">{total}</span>
+                    </div>
+                ) : null}
+                confirmVariant="action"
+                confirmLabel="Approve quote"
                 busy={busy}
                 onConfirm={confirmApprove}
             />
@@ -63,7 +70,7 @@ const QuoteDecisionActions = ({ requestId }) => {
                 open={declineOpen}
                 onOpenChange={setDeclineOpen}
                 title="Decline this quote?"
-                description="Let the technician know why you are declining."
+                description="Tell your technician why. They can send a revised quote or close the request; nothing is charged either way."
                 confirmLabel="Decline quote"
                 destructive
                 busy={busy}

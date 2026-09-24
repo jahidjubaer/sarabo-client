@@ -16,12 +16,11 @@ const PaymentCancelled = () => {
                 </span>
                 <h1 className="mt-4 text-heading text-ds-foreground">Payment cancelled</h1>
                 <p className="mt-2 text-body-sm text-ds-muted-foreground">
-                    Payment cancelled - no charge was recorded.
-                    You can try again anytime from My Repair Requests.
+                    No charge was made. Your repair is still waiting for payment, and you can pay from it whenever you are ready.
                 </p>
 
                 <div className="mt-6 flex flex-col gap-2 sm:flex-row">
-                    <Link to="/dashboard/my-requests" className={`${buttonVariants()} flex-1`}>Return to my repair requests</Link>
+                    <Link to="/dashboard/my-requests" className={`${buttonVariants({ variant: 'primary' })} flex-1`}>Back to my repairs</Link>
                     <Link to="/dashboard" className={`${buttonVariants({ variant: 'outline' })} flex-1`}>Go to dashboard</Link>
                 </div>
             </Card>

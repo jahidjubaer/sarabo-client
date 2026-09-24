@@ -39,6 +39,16 @@ const PaymentSuccess = () => {
     const [secondsLeft, setSecondsLeft] = useState(AUTO_REDIRECT_SECONDS);
     const hasVerified = useRef(false);
 
+    // Return the customer to the repair they just paid for. The verification
+    // response carries the tracking code, not the request id, so look it up in
+    // the already-cached My Requests list; fall back to the list itself.
+    const cachedRequests = queryClient.getQueryData(['my-requests', user?.email]);
+    const paidRequest = Array.isArray(cachedRequests) && paymentInfo.trackingId
+        ? cachedRequests.find((request) => request.trackingId === paymentInfo.trackingId)
+        : null;
+    const returnPath = paidRequest ? `/dashboard/my-requests/${paidRequest._id}` : '/dashboard/my-requests';
+    const returnLabel = paidRequest ? 'Back to your repair' : 'View my repairs';
+
     useEffect(() => {
         if (!sessionId) return;
         // Guards against React Strict Mode's double-invoke and any re-render
@@ -93,12 +103,12 @@ const PaymentSuccess = () => {
     useEffect(() => {
         if (status !== 'verified') return;
         if (secondsLeft <= 0) {
-            navigate('/dashboard/my-requests');
+            navigate(returnPath);
             return;
         }
         const timer = setTimeout(() => setSecondsLeft(seconds => seconds - 1), 1000);
         return () => clearTimeout(timer);
-    }, [status, secondsLeft, navigate]);
+    }, [status, secondsLeft, navigate, returnPath]);
 
     const handleRetry = () => {
         hasVerified.current = false;
@@ -173,19 +183,21 @@ const PaymentSuccess = () => {
                                     {
                                         paymentInfo.trackingId &&
                                         <div className="flex items-start justify-between gap-4 px-4 py-2.5">
-                                            <dt className="shrink-0 text-body-sm text-ds-muted-foreground">Request ID</dt>
+                                            <dt className="shrink-0 text-body-sm text-ds-muted-foreground">Tracking code</dt>
                                             <dd className="ds-numeric min-w-0 break-all text-right text-body-sm font-semibold text-ds-foreground">{paymentInfo.trackingId}</dd>
                                         </div>
                                     }
                                 </dl>
                             }
 
-                            <p className="mt-5 text-micro text-ds-muted-foreground" role="status">
-                                Taking you to My Repair Requests in {secondsLeft}s…
+                            {/* Visual only: announcing every tick made screen readers
+                                read the countdown once a second. */}
+                            <p className="mt-5 text-micro text-ds-muted-foreground" aria-hidden="true">
+                                Taking you back in {secondsLeft}s…
                             </p>
 
                             <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                                <Link to="/dashboard/my-requests" className={`${buttonVariants()} flex-1`}>View my repair requests</Link>
+                                <Link to={returnPath} className={`${buttonVariants({ variant: 'primary' })} flex-1`}>{returnLabel}</Link>
                                 <Link to="/dashboard/payment-history" className={`${buttonVariants({ variant: 'outline' })} flex-1`}>View payment history</Link>
                             </div>
                             <Link to="/dashboard" className={`${buttonVariants({ variant: 'ghost', size: 'sm' })} mt-2 w-full`}>Return to dashboard</Link>

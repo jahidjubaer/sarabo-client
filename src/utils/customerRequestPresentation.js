@@ -11,8 +11,9 @@ import { getHandoverState } from './repairStage';
 // Maps each backend deliveryStatus to a customer-friendly group. A pending
 // post-repair handover is layered on through the shared handover utility below;
 // it remains separate from the four-stage repair spine. All other in-flight
-// states are "active"; terminal completions are "completed";
-// declined/cancelled are "closed".
+// states are "active"; terminal completions are "completed"; cancelled is
+// "closed". A declined quote is "active", not closed: the technician can still
+// send a revised quote (or close the request, which moves it to cancelled).
 const STATUS_GROUP = {
     'pending-pickup': 'active',
     'driver_assigned': 'active',
@@ -25,16 +26,16 @@ const STATUS_GROUP = {
     'repair_in_progress': 'active',
     'repair_completed': 'completed',
     'parcel_delivered': 'completed',
-    'quote_rejected': 'closed',
+    'quote_rejected': 'active',
     'cancelled': 'closed',
 };
 
-export const REQUEST_GROUPS = ['all', 'active', 'needs-action', 'completed', 'closed'];
-export const GROUP_LABELS = { all: 'All', active: 'Active', 'needs-action': 'Needs Action', completed: 'Completed', closed: 'Closed' };
+export const REQUEST_GROUPS = ['all', 'needs-action', 'active', 'completed', 'closed'];
+export const GROUP_LABELS = { all: 'All', 'needs-action': 'Needs you', active: 'In progress', completed: 'Completed', closed: 'Cancelled' };
 export const SORT_OPTIONS = [
     { value: 'newest', label: 'Newest first' },
     { value: 'oldest', label: 'Oldest first' },
-    { value: 'status', label: 'By status' },
+    { value: 'status', label: 'Needs you first' },
 ];
 
 export function getRequestStatus(request) {
@@ -45,13 +46,6 @@ export function getRequestGroup(request) {
     const handover = getHandoverState(request);
     if (handover && !handover.confirmed) return 'needs-action';
     return STATUS_GROUP[getRequestStatus(request)] || 'active';
-}
-
-// "Active" for the customer = anything still in flight, including states that
-// need their action. Used for the active-repair snapshot + the Active count.
-export function isActiveRequest(request) {
-    const group = getRequestGroup(request);
-    return group === 'active' || group === 'needs-action';
 }
 
 // Whether a Pay control may be OFFERED for a request in a list context.
@@ -175,21 +169,10 @@ export function summarizeRequests(requests) {
     return { total: list.length, active, needsAction, completed };
 }
 
+const GROUP_RANK = { 'needs-action': 0, active: 1, completed: 2, closed: 3 };
+
 function byNewest(a, b) {
     return new Date(b?.createdAt || 0) - new Date(a?.createdAt || 0);
-}
-
-// The single request to feature on the dashboard: the newest one that needs the
-// customer's action if any, otherwise the newest active repair. Null when
-// nothing is in flight.
-export function selectActiveSnapshot(requests) {
-    const ongoing = (Array.isArray(requests) ? requests : []).filter(isActiveRequest).sort(byNewest);
-    const needing = ongoing.filter((request) => getRequestGroup(request) === 'needs-action');
-    return needing[0] || ongoing[0] || null;
-}
-
-export function getRecentRequests(requests, count = 4) {
-    return [...(Array.isArray(requests) ? requests : [])].sort(byNewest).slice(0, count);
 }
 
 // Case-insensitive, trimmed search over already-displayed fields only (device
@@ -216,7 +199,10 @@ export function applyRequestView(requests, { search = '', group = 'all', sort = 
     if (sort === 'oldest') {
         list = [...list].sort((a, b) => new Date(a?.createdAt || 0) - new Date(b?.createdAt || 0));
     } else if (sort === 'status') {
-        list = [...list].sort((a, b) => getRequestStatus(a).localeCompare(getRequestStatus(b)) || byNewest(a, b));
+        // "Needs you first": the customer's to-dos, then in-flight repairs, then
+        // finished, then cancelled - newest first within each. (This used to
+        // sort raw status strings alphabetically, which meant nothing.)
+        list = [...list].sort((a, b) => (GROUP_RANK[getRequestGroup(a)] - GROUP_RANK[getRequestGroup(b)]) || byNewest(a, b));
     } else {
         list = [...list].sort(byNewest);
     }

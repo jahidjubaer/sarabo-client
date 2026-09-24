@@ -1,5 +1,4 @@
 import { formatMoney } from '../../utils/currency';
-import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
 import { formatAbsoluteDateTime } from '../../utils/relativeTime';
 
@@ -24,9 +23,9 @@ function money(amount, currency) {
 
 function Line({ label, value, strong }) {
     return (
-        <div className="flex items-center justify-between gap-3 text-sm">
-            <span className={strong ? 'font-semibold text-ds-foreground' : 'text-ds-muted-foreground'}>{label}</span>
-            <span className={strong ? 'font-semibold text-ds-foreground tabular-nums' : 'text-ds-foreground tabular-nums'}>{value}</span>
+        <div className="flex items-baseline justify-between gap-3">
+            <span className={strong ? 'text-body font-bold text-ds-foreground' : 'text-body-sm text-ds-muted-foreground'}>{label}</span>
+            <span className={strong ? 'ds-numeric text-heading text-ds-foreground' : 'ds-numeric text-body-sm text-ds-foreground'}>{value}</span>
         </div>
     );
 }
@@ -39,36 +38,34 @@ const QuoteSummary = ({ quote, audience }) => {
 
     return (
         <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2">
-                <span className="text-sm font-medium text-ds-foreground">Repair quote</span>
-                <Badge tone={status.tone}>{status.label}</Badge>
-            </div>
-
-            <div className="rounded-ds-lg border border-ds-border p-4">
-                <div className="space-y-2">
-                    <Line label="Labor" value={money(quote.laborAmount, currency)} />
-                    <Line label="Parts" value={money(quote.partsAmount, currency)} />
-                    <Line label="Additional charges" value={money(quote.additionalCharges, currency)} />
-                </div>
-                <Separator className="my-3" />
+            {/* Status is shown by the section this sits in (and the header
+                badge); a second "Repair quote" title and badge here repeated it. */}
+            <p className="sr-only">Quote status: {status.label}</p>
+            <div className="space-y-2.5 rounded-ds-lg bg-ds-muted p-4 sm:p-5">
+                <Line label="Labour" value={money(quote.laborAmount, currency)} />
+                <Line label="Parts" value={money(quote.partsAmount, currency)} />
+                <Line label="Additional charges" value={money(quote.additionalCharges, currency)} />
+                <Separator className="!my-3" />
                 <Line label="Total" value={money(quote.totalAmount, currency)} strong />
             </div>
 
             {quote.notes && (
                 <div>
-                    <h4 className="text-sm font-semibold text-ds-foreground">Notes</h4>
-                    <p className="whitespace-pre-line text-sm text-ds-muted-foreground">{quote.notes}</p>
+                    <p className="text-body-sm font-semibold text-ds-foreground">Technician's notes</p>
+                    <p className="mt-0.5 whitespace-pre-line text-body-sm text-ds-muted-foreground">{quote.notes}</p>
                 </div>
             )}
 
-            {quote.submittedAt && <p className="text-xs text-ds-muted-foreground">Quoted on {formatAbsoluteDateTime(quote.submittedAt)}</p>}
-            {quote.decidedAt && (
-                <p className="text-xs text-ds-muted-foreground">
-                    {quote.status === 'approved' ? 'Approved' : 'Declined'} on {formatAbsoluteDateTime(quote.decidedAt)}
-                    {quote.status === 'rejected' && quote.decisionReason ? ` — ${quote.decisionReason}` : ''}
+            <p className="text-micro text-ds-muted-foreground">
+                {quote.submittedAt ? `Quoted ${formatAbsoluteDateTime(quote.submittedAt)}` : null}
+                {quote.decidedAt ? ` · ${quote.status === 'approved' ? 'Approved' : 'Declined'} ${formatAbsoluteDateTime(quote.decidedAt)}` : null}
+            </p>
+            {quote.status === 'rejected' && quote.decisionReason && (
+                <p className="rounded-ds-lg border border-ds-border p-3 text-body-sm text-ds-muted-foreground">
+                    <span className="font-semibold text-ds-foreground">Reason given: </span>{quote.decisionReason}
                 </p>
             )}
-            {customerDeciding && <p className="text-xs text-ds-muted-foreground">Payment becomes available after you approve the quote.</p>}
+            {customerDeciding && <p className="text-body-sm text-ds-muted-foreground">Nothing is charged until you approve. Payment comes next.</p>}
         </div>
     );
 };

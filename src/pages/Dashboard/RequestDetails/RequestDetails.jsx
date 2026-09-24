@@ -1,30 +1,18 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
-import { MotionConfig, motion as Motion } from 'motion/react';
+import { MotionConfig } from 'motion/react';
 import { History, Ban, CreditCard } from 'lucide-react';
 import useAuth from '../../../hooks/useAuth';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import { DetailSkeleton } from '../../../components/common/Skeletons';
 import { ErrorState } from '../../../components/common/ErrorState';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
-import { Card, CardContent } from '../../../components/ui/card';
-import { Button } from '../../../components/ui/button';
 import { buttonVariants } from '../../../components/ui/button-variants';
 import { RepairWorkspaceHeader } from '../../../components/workspace/RepairWorkspaceHeader';
-import { RepairLifecycleTimeline } from '../../../components/workspace/RepairLifecycleTimeline';
-import { CurrentStageActionPanel } from '../../../components/workspace/CurrentStageActionPanel';
-import { WorkspaceContextPanels } from '../../../components/workspace/WorkspaceContextPanels';
 import { CustomerRequestDetailsView } from '../../../components/customer/CustomerRequestDetailsView';
 import { TechnicianRequestDetailsView } from '../../../components/technician/TechnicianRequestDetailsView';
 import { AdminRequestDetailsView } from '../../../components/admin/AdminRequestDetailsView';
-import DamageImageManager from '../../../components/damage-images/DamageImageManager';
-import InspectionSection from '../../../components/inspection/InspectionSection';
-import QuoteSection from '../../../components/quote/QuoteSection';
-import V2PaymentSection from '../../../components/payment/V2PaymentSection';
-import RepairSection from '../../../components/repair/RepairSection';
-import ReceiptConfirmationSection from '../../../components/repair/ReceiptConfirmationSection';
-import TechnicianEarningSettlement from '../../../components/repair/TechnicianEarningSettlement';
 import { notify } from '../../../lib/notify';
 import { getViewerRole, getSectionVisibility, isLegacyRequest } from '../../../utils/workspacePresentation';
 import { getStatusPresentation } from '../../../config/statusPresentation';
@@ -34,18 +22,6 @@ import { canEditDamageImages } from '../../../utils/damageImageValidation';
 import { getCancellationErrorMessage } from '../../../utils/cancellationErrorMessage';
 import { getRepairStatusActionErrorMessage } from '../../../utils/repairStatusActionErrorMessage';
 import { validateRejectionReason, getAssignmentDecisionErrorMessage } from '../../../utils/assignmentDecision';
-import { staggerContainer, staggerItem } from '../../../theme/motion';
-
-function SectionCard({ title, children }) {
-    return (
-        <Card>
-            <CardContent className="space-y-4 p-5">
-                <h2 className="text-sm font-semibold text-ds-foreground">{title}</h2>
-                {children}
-            </CardContent>
-        </Card>
-    );
-}
 
 // Phase 7.6: the shared repair workspace (customer / assigned technician /
 // admin, distinguished by route as before). All eligibility flags are preserved
@@ -229,28 +205,25 @@ const RequestDetails = () => {
             .finally(() => setCancelling(false));
     };
 
-    const headerAction = (
-        <>
-            <Link to={`/track-request/${request.trackingId}`} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
-                <History aria-hidden="true" /> Timeline
-            </Link>
-            {isOwner && !isV2Request && request.paymentStatus !== 'paid' && !isCancelled && (
-                <Link to={`/dashboard/payment/${request._id}`} className={buttonVariants({ size: 'sm' })}>
-                    <CreditCard aria-hidden="true" /> Pay now
-                </Link>
-            )}
-            {isOwner && canCancelRequest(request) && (
-                <Button variant="outline" size="sm" className="text-ds-destructive hover:text-ds-destructive" onClick={handleCancelClick} disabled={cancelling}>
-                    <Ban aria-hidden="true" /> {cancelling ? 'Cancelling…' : 'Cancel'}
-                </Button>
-            )}
-        </>
-    );
+    // Secondary actions go in the header's "More" menu; only the legacy
+    // (pre-quote) payment stays a visible button, because it is that request's
+    // next step. Eligibility gates are unchanged.
+    const headerMenu = [
+        { label: 'Public tracking page', icon: History, to: `/track-request/${request.trackingId}` },
+        ...(isOwner && canCancelRequest(request)
+            ? [{ label: cancelling ? 'Cancelling…' : 'Cancel request', icon: Ban, onSelect: handleCancelClick, destructive: true, disabled: cancelling }]
+            : []),
+    ];
+    const headerPrimary = isOwner && !isV2Request && request.paymentStatus !== 'paid' && !isCancelled ? (
+        <Link to={`/dashboard/payment/${request._id}`} className={buttonVariants({ variant: 'action', size: 'sm' })}>
+            <CreditCard aria-hidden="true" /> Pay now
+        </Link>
+    ) : null;
 
     return (
         <MotionConfig reducedMotion="user">
             <div className="space-y-6">
-                <RepairWorkspaceHeader request={request} backTo={backTo} backLabel={backLabel} action={headerAction} audience={viewerRole} />
+                <RepairWorkspaceHeader request={request} backTo={backTo} backLabel={backLabel} audience={viewerRole} primaryAction={headerPrimary} menuItems={headerMenu} />
 
                 {viewerRole === 'customer' ? (
                     <CustomerRequestDetailsView
@@ -282,66 +255,14 @@ const RequestDetails = () => {
                         isV2Request={isV2Request}
                     />
                 ) : (
-                <Motion.div variants={staggerContainer} initial="hidden" animate="show" className="grid gap-6 lg:grid-cols-3">
-                    <Motion.div variants={staggerItem} className="space-y-6 lg:col-span-2">
-                        <CurrentStageActionPanel
-                            request={request}
-                            viewerRole={viewerRole}
-                            isAssignedTechnicianView={technicianCanAdvance}
-                            onAdvance={handleAdvance}
-                            advancing={advancing}
-                            onAccept={handleAccept}
-                            onReject={() => setRejectOpen(true)}
-                            deciding={deciding}
-                        />
-
-                        {sections.showDamage && (
-                            <SectionCard title="Damage photos">
-                                <DamageImageManager requestId={request._id} canEdit={damageImagesEditable} />
-                            </SectionCard>
-                        )}
-                        {sections.showInspection && (
-                            <SectionCard title="Inspection">
-                                <InspectionSection requestId={request._id} canInspect={canInspect} isAssignedTechnicianView={isAssignedTechnicianView} />
-                            </SectionCard>
-                        )}
-                        {sections.showQuote && (
-                            <SectionCard title="Repair quote">
-                                <QuoteSection requestId={request._id} isOwner={isOwner} canSubmitQuote={canSubmitQuote} isAssignedTechnicianView={isAssignedTechnicianView} />
-                            </SectionCard>
-                        )}
-                        {sections.showPayment && <V2PaymentSection requestId={request._id} />}
-                        {sections.showRepair && (
-                            <SectionCard title="Repair">
-                                <RepairSection requestId={request._id} canManage={isAssignedTechnicianView} deliveryStatus={request.deliveryStatus} />
-                            </SectionCard>
-                        )}
-                        {/* Phase 8.9: post-completion device-receipt confirmation.
-                            Self-guards on deliveryStatus === 'repair_completed', so it
-                            renders nothing until the repair is done. */}
-                        <ReceiptConfirmationSection requestId={request._id} request={request} isOwner={isOwner} />
-                        {/* Legacy technician earning, read-only since Phase 9 - the
-                            per-repair payout control is retired and payouts now run
-                            through the wallet withdrawal queue. Kept so pre-Phase-9
-                            repairs still show what was recorded against them.
-                            request.technicianEarning is returned by the server only
-                            to admins; the component self-guards on its presence. */}
-                        {isAdminContext && <TechnicianEarningSettlement earning={request.technicianEarning} />}
-
-                        {!isV2Request && (
-                            <SectionCard title="Repair request">
-                                <p className="text-sm text-ds-muted-foreground">
-                                    This is an earlier repair request. Inspection, quotes, and the newer repair workflow are available for requests created after the latest update.
-                                </p>
-                            </SectionCard>
-                        )}
-                    </Motion.div>
-
-                    <Motion.div variants={staggerItem} className="space-y-4">
-                        <RepairLifecycleTimeline request={request} />
-                        <WorkspaceContextPanels request={request} showCustomer={isAdminContext || isAssignedTechnicianView} />
-                    </Motion.div>
-                </Motion.div>
+                    // Not the owner, the assigned technician or an admin: the
+                    // server refuses this read, so this is only reached if it
+                    // ever did not. Show nothing of the request.
+                    <ErrorState
+                        title="Repair request not available"
+                        description="You do not have access to this repair request."
+                        secondaryAction={<Link to={backTo} className={buttonVariants({ variant: 'outline', size: 'sm' })}>{backLabel}</Link>}
+                    />
                 )}
             </div>
 
