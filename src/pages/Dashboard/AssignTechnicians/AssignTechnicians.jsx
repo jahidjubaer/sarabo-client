@@ -21,8 +21,26 @@ import { getWorkStatusLabel, getWorkStatusTone, formatRecommendationReasons, get
 import { formatPickupSlot } from '../../../utils/pickupSlots';
 import { formatAbsoluteDateTime } from '../../../utils/relativeTime';
 import { getAssignmentErrorMessage } from '../../../utils/assignmentErrorMessage';
+import { useAdminAttention, adminAttentionKeys } from '../../../hooks/useAdminAttention';
+import { attentionIdSets, flagsFor, ATTENTION_FLAGS } from '../../../utils/attentionPresentation';
+import { Select } from '../../../components/ui/select';
 
 const EMPTY_REQUESTS = [];
+const VIEW_OPTIONS = [
+    { value: 'all', label: 'All waiting requests' },
+    { value: 'overdue', label: 'Pickup time passed' },
+    { value: 'unmatched', label: 'No local technician' },
+];
+
+// Badges for a waiting request that needs attention (overdue-alerts phase).
+function AttentionBadges({ flags }) {
+    if (flags.length === 0) return null;
+    return (
+        <span className="mt-1 flex flex-wrap gap-1">
+            {flags.map((flag) => <Badge key={flag} tone={ATTENTION_FLAGS[flag].tone}>{ATTENTION_FLAGS[flag].label}</Badge>)}
+        </span>
+    );
+}
 
 // Phase 7.5: technician assignment rebuilt around the EXPERTISE-AWARE backend.
 // The assignment Sheet uses the authoritative eligible-technicians endpoint
@@ -36,8 +54,13 @@ const EMPTY_REQUESTS = [];
 const AssignTechnicians = () => {
     const axiosSecure = useAxiosSecure();
     const queryClient = useQueryClient();
-    const [filters, setFilters] = useUrlFilters({ q: '' });
+    const [filters, setFilters] = useUrlFilters({ q: '', view: 'all' });
     const search = filters.q;
+    const view = VIEW_OPTIONS.some((o) => o.value === filters.view) ? filters.view : 'all';
+    // Overdue / no-local-technician flags from GET /admin/attention. Optional:
+    // without it the page works as before, just without badges.
+    const attentionQuery = useAdminAttention();
+    const attentionSets = useMemo(() => (attentionQuery.data ? attentionIdSets(attentionQuery.data) : null), [attentionQuery.data]);
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [assigningId, setAssigningId] = useState(null);
     const [searchParams, setSearchParams] = useSearchParams();
@@ -78,10 +101,11 @@ const AssignTechnicians = () => {
     }, [hasUsableRequests, requests, preselectRequestId, autoOpenedFor]);
 
     const filtered = useMemo(() => requests.filter((r) => {
+        if (view !== 'all' && !(attentionSets && attentionSets[view].has(r._id))) return false;
         const term = search.trim().toLowerCase();
         if (!term) return true;
         return getDeviceLabel(r).toLowerCase().includes(term) || (r.senderDistrict || r.serviceLocation?.district || '').toLowerCase().includes(term);
-    }), [requests, search]);
+    }), [requests, search, view, attentionSets]);
 
     const handleAssign = (technician) => {
         if (assigningId || !selectedRequest) return;
@@ -95,6 +119,7 @@ const AssignTechnicians = () => {
                     refetchRequests();
                     queryClient.invalidateQueries({ queryKey: ['request-status-stats'] });
                     queryClient.invalidateQueries({ queryKey: ['admin-all-requests'] });
+                    queryClient.invalidateQueries({ queryKey: adminAttentionKeys.all });
                     notify.success(`${technician.displayName} offered this assignment — awaiting their decision.`);
                 } else {
                     refetchRequests();
@@ -120,6 +145,7 @@ const AssignTechnicians = () => {
                     <div className="min-w-0">
                         <div className="truncate font-medium text-ds-foreground">{device}</div>
                         {category && <div className="truncate text-xs text-ds-muted-foreground">{category}</div>}
+                        <AttentionBadges flags={flagsFor(row.original._id, attentionSets)} />
                     </div>
                 );
             },
@@ -149,7 +175,7 @@ const AssignTechnicians = () => {
             ),
             meta: { label: 'Actions', headClassName: 'text-right', cellClassName: 'text-right' },
         },
-    ], []);
+    ], [attentionSets]);
 
     if (isUnavailableBeforeData) {
         return (
@@ -178,6 +204,7 @@ const AssignTechnicians = () => {
                 <p className="ds-label text-ds-warning">Assignment required</p>
                 <p className="truncate text-sm font-semibold text-ds-foreground">{device}</p>
                 <p className="truncate text-xs text-ds-muted-foreground">{[category, request.senderName].filter(Boolean).join(' · ')}</p>
+                <AttentionBadges flags={flagsFor(request._id, attentionSets)} />
                 {request.trackingId && <p className="mt-2 break-all font-mono text-xs text-ds-muted-foreground">{request.trackingId}</p>}
                 <div className="mt-2 flex items-center gap-2 text-xs text-ds-muted-foreground">
                     <MapPin aria-hidden="true" className="size-3.5" />
@@ -196,11 +223,24 @@ const AssignTechnicians = () => {
         );
     };
 
+    const viewCount = (value) => {
+        if (value === 'all' || !attentionSets) return null;
+        return requests.filter((r) => attentionSets[value].has(r._id)).length;
+    };
     const toolbar = (
-        <div className="relative min-w-0 flex-1 sm:max-w-xs">
-            <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ds-muted-foreground" />
-            <Label htmlFor="assign-search" className="sr-only">Search requests</Label>
-            <Input id="assign-search" type="search" value={search} onChange={(e) => setFilters({ q: e.target.value })} placeholder="Search by device or district" className="pl-9" />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative min-w-0 flex-1 sm:max-w-xs">
+                <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ds-muted-foreground" />
+                <Label htmlFor="assign-search" className="sr-only">Search requests</Label>
+                <Input id="assign-search" type="search" value={search} onChange={(e) => setFilters({ q: e.target.value })} placeholder="Search by device or district" className="pl-9" />
+            </div>
+            <Label htmlFor="assign-view" className="sr-only">Show</Label>
+            <Select id="assign-view" size="sm" value={view} onChange={(e) => setFilters({ view: e.target.value })} wrapperClassName="sm:w-60">
+                {VIEW_OPTIONS.map((o) => {
+                    const count = viewCount(o.value);
+                    return <option key={o.value} value={o.value}>{count === null ? o.label : `${o.label} (${count})`}</option>;
+                })}
+            </Select>
         </div>
     );
 
@@ -224,8 +264,10 @@ const AssignTechnicians = () => {
                 renderCard={renderCard}
                 emptyState={
                     <EmptyState
-                        title={search ? 'No matching requests' : 'Nothing to assign'}
-                        description={search ? 'No requests match your search.' : 'No repair requests are waiting for technician assignment right now.'}
+                        title={search || view !== 'all' ? 'No matching requests' : 'Nothing to assign'}
+                        description={view === 'overdue' ? 'No waiting request has passed its pickup time.'
+                            : view === 'unmatched' ? 'Every waiting request has at least one technician in its region who can take it.'
+                            : search ? 'No requests match your search.' : 'No repair requests are waiting for technician assignment right now.'}
                     />
                 }
             />
