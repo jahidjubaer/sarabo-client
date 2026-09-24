@@ -1,0 +1,31 @@
+name: CI
+
+# Checks only - this workflow never deploys. Firebase deploys stay manual.
+on:
+  push:
+  pull_request:
+    branches: [main, development]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24 # same as the server CI and Vercel
+          cache: npm
+
+      - run: npm ci
+      - run: npm run lint
+      # No VITE_* values: this only proves the app compiles, the build is discarded.
+      - run: npm run build
