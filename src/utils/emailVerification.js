@@ -7,8 +7,17 @@
 // users report true; email/password users report true only after they follow
 // the verification link and the local user is reloaded. Provider is never
 // hardcoded to verified.
+//
+// Local development only: VITE_SKIP_EMAIL_VERIFICATION=true treats every
+// signed-in user as verified, matching the server's SKIP_EMAIL_VERIFICATION.
+// `import.meta.env.DEV` is false in every production build, so the setting
+// can never switch verification off on the live site.
+export const EMAIL_VERIFICATION_SKIPPED = import.meta.env.DEV && import.meta.env.VITE_SKIP_EMAIL_VERIFICATION === 'true';
+
 export function isUserEmailVerified(user) {
-    return !!(user && user.emailVerified === true);
+    if (!user) return false;
+    if (EMAIL_VERIFICATION_SKIPPED) return true;
+    return user.emailVerified === true;
 }
 
 // True when a path contains any ASCII control character (0x00-0x1F). Uses
