@@ -1,6 +1,6 @@
 import {
     LayoutDashboard, PlusCircle, Wrench, CreditCard, ClipboardList, CheckCheck,
-    UserCog, UserCheck, Users, Bell, User, Home, Wallet, Banknote, MessageSquare, ClipboardCheck, Tags,
+    UserCog, UserCheck, Users, Bell, User, Home, Wallet, Banknote, MessageSquare, ClipboardCheck, Tags, ChartColumn,
 } from 'lucide-react';
 import { matchPath } from 'react-router';
 
@@ -59,6 +59,7 @@ const ADMIN_SECTIONS = [
     {
         heading: 'Feedback & reports',
         items: [
+            { label: 'Reports', to: '/dashboard/reports', icon: ChartColumn },
             { label: 'Technician reports', to: '/dashboard/technician-reports', icon: ClipboardCheck },
             { label: 'Technician reviews', to: '/dashboard/technician-reviews', icon: MessageSquare },
         ],
@@ -120,6 +121,7 @@ export const SEGMENT_LABELS = {
     wallet: 'Wallet',
     'withdrawal-requests': 'Withdrawals',
     'service-catalogue': 'Services & prices',
+    reports: 'Reports',
     'technician-reports': 'Technician reports',
     'technician-reviews': 'Technician reviews',
     notifications: 'Notifications',

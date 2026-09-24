@@ -47,6 +47,7 @@ const Wallet = lazy(() => import("../pages/Dashboard/Wallet/Wallet"));
 const WithdrawalRequests = lazy(() => import("../pages/Dashboard/WithdrawalRequests/WithdrawalRequests"));
 const AdminFeedbackPage = lazy(() => import("../pages/Dashboard/TechnicianFeedback/AdminFeedbackPage"));
 const ServiceCatalogue = lazy(() => import("../pages/Dashboard/ServiceCatalogue/ServiceCatalogue"));
+const Reports = lazy(() => import("../pages/Dashboard/Reports/Reports"));
 
 export const router = createBrowserRouter([
   {
@@ -251,6 +252,11 @@ export const router = createBrowserRouter([
         // Admin service catalogue: prices and on/off for each repair service.
         path: 'service-catalogue',
         element: <AdminRoute><ServiceCatalogue></ServiceCatalogue></AdminRoute>
+      },
+      {
+        // Admin reports: demand, completion, regions, pickups, workload.
+        path: 'reports',
+        element: <AdminRoute><Reports></Reports></AdminRoute>
       }
     ]
       }

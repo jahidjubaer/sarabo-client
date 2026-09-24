@@ -6,7 +6,7 @@ test('an unknown address shows the not-found page', async ({ page }) => {
 });
 
 // Signed-out visitors are sent to sign in, for every kind of dashboard page.
-for (const path of ['/dashboard', '/dashboard/create-request', '/dashboard/assigned-jobs', '/dashboard/service-catalogue']) {
+for (const path of ['/dashboard', '/dashboard/create-request', '/dashboard/assigned-jobs', '/dashboard/service-catalogue', '/dashboard/reports']) {
     test(`${path} sends a signed-out visitor to sign in`, async ({ page }) => {
         await page.goto(path);
         await expect(page).toHaveURL(/\/login$/);
