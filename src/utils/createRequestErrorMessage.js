@@ -24,6 +24,7 @@ const V2_ERROR_MESSAGES = {
     INVALID_DAMAGE_DESCRIPTION: 'Please describe the issue in more detail.',
     INVALID_SERVICE_LOCATION: 'Please complete the service location fields.',
     INVALID_PICKUP_SLOT: 'Please choose a pickup time.',
+    NO_TECHNICIAN_AVAILABLE: "No technician in your region offers this repair yet, so we can't take this request right now.",
     PICKUP_SLOT_FULL: 'That pickup time was just booked up. Please choose another.',
     PICKUP_SLOT_TOO_SOON: 'That pickup time has passed or starts too soon. Please choose a later one.',
     PICKUP_SLOT_TOO_FAR: 'Pickups can be booked up to 7 days ahead. Please choose an earlier day.',

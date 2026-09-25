@@ -100,6 +100,10 @@ export function getRequestAction(request) {
     const to = `/dashboard/my-requests/${request._id}`;
     const handover = getHandoverState(request);
     if (handover && !handover.confirmed) return { kind: 'handover', label: 'Confirm device received', to };
+    // Technicians estimate from photos: a waiting request needs at least one.
+    if (request.schemaVersion === 2 && status === 'pending-pickup' && request.damage && request.damage.imageCount === 0) {
+        return { kind: 'add-photo', label: 'Add a photo', to };
+    }
     // An admin asked for a new pickup time after a missed pickup.
     if (request.pickupRescheduleRequestedAt && ['assignment_pending', 'driver_assigned', 'rider_arriving'].includes(status)) {
         return { kind: 'new-pickup-time', label: 'Choose a new pickup time', to };

@@ -35,6 +35,7 @@ import { Card } from '../ui/card';
 import { Select } from '../ui/select';
 import { PickupSlotPicker } from '../pickup/PickupSlotPicker';
 import { pickupSlotKeys } from '../../hooks/usePickupSlots';
+import { useServiceAvailability, serviceAvailabilityKeys } from '../../hooks/useServiceAvailability';
 import { formatPickupChoice, STALE_PICKUP_CODES } from '../../utils/pickupSlots';
 
 
@@ -128,6 +129,9 @@ const RepairRequestV2Form = () => {
     const selectedServiceDefinitionId = useWatch({ control, name: 'serviceDefinitionId' });
     const servicesForSelectedProduct = getServicesForProduct(definitions, selectedProductCategorySlug);
     const selectedDefinition = findDefinitionById(definitions, selectedServiceDefinitionId);
+    // Nobody in the region offers this repair -> the request can't be taken.
+    const availabilityQuery = useServiceAvailability(selectedRegion, selectedDefinition ? selectedServiceDefinitionId : null);
+    const noTechnician = availabilityQuery.data?.available === false;
 
     // Apply the initial public-service deep link once the canonical catalogue
     // is available. Exact slug matching rejects missing/stale values without
@@ -251,6 +255,9 @@ const RepairRequestV2Form = () => {
             }
             // The chosen time was taken or closed meanwhile: reload the times
             // and ask for another, keeping everything else the customer typed.
+            if (error?.response?.data?.code === 'NO_TECHNICIAN_AVAILABLE') {
+                queryClient.invalidateQueries({ queryKey: serviceAvailabilityKeys.all });
+            }
             if (STALE_PICKUP_CODES.includes(error?.response?.data?.code)) {
                 queryClient.invalidateQueries({ queryKey: pickupSlotKeys.all });
                 setValue('pickupChoice', '');
@@ -265,6 +272,7 @@ const RepairRequestV2Form = () => {
         // Single-flight guard beyond RHF's own re-entrancy: a mutation
         // already in flight or already succeeded never fires a second POST.
         if (mutation.isPending || stage !== 'form') return;
+        if (noTechnician) return;
 
         const finalCheck = validateRepairRequestV2Form(values, definitions);
         if (!finalCheck.valid) {
@@ -374,6 +382,7 @@ const RepairRequestV2Form = () => {
             size="lg"
             loading={mutation.isPending}
             loadingText="Creating…"
+            disabled={noTechnician}
             className={fullWidth ? 'w-full' : 'shrink-0'}
         >
             Create request
@@ -498,6 +507,16 @@ const RepairRequestV2Form = () => {
                         </SectionShell>
 
                         <SectionShell step={3} stepId="location" title="Where to collect it" description="Your technician collects the device from this address.">
+                                {noTechnician && (
+                                    <FormAlert
+                                        className="mb-4"
+                                        alert={{
+                                            tone: 'warning',
+                                            title: 'No technician here for this repair yet',
+                                            text: `No technician in ${selectedRegion} offers ${selectedDefinition?.label || 'this repair'} yet, so we can't take this request right now. Please check back soon.`,
+                                        }}
+                                    />
+                                )}
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                     <FormField id="region" label="Region" required error={errors.serviceLocation?.region?.message}>
                                         <Select

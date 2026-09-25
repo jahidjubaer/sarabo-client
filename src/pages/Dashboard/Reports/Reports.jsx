@@ -155,6 +155,7 @@ function RegionTable({ regions }) {
                             <TableHead scope="col" className="text-right">Requests</TableHead>
                             <TableHead scope="col" className="text-right">Waiting now</TableHead>
                             <TableHead scope="col">No local technician</TableHead>
+                            <TableHead scope="col" className="text-right">Turned away</TableHead>
                             <TableHead scope="col" className="text-right">Technicians</TableHead>
                             <TableHead scope="col" className="text-right">Free now</TableHead>
                         </TableRow>
@@ -170,6 +171,7 @@ function RegionTable({ regions }) {
                                         ? <Badge tone="attention"><TriangleAlert aria-hidden="true" />{r.unmatchedWaiting} can't be matched</Badge>
                                         : <span className="text-ds-muted-foreground">None</span>}
                                 </TableCell>
+                                <TableCell className="ds-numeric text-right">{r.turnedAway ?? 0}</TableCell>
                                 <TableCell className="ds-numeric text-right">{r.approvedTechnicians}</TableCell>
                                 <TableCell className="ds-numeric text-right">{r.availableTechnicians}</TableCell>
                             </TableRow>
@@ -189,6 +191,7 @@ function RegionTable({ regions }) {
                             <div><dt className="text-micro text-ds-muted-foreground">Waiting now</dt><dd className="ds-numeric">{r.waiting}</dd></div>
                             <div><dt className="text-micro text-ds-muted-foreground">Technicians</dt><dd className="ds-numeric">{r.approvedTechnicians}</dd></div>
                             <div><dt className="text-micro text-ds-muted-foreground">Free now</dt><dd className="ds-numeric">{r.availableTechnicians}</dd></div>
+                            <div><dt className="text-micro text-ds-muted-foreground">Turned away</dt><dd className="ds-numeric">{r.turnedAway ?? 0}</dd></div>
                         </dl>
                     </li>
                 ))}
@@ -294,11 +297,12 @@ const Reports = () => {
                         { label: 'Repairs finished', value: formatCount(o.completed), hint: previousHint(o.previous.completed, period) },
                         { label: 'Cancelled', value: formatCount(o.cancelled), hint: previousHint(o.previous.cancelled, period) },
                         { label: 'Success rate', value: formatPercent(o.successRate), hint: previousHint(o.previous.successRate, period, formatPercent) },
+                        { label: 'Turned away', value: formatCount(o.turnedAway), hint: previousHint(o.previous.turnedAway, period) },
                     ]}
                 />
                 <p className="mt-3 text-body-sm text-ds-muted-foreground">
                     Average time from request to finished repair: <span className="font-semibold text-ds-foreground">{formatDays(o.avgDaysToComplete)}</span>
-                    {' '}(previous {period} days: {formatDays(o.previous.avgDaysToComplete)}). Success rate is finished ÷ (finished + cancelled).
+                    {' '}(previous {period} days: {formatDays(o.previous.avgDaysToComplete)}). Success rate is finished ÷ (finished + cancelled). Turned away counts customers who couldn't submit because no local technician offers that repair.
                 </p>
             </Section>
 

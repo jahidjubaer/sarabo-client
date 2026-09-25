@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion as Motion } from 'motion/react';
 import { Link } from 'react-router';
-import { CalendarClock, RotateCcw } from 'lucide-react';
+import { Camera, CalendarClock, RotateCcw } from 'lucide-react';
 import { buttonVariants } from '../ui/button-variants';
 import { canRebook, rebookPath } from '../../utils/createRequestFlow';
 import ServiceSpine from '../spine/ServiceSpine';
@@ -34,6 +34,9 @@ function nextStepModel(request, action) {
     const group = getRequestGroup(request);
     const handover = getHandoverState(request);
 
+    if (action?.kind === 'add-photo') {
+        return { tone: 'action', eyebrow: 'Your next step', title: 'Add at least one photo', description: 'Technicians use photos to estimate the repair. Add a photo of the problem so they can see your request.' };
+    }
     if (action?.kind === 'new-pickup-time') {
         return { tone: 'action', eyebrow: 'Your next step', title: 'Choose a new pickup time', description: 'Your pickup was missed. Choose a new 2-hour window and your technician will collect the device then.' };
     }
@@ -110,6 +113,11 @@ function CustomerRequestDetailsView({ request, sections, isV2Request, damageImag
                         )}
                         {focus === 'payment' && <V2PaymentSection requestId={request._id} bare />}
                         {focus === 'handover' && <ReceiptConfirmationSection requestId={request._id} request={request} isOwner />}
+                        {focus === 'add-photo' && (
+                            <a href="#repair-request" className={buttonVariants({ variant: 'action' })}>
+                                <Camera aria-hidden="true" /> Add a photo
+                            </a>
+                        )}
                         {focus === 'new-pickup-time' && (
                             <Button variant="action" onClick={() => setPickupSheetOpen(true)}>
                                 <CalendarClock aria-hidden="true" /> Choose a new time
