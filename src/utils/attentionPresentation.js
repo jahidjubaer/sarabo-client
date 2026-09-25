@@ -5,6 +5,7 @@ import { humanizeSlug } from './serviceDefinitionCatalog';
 export const ATTENTION_FLAGS = {
     overdue: { label: 'Pickup time passed', tone: 'attention' },
     unmatched: { label: 'No local technician', tone: 'danger' },
+    unchosen: { label: 'Nobody chosen in 24h', tone: 'attention' },
 };
 
 // Sets of request ids, for badging rows that come from other lists.
@@ -12,12 +13,13 @@ export function attentionIdSets(data) {
     return {
         overdue: new Set((data?.overdueWaiting ?? []).map((r) => r.id)),
         unmatched: new Set((data?.unmatchable ?? []).map((r) => r.id)),
+        unchosen: new Set((data?.unchosen ?? []).map((r) => r.id)),
     };
 }
 
 export function flagsFor(id, sets) {
     if (!sets) return [];
-    return ['overdue', 'unmatched'].filter((key) => sets[key].has(id));
+    return ['overdue', 'unmatched', 'unchosen'].filter((key) => sets[key].has(id));
 }
 
 // "Samsung A52", or the device type when there is no brand/model.

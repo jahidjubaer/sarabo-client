@@ -14,6 +14,7 @@ import ReceiptConfirmationSection from '../repair/ReceiptConfirmationSection';
 import CustomerTechnicianFeedback from '../feedback/customer/CustomerTechnicianFeedback';
 import { WorkspaceContextPanels } from '../workspace/WorkspaceContextPanels';
 import { PickupRescheduleSheet } from '../pickup/PickupRescheduleSheet';
+import { TechnicianApplications } from './TechnicianApplications';
 import { Button } from '../ui/button';
 import { canChangePickup } from '../../utils/pickupSlots';
 import { NextStepPanel } from '../workspace/NextStepPanel';
@@ -34,6 +35,12 @@ function nextStepModel(request, action) {
     const group = getRequestGroup(request);
     const handover = getHandoverState(request);
 
+    // Job portal (phase B): a waiting request with a photo is open to
+    // technicians; the customer compares their applications and chooses.
+    if (!action && request?.schemaVersion === 2 && (request?.deliveryStatus || 'pending-pickup') === 'pending-pickup'
+        && !request?.technicianName && request?.damage?.imageCount > 0) {
+        return { tone: 'action', eyebrow: 'Your next step', title: 'Choose a technician', description: 'Technicians in your area send an estimate and their inspection fee. Compare them and choose one.', chooser: true };
+    }
     if (action?.kind === 'add-photo') {
         return { tone: 'action', eyebrow: 'Your next step', title: 'Add at least one photo', description: 'Technicians use photos to estimate the repair. Add a photo of the problem so they can see your request.' };
     }
@@ -113,6 +120,7 @@ function CustomerRequestDetailsView({ request, sections, isV2Request, damageImag
                         )}
                         {focus === 'payment' && <V2PaymentSection requestId={request._id} bare />}
                         {focus === 'handover' && <ReceiptConfirmationSection requestId={request._id} request={request} isOwner />}
+                        {model.chooser && <TechnicianApplications request={request} />}
                         {focus === 'add-photo' && (
                             <a href="#repair-request" className={buttonVariants({ variant: 'action' })}>
                                 <Camera aria-hidden="true" /> Add a photo

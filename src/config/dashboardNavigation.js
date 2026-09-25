@@ -1,6 +1,6 @@
 import {
     LayoutDashboard, PlusCircle, Wrench, CreditCard, ClipboardList, CheckCheck,
-    UserCog, UserCheck, Users, Bell, User, Home, Wallet, Banknote, MessageSquare, ClipboardCheck, Tags, ChartColumn,
+    UserCog, UserCheck, Users, Bell, User, Home, Wallet, Banknote, MessageSquare, ClipboardCheck, Tags, ChartColumn, Search,
 } from 'lucide-react';
 import { matchPath } from 'react-router';
 
@@ -36,6 +36,7 @@ const TECHNICIAN_SECTIONS = [
         heading: 'Repair Work',
         items: [
             { label: 'Overview', to: '/dashboard', icon: LayoutDashboard, end: true },
+            { label: 'Job portal', to: '/dashboard/job-portal', icon: Search },
             { label: 'Assigned jobs', to: '/dashboard/assigned-jobs', icon: ClipboardList },
             { label: 'Completed jobs', to: '/dashboard/completed-jobs', icon: CheckCheck },
             { label: 'Wallet', to: '/dashboard/wallet', icon: Wallet },
@@ -113,6 +114,7 @@ export const SEGMENT_LABELS = {
     'my-requests': 'My Requests',
     'payment-history': 'Payment History',
     'assigned-jobs': 'Assigned jobs',
+    'job-portal': 'Job portal',
     'completed-jobs': 'Completed jobs',
     'manage-repair-requests': 'Repair requests',
     'assign-technicians': 'Assign technicians',

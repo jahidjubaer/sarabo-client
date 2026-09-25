@@ -2,7 +2,7 @@ import { lazy, Suspense } from 'react';
 import { Link } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion as Motion, MotionConfig } from 'motion/react';
-import { ArrowRight, Banknote, CalendarX, CircleCheckBig, Flag, MapPinOff, ReceiptText, TriangleAlert, UserCheck, UserCog } from 'lucide-react';
+import { ArrowRight, Banknote, CalendarX, CircleCheckBig, Clock3, Flag, MapPinOff, ReceiptText, TriangleAlert, UserCheck, UserCog } from 'lucide-react';
 import useAxiosSecure from '../../hooks/useAxiosSecure';
 import { walletKeys } from '../../hooks/walletKeys';
 import { useAdminFeedbackList } from '../../hooks/useTechnicianFeedback';
@@ -90,11 +90,12 @@ function AttentionStrip({ counts }) {
     const items = [
         counts.missedPickups > 0 && { key: 'missed', icon: CalendarX, text: `${plural(counts.missedPickups, 'pickup')} missed`, hint: 'Technician assigned, device not collected', to: '#needs-you-queue' },
         counts.overdueWaiting > 0 && { key: 'overdue', icon: TriangleAlert, text: `${plural(counts.overdueWaiting, 'pickup')} overdue`, hint: 'Pickup time passed, no technician yet', to: '/dashboard/assign-technicians?view=overdue' },
+        counts.unchosen > 0 && { key: 'unchosen', icon: Clock3, text: `${plural(counts.unchosen, 'request')} with nobody chosen`, hint: 'Open 24 hours in the job portal - invite a technician', to: '/dashboard/assign-technicians?view=unchosen' },
         counts.unmatchable > 0 && { key: 'unmatched', icon: MapPinOff, text: `${plural(counts.unmatchable, 'request')} with no local technician`, hint: 'Nobody in the region can take them', to: '/dashboard/assign-technicians?view=unmatched' },
     ].filter(Boolean);
     if (items.length === 0) return null;
     return (
-        <nav aria-label="Pickups that need attention" className="mb-5 grid gap-3 rounded-ds-lg border border-ds-attention/40 bg-ds-attention-subtle p-3 sm:grid-cols-3">
+        <nav aria-label="Pickups that need attention" className="mb-5 grid gap-3 rounded-ds-lg border border-ds-attention/40 bg-ds-attention-subtle p-3 sm:grid-cols-2 xl:grid-cols-4">
             {items.map((item) => {
                 const ItemIcon = item.icon;
                 const content = (

@@ -48,6 +48,7 @@ const WithdrawalRequests = lazy(() => import("../pages/Dashboard/WithdrawalReque
 const AdminFeedbackPage = lazy(() => import("../pages/Dashboard/TechnicianFeedback/AdminFeedbackPage"));
 const ServiceCatalogue = lazy(() => import("../pages/Dashboard/ServiceCatalogue/ServiceCatalogue"));
 const Reports = lazy(() => import("../pages/Dashboard/Reports/Reports"));
+const JobPortal = lazy(() => import("../pages/Dashboard/JobPortal/JobPortal"));
 
 export const router = createBrowserRouter([
   {
@@ -191,6 +192,11 @@ export const router = createBrowserRouter([
       {
         path: 'assigned-jobs',
         element: <TechnicianRoute><AssignedJobs></AssignedJobs></TechnicianRoute>
+      },
+      {
+        // Open repair requests technicians can apply for (job-portal phase B).
+        path: 'job-portal',
+        element: <TechnicianRoute><JobPortal></JobPortal></TechnicianRoute>
       },
       {
         // Assigned technician's detail view (Phase 6.4 Unit 4) - reuses the

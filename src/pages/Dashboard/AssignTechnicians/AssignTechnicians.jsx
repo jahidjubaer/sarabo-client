@@ -22,6 +22,7 @@ import { formatPickupSlot } from '../../../utils/pickupSlots';
 import { formatAbsoluteDateTime } from '../../../utils/relativeTime';
 import { getAssignmentErrorMessage } from '../../../utils/assignmentErrorMessage';
 import { useAdminAttention, adminAttentionKeys } from '../../../hooks/useAdminAttention';
+import { inviteTechnician } from '../../../api/jobPortal';
 import { attentionIdSets, flagsFor, ATTENTION_FLAGS } from '../../../utils/attentionPresentation';
 import { Select } from '../../../components/ui/select';
 
@@ -30,6 +31,7 @@ const VIEW_OPTIONS = [
     { value: 'all', label: 'All waiting requests' },
     { value: 'overdue', label: 'Pickup time passed' },
     { value: 'unmatched', label: 'No local technician' },
+    { value: 'unchosen', label: 'Nobody chosen in 24h' },
 ];
 
 // Badges for a waiting request that needs attention (overdue-alerts phase).
@@ -106,6 +108,30 @@ const AssignTechnicians = () => {
         if (!term) return true;
         return getDeviceLabel(r).toLowerCase().includes(term) || (r.senderDistrict || r.serviceLocation?.district || '').toLowerCase().includes(term);
     }), [requests, search, view, attentionSets]);
+
+    // Job portal (phase B): a request with a photo is open for applications -
+    // the normal way is to invite a technician to apply, so the customer
+    // chooses. Direct assignment stays as an admin override.
+    const openForApplications = Boolean(selectedRequest) && selectedRequest.schemaVersion === 2 && (selectedRequest.damage?.imageCount ?? 0) > 0;
+    const [invited, setInvited] = useState(() => new Set());
+    const [invitingId, setInvitingId] = useState(null);
+    // Remembered per request and technician, for this page visit.
+    const inviteKey = (technicianId) => `${selectedRequest?._id}|${technicianId}`;
+    const handleInvite = (technician) => {
+        if (!selectedRequest || invitingId) return;
+        setInvitingId(technician.technicianId);
+        inviteTechnician(axiosSecure, selectedRequest._id, technician.technicianId)
+            .then(() => {
+                setInvited((current) => new Set(current).add(inviteKey(technician.technicianId)));
+                notify.success(`${technician.displayName} has been invited to apply.`);
+            })
+            .catch((error) => {
+                const code = error?.response?.data?.code;
+                if (code === 'ALREADY_INVITED') setInvited((current) => new Set(current).add(inviteKey(technician.technicianId)));
+                notify.error(code === 'ALREADY_INVITED' ? 'Already invited.' : code === 'JOB_NOT_OPEN' ? 'This request is no longer open for applications.' : 'The invitation could not be sent. Please try again.');
+            })
+            .finally(() => setInvitingId(null));
+    };
 
     const handleAssign = (technician) => {
         if (assigningId || !selectedRequest) return;
@@ -325,9 +351,16 @@ const AssignTechnicians = () => {
                                                     <p className="mt-1 inline-flex items-center gap-1 text-xs text-ds-muted-foreground"><Wrench aria-hidden="true" className="size-3.5" />Completed repairs: {tech.completedRepairCount}</p>
                                                 )}
                                             </div>
-                                            <Button size="sm" className="w-full shrink-0 sm:w-auto" disabled={!!assigningId} onClick={() => handleAssign(tech)}>
-                                                {assigningId === tech.technicianId ? 'Assigning…' : 'Assign'}
-                                            </Button>
+                                            <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto">
+                                                {openForApplications && (
+                                                    <Button size="sm" variant="primary" disabled={!!assigningId || invited.has(inviteKey(tech.technicianId)) || invitingId === tech.technicianId} onClick={() => handleInvite(tech)}>
+                                                        {invited.has(inviteKey(tech.technicianId)) ? 'Invited' : invitingId === tech.technicianId ? 'Inviting…' : 'Invite to apply'}
+                                                    </Button>
+                                                )}
+                                                <Button size="sm" variant={openForApplications ? 'outline' : 'primary'} disabled={!!assigningId} onClick={() => handleAssign(tech)}>
+                                                    {assigningId === tech.technicianId ? 'Assigning…' : openForApplications ? 'Assign directly' : 'Assign'}
+                                                </Button>
+                                            </div>
                                         </div>
                                         {Array.isArray(tech.recommendationReasons) && tech.recommendationReasons.length > 0 && (
                                             <div className="mt-2 flex flex-wrap gap-1">
