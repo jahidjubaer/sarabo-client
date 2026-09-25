@@ -2,7 +2,7 @@ import { lazy, Suspense } from 'react';
 import { Link } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion as Motion, MotionConfig } from 'motion/react';
-import { ArrowRight, Banknote, CalendarX, CircleCheckBig, Clock3, Flag, MapPinOff, ReceiptText, TriangleAlert, UserCheck, UserCog } from 'lucide-react';
+import { ArrowRight, Banknote, CalendarX, CircleCheckBig, Clock3, Flag, MapPinOff, ReceiptText, TriangleAlert, Undo2, UserCheck, UserCog } from 'lucide-react';
 import useAxiosSecure from '../../hooks/useAxiosSecure';
 import { walletKeys } from '../../hooks/walletKeys';
 import { useAdminFeedbackList } from '../../hooks/useTechnicianFeedback';
@@ -91,6 +91,7 @@ function AttentionStrip({ counts }) {
         counts.missedPickups > 0 && { key: 'missed', icon: CalendarX, text: `${plural(counts.missedPickups, 'pickup')} missed`, hint: 'Technician assigned, device not collected', to: '#needs-you-queue' },
         counts.overdueWaiting > 0 && { key: 'overdue', icon: TriangleAlert, text: `${plural(counts.overdueWaiting, 'pickup')} overdue`, hint: 'Pickup time passed, no technician yet', to: '/dashboard/assign-technicians?view=overdue' },
         counts.unchosen > 0 && { key: 'unchosen', icon: Clock3, text: `${plural(counts.unchosen, 'request')} with nobody chosen`, hint: 'Open 24 hours in the job portal - invite a technician', to: '/dashboard/assign-technicians?view=unchosen' },
+        counts.feeRefunds > 0 && { key: 'refunds', icon: Undo2, text: `${plural(counts.feeRefunds, 'refund')} waiting`, hint: 'Inspection fees Stripe has not refunded yet - retry them', to: '#needs-you-queue' },
         counts.unmatchable > 0 && { key: 'unmatched', icon: MapPinOff, text: `${plural(counts.unmatchable, 'request')} with no local technician`, hint: 'Nobody in the region can take them', to: '/dashboard/assign-technicians?view=unmatched' },
     ].filter(Boolean);
     if (items.length === 0) return null;
@@ -152,6 +153,12 @@ function requestKind(flags) {
     return 'Needs a technician';
 }
 
+const REFUND_REASONS = {
+    booking_failed: 'Technician could not be booked',
+    technician_no_show: 'Technician did not come',
+    customer_cancelled: 'Customer cancelled in time',
+};
+
 function buildQueue({ requests, technicians, withdrawals, reports, attention }) {
     const sets = attention ? attentionIdSets(attention) : null;
     const items = [
@@ -160,6 +167,12 @@ function buildQueue({ requests, technicians, withdrawals, reports, attention }) 
             key: `missed-${entry.id}`, icon: CalendarX, kind: 'Pickup missed', title: attentionDeviceLabel(entry), urgent: true, priority: 3,
             meta: [entry.technicianName && `Technician: ${entry.technicianName}`, entry.district, formatPickupSlot(entry.pickupSlot), entry.trackingId],
             at: entry.pickupSlot?.endsAt, atLabel: 'Window ended', action: 'Open', to: `/dashboard/manage-repair-requests/${entry.id}`,
+        })),
+        // An inspection-fee refund Stripe has not completed (job-portal phase D).
+        ...(attention?.feeRefunds ?? []).map((entry) => ({
+            key: `refund-${entry.id}-${entry.paidAt}`, icon: Undo2, kind: 'Refund waiting', title: `${formatMoney(entry.amount, entry.currency)} inspection fee`, urgent: true, priority: 3,
+            meta: [REFUND_REASONS[entry.reason], entry.trackingId],
+            at: entry.paidAt, atLabel: 'Paid', action: 'Retry refund', to: `/dashboard/manage-repair-requests/${entry.id}`,
         })),
         ...requests.map((request) => {
             const { device, category } = getProductSummary(request);

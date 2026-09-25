@@ -19,6 +19,37 @@ import {
     previousHint, labelSlug, heatStep,
 } from '../../../utils/reportPresentation';
 import { cn } from '../../../lib/utils';
+import { formatMoney } from '../../../utils/currency';
+
+// Inspection fees in the period (job-portal phases C/D): paid to book a
+// technician, refunded, or kept when the repair did not go ahead - a kept fee
+// is split 90% technician, 10% Sarabo.
+function InspectionFeeReport({ fees }) {
+    const money = (amount) => formatMoney(amount, fees.currency || 'BDT');
+    const kept = fees.kept;
+    return (
+        <Section
+            title="Inspection fees"
+            description="Fees customers paid to book a technician. A fee counts toward the repair price; if the repair doesn't go ahead it is refunded, or kept and split 90% technician, 10% Sarabo."
+            variant="card"
+            actions={fees.refundPending.count > 0 ? <Badge tone="attention"><TriangleAlert aria-hidden="true" />{fees.refundPending.count} refund{fees.refundPending.count === 1 ? '' : 's'} waiting on Stripe</Badge> : null}
+        >
+            <KpiStrip
+                label="Inspection fees"
+                items={[
+                    { label: 'Paid', value: money(fees.paid.amount), hint: `${formatCount(fees.paid.count)} fee${fees.paid.count === 1 ? '' : 's'}` },
+                    { label: 'Refunded', value: money(fees.refunded.amount), hint: `${formatCount(fees.refunded.count)} refund${fees.refunded.count === 1 ? '' : 's'}` },
+                    { label: 'Kept', value: money(kept.amount), hint: `${formatCount(kept.count)} fee${kept.count === 1 ? '' : 's'}` },
+                    { label: "Sarabo's share", value: money(kept.saraboShare), hint: `Technicians got ${money(kept.technicianShare)}` },
+                ]}
+            />
+            <p className="mt-3 text-body-sm text-ds-muted-foreground">
+                Kept because the customer declined the price: <span className="font-semibold text-ds-foreground">{formatCount(kept.quoteDeclined)}</span>.
+                {' '}Kept because the customer cancelled less than 2 hours before the visit: <span className="font-semibold text-ds-foreground">{formatCount(kept.lateCancellations)}</span>.
+            </p>
+        </Section>
+    );
+}
 
 // recharts is large; the one line chart loads separately from the page.
 const RequestsTrendChart = lazy(() => import('../../../components/admin/reports/RequestsTrendChart'));
@@ -333,6 +364,8 @@ const Reports = () => {
                     <PickupGrid pickupLoad={data.pickupLoad} slots={data.slots} />
                 </div>
             </Section>
+
+            {data.inspectionFees && <InspectionFeeReport fees={data.inspectionFees} />}
 
             <Section title="Technician workload" variant="card">
                 <KpiStrip
