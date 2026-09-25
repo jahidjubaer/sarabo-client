@@ -64,3 +64,18 @@ export const STALE_PICKUP_CODES = ['PICKUP_SLOT_FULL', 'PICKUP_SLOT_TOO_SOON', '
 export function getPickupErrorMessage(error) {
     return PICKUP_ERROR_MESSAGES[error?.response?.data?.code] || null;
 }
+
+// ---- Missed pickups (missed-pickup phase) ----
+// Assigned (offered, accepted or on the way) but the window has ended and the
+// device was not collected. Mirrors the server's rule; the server decides.
+const ASSIGNED_NOT_COLLECTED = ['assignment_pending', 'driver_assigned', 'rider_arriving'];
+
+export function isPickupMissed(request, now = Date.now()) {
+    const endsAt = request?.pickupSlot?.endsAt ? new Date(request.pickupSlot.endsAt).getTime() : null;
+    return ASSIGNED_NOT_COLLECTED.includes(request?.deliveryStatus) && !!request?.technicianName && endsAt !== null && endsAt <= now;
+}
+
+// An admin asked the customer to choose a new pickup time, and they have not yet.
+export function isNewPickupTimeRequested(request) {
+    return Boolean(request?.pickupRescheduleRequestedAt) && ASSIGNED_NOT_COLLECTED.includes(request?.deliveryStatus);
+}

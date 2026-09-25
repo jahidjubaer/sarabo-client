@@ -100,6 +100,10 @@ export function getRequestAction(request) {
     const to = `/dashboard/my-requests/${request._id}`;
     const handover = getHandoverState(request);
     if (handover && !handover.confirmed) return { kind: 'handover', label: 'Confirm device received', to };
+    // An admin asked for a new pickup time after a missed pickup.
+    if (request.pickupRescheduleRequestedAt && ['assignment_pending', 'driver_assigned', 'rider_arriving'].includes(status)) {
+        return { kind: 'new-pickup-time', label: 'Choose a new pickup time', to };
+    }
     if (status === 'quote_submitted') return { kind: 'quote-review', label: 'Review quote', to };
     if (status === 'quote_approved') return { kind: 'payment', label: 'Complete payment', to };
     return null;

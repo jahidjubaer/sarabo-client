@@ -17,6 +17,9 @@ import { StageSection } from '../workspace/StageSection';
 import { getStatusPresentation } from '../../config/statusPresentation';
 import { getHandoverState } from '../../utils/repairStage';
 import { getStatusRank } from '../../utils/workspacePresentation';
+import { isPickupMissed, isNewPickupTimeRequested, formatPickupSlot } from '../../utils/pickupSlots';
+import { formatRelativeTime } from '../../utils/relativeTime';
+import { MissedPickupActions } from './MissedPickupActions';
 import { staggerContainer, staggerItem } from '../../theme/motion';
 
 const QUOTE_META = { submitted: 'Waiting for the customer', approved: 'Approved by the customer', rejected: 'Declined by the customer' };
@@ -28,6 +31,21 @@ const QUOTE_META = { submitted: 'Waiting for the customer', approved: 'Approved 
 function nextStepModel(request) {
     const status = request?.deliveryStatus || 'pending-pickup';
     const presentation = getStatusPresentation(status);
+    // Missed pickup (missed-pickup phase): the technician's window ended
+    // without the device being collected.
+    if (isNewPickupTimeRequested(request)) {
+        return {
+            tone: 'waiting', eyebrow: 'Waiting for the customer', title: 'Customer asked for a new pickup time',
+            description: `Asked ${formatRelativeTime(request.pickupRescheduleRequestedAt)}. ${request.technicianName || 'The technician'} stays on the job; the request updates when the customer chooses a time.`,
+        };
+    }
+    if (isPickupMissed(request)) {
+        const slot = formatPickupSlot(request.pickupSlot);
+        return {
+            tone: 'action', eyebrow: 'Needs you', title: 'Pickup missed', missed: true,
+            description: `${request.technicianName || 'The technician'} did not collect the device${slot ? ` in its window (${slot})` : ''}. Give the job to someone else, or keep them and ask the customer for a new time.`,
+        };
+    }
     if (status === 'pending-pickup') {
         return { tone: 'action', eyebrow: 'Needs you', title: 'Assign a technician', description: 'This request is waiting for an eligible technician. Sarabo lists only the technicians it matches.', assign: true };
     }
@@ -71,6 +89,7 @@ function AdminRequestDetailsView({ request, sections, isV2Request }) {
             <Motion.div variants={staggerItem} className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
                 <div className="min-w-0 space-y-4">
                     <NextStepPanel tone={model.tone} eyebrow={model.eyebrow} title={model.title} description={model.description}>
+                        {model.missed && <MissedPickupActions request={request} />}
                         {model.assign && (
                             <Link to={`/dashboard/assign-technicians?request=${request._id}`} className={buttonVariants({ variant: 'action', size: 'lg' })}>
                                 <UserCog aria-hidden="true" /> Find technicians

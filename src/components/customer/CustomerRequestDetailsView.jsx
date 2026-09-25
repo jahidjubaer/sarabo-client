@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion as Motion } from 'motion/react';
 import { Link } from 'react-router';
-import { RotateCcw } from 'lucide-react';
+import { CalendarClock, RotateCcw } from 'lucide-react';
 import { buttonVariants } from '../ui/button-variants';
 import { canRebook, rebookPath } from '../../utils/createRequestFlow';
 import ServiceSpine from '../spine/ServiceSpine';
@@ -34,6 +34,9 @@ function nextStepModel(request, action) {
     const group = getRequestGroup(request);
     const handover = getHandoverState(request);
 
+    if (action?.kind === 'new-pickup-time') {
+        return { tone: 'action', eyebrow: 'Your next step', title: 'Choose a new pickup time', description: 'Your pickup was missed. Choose a new 2-hour window and your technician will collect the device then.' };
+    }
     if (action?.kind === 'quote-review') {
         return { tone: 'action', eyebrow: 'Your next step', title: 'Review and decide on your quote', description: 'Your technician has inspected the device. Approve to go ahead, or decline.' };
     }
@@ -107,6 +110,11 @@ function CustomerRequestDetailsView({ request, sections, isV2Request, damageImag
                         )}
                         {focus === 'payment' && <V2PaymentSection requestId={request._id} bare />}
                         {focus === 'handover' && <ReceiptConfirmationSection requestId={request._id} request={request} isOwner />}
+                        {focus === 'new-pickup-time' && (
+                            <Button variant="action" onClick={() => setPickupSheetOpen(true)}>
+                                <CalendarClock aria-hidden="true" /> Choose a new time
+                            </Button>
+                        )}
                         {canRebook(request) && (
                             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
                                 <Link to={rebookPath(request)} className={buttonVariants({ variant: 'primary' })}>
