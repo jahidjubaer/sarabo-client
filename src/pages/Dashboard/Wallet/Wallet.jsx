@@ -135,7 +135,12 @@ const Wallet = () => {
         {
             key: 'trackingId',
             header: 'Repair',
-            cell: (row) => <span className="ds-numeric text-body-sm text-ds-foreground">{row.trackingId || '—'}</span>,
+            cell: (row) => (
+                <span className="text-body-sm">
+                    <span className="ds-numeric text-ds-foreground">{row.trackingId || '—'}</span>
+                    {row.kind === 'inspection_fee' && <span className="block text-micro text-ds-muted-foreground">Inspection fee kept</span>}
+                </span>
+            ),
         },
         {
             key: 'repairSubtotal',
@@ -208,7 +213,7 @@ const Wallet = () => {
                     <p className="text-body-sm font-semibold text-ds-muted-foreground">Available to withdraw</p>
                     <p className="ds-numeric mt-1 text-display text-ds-foreground">{formatMoney(availableBalance, currency)}</p>
                     <p className="mt-2 max-w-prose text-body-sm text-ds-muted-foreground">
-                        From repairs the customer has confirmed they received.
+                        From repairs the customer has confirmed they received, and inspection fees you kept.
                     </p>
                 </div>
 
@@ -300,7 +305,9 @@ const Wallet = () => {
                 <p className="max-w-prose border-t border-ds-border px-4 py-3 text-body-sm text-ds-muted-foreground">
                     Sarabo takes {commissionPercent}% of each customer-approved repair subtotal: parts, labour and
                     any additional charges together. You receive the remaining {100 - commissionPercent}%. How you
-                    split a quote between parts and labour never changes what you receive.
+                    split a quote between parts and labour never changes what you receive. If a repair does
+                    not go ahead because the customer declines your price or cancels less than 2 hours before
+                    the visit, you keep {100 - commissionPercent}% of the inspection fee, shown as "Inspection fee kept".
                 </p>
             </details>
 
@@ -309,7 +316,7 @@ const Wallet = () => {
                 <DataTable
                     columns={settlementColumns}
                     data={data.settlements}
-                    getRowKey={(row) => row.repairRequestId}
+                    getRowKey={(row) => `${row.kind || 'repair'}-${row.repairRequestId}`}
                     renderMobile={(row) => (
                         <div className="rounded-ds-lg border border-ds-border bg-ds-card p-4">
                             <div className="flex items-start justify-between gap-3">
@@ -318,7 +325,7 @@ const Wallet = () => {
                             </div>
                             <p className="ds-numeric mt-2 text-heading text-ds-foreground">{formatMoney(row.technicianReceivable, row.currency || currency)}</p>
                             <p className="ds-numeric mt-0.5 text-micro text-ds-muted-foreground">
-                                {formatMoney(row.repairSubtotal, row.currency || currency)} subtotal − {formatMoney(row.platformCommission, row.currency || currency)} commission
+                                {formatMoney(row.repairSubtotal, row.currency || currency)} {row.kind === 'inspection_fee' ? 'inspection fee' : 'subtotal'} − {formatMoney(row.platformCommission, row.currency || currency)} commission
                             </p>
                         </div>
                     )}

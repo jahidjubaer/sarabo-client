@@ -20,6 +20,7 @@ import { getStatusRank } from '../../utils/workspacePresentation';
 import { isPickupMissed, isNewPickupTimeRequested, formatPickupSlot } from '../../utils/pickupSlots';
 import { formatRelativeTime } from '../../utils/relativeTime';
 import { MissedPickupActions } from './MissedPickupActions';
+import { AdminInspectionFee } from './AdminInspectionFee';
 import { staggerContainer, staggerItem } from '../../theme/motion';
 
 const QUOTE_META = { submitted: 'Waiting for the customer', approved: 'Approved by the customer', rejected: 'Declined by the customer' };
@@ -120,6 +121,17 @@ function AdminRequestDetailsView({ request, sections, isV2Request }) {
                     {handover && (
                         <StageSection id="admin-handover" title="Handover" meta={handover.label} state={handover.confirmed ? 'done' : 'current'}>
                             <ReceiptConfirmationSection requestId={request._id} request={request} isOwner={false} />
+                        </StageSection>
+                    )}
+                    {request.inspectionPayment && (
+                        <StageSection
+                            id="admin-inspection-fee"
+                            title="Inspection fee"
+                            meta={request.inspectionPayment.status === 'refund_pending' ? 'Refund waiting - needs a retry' : 'Paid to book the technician'}
+                            state={request.inspectionPayment.status === 'refund_pending' ? 'current' : 'info'}
+                            defaultOpen={request.inspectionPayment.status === 'refund_pending'}
+                        >
+                            <AdminInspectionFee request={request} />
                         </StageSection>
                     )}
                     {request.technicianSettlement && (

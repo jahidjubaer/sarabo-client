@@ -37,10 +37,12 @@ function MissedPickupActions({ request }) {
 
     const withdraw = useMutation({
         mutationFn: () => withdrawMissedPickup(axiosSecure, request._id),
-        onSuccess: () => {
+        onSuccess: (result) => {
             refresh();
             setConfirming(null);
-            notify.success(`${request.technicianName || 'The technician'} is off this job. Choose who to offer it to next.`);
+            const refund = result?.inspectionFee === 'refunded' ? ' The inspection fee was refunded to the customer.'
+                : result?.inspectionFee === 'refund_pending' ? ' The inspection fee refund is waiting - retry it from the request page.' : '';
+            notify.success(`${request.technicianName || 'The technician'} is off this job. Choose who to offer it to next.${refund}`);
             navigate(`/dashboard/assign-technicians?request=${request._id}`);
         },
         onError: (error) => {
@@ -67,6 +69,8 @@ function MissedPickupActions({ request }) {
     const busy = withdraw.isPending || ask.isPending;
     const technician = request.technicianName || 'the technician';
     const slot = formatPickupSlot(request.pickupSlot);
+    // A no-show: a paid inspection fee goes back to the customer (phase D).
+    const feePaid = request.inspectionPayment?.status === 'paid';
 
     return (
         <>
@@ -82,7 +86,7 @@ function MissedPickupActions({ request }) {
                 open={confirming === 'withdraw'}
                 onOpenChange={(open) => { if (!open) setConfirming(null); }}
                 title="Offer this job to another technician?"
-                description={`${technician} will be taken off this job and told why, and becomes free for other work. The request goes back to waiting, and you choose who to offer it to next.`}
+                description={`${technician} will be taken off this job and told why, and becomes free for other work. The request goes back to waiting, and you choose who to offer it to next.${feePaid ? " The customer's inspection fee is refunded in full, and the other technicians who applied can be chosen again." : ''}`}
                 confirmLabel="Take job back"
                 busy={withdraw.isPending}
                 busyLabel="Taking it back…"

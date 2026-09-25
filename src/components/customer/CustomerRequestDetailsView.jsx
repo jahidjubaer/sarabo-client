@@ -15,6 +15,7 @@ import CustomerTechnicianFeedback from '../feedback/customer/CustomerTechnicianF
 import { WorkspaceContextPanels } from '../workspace/WorkspaceContextPanels';
 import { PickupRescheduleSheet } from '../pickup/PickupRescheduleSheet';
 import { TechnicianApplications } from './TechnicianApplications';
+import { InspectionFeeNote } from './InspectionFeeNote';
 import { Button } from '../ui/button';
 import { canChangePickup } from '../../utils/pickupSlots';
 import { NextStepPanel } from '../workspace/NextStepPanel';
@@ -121,6 +122,7 @@ function CustomerRequestDetailsView({ request, sections, isV2Request, damageImag
                         {focus === 'payment' && <V2PaymentSection requestId={request._id} bare />}
                         {focus === 'handover' && <ReceiptConfirmationSection requestId={request._id} request={request} isOwner />}
                         {model.chooser && <TechnicianApplications request={request} />}
+                        <InspectionFeeNote request={request} />
                         {focus === 'add-photo' && (
                             <a href="#repair-request" className={buttonVariants({ variant: 'action' })}>
                                 <Camera aria-hidden="true" /> Add a photo
