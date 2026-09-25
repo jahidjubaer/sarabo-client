@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLoaderData, useNavigate, useSearchParams, Link } from 'react-router';
 import { motion as Motion, MotionConfig } from 'motion/react';
 import { CircleCheckBig, TriangleAlert, ArrowRight } from 'lucide-react';
@@ -15,7 +15,7 @@ import {
     validateRepairRequestV2Form, buildRepairRequestV2Payload,
     DAMAGE_DESCRIPTION_MIN_LENGTH, DAMAGE_DESCRIPTION_MAX_LENGTH, BRAND_MODEL_MAX_LENGTH,
 } from '../../utils/repairRequestV2Form';
-import { buildReviewModel, getSuccessActions } from '../../utils/createRequestFlow';
+import { buildReviewModel, getSuccessActions, buildRebookValues } from '../../utils/createRequestFlow';
 import { getCreateRequestErrorMessage } from '../../utils/createRequestErrorMessage';
 import { notify } from '../../lib/notify';
 import { PageHeader } from '../common/PageHeader';
@@ -92,14 +92,21 @@ function SummaryRow({ label, value }) {
 // the malformed-response handling are all preserved exactly.
 const RepairRequestV2Form = () => {
     const {
-        register, handleSubmit, control, setValue, setError, reset, formState: { errors },
+        register, handleSubmit, control, setValue, setError, reset, getValues, formState: { errors },
     } = useForm();
     const axiosSecure = useAxiosSecure();
     const queryClient = useQueryClient();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const requestedCategorySlugRef = useRef(searchParams.get('category'));
-    const categoryDeepLinkHandledRef = useRef(false);
+    // "Request again" (?rebook=<id>): an earlier request prefills the form.
+    const rebookIdRef = useRef(searchParams.get('rebook'));
+    const rebookId = rebookIdRef.current;
+    // A rebook fills in the category itself, so it replaces the category deep link.
+    const categoryDeepLinkHandledRef = useRef(Boolean(rebookId));
+    // The values a rebook filled in, so the "clear the dependent field" effects
+    // below leave a prefilled region/district and category/service pair alone.
+    const rebookPrefillRef = useRef(null);
 
     const serviceAreas = useLoaderData();
     const regions = [...new Set(serviceAreas.map((c) => c.region))];
@@ -136,6 +143,33 @@ const RepairRequestV2Form = () => {
         }
     }, [productCategories, setValue]);
 
+    // Request again: load the earlier request (the server only returns it to
+    // its owner), then fill the form once the catalogue is known.
+    const rebookQuery = useQuery({
+        queryKey: ['repair-requests', rebookId],
+        queryFn: async () => (await axiosSecure.get(`/repair-requests/${rebookId}`)).data,
+        enabled: Boolean(rebookId),
+        retry: false,
+    });
+    const [rebookNotice, setRebookNotice] = useState(null);
+    const rebookAppliedRef = useRef(false);
+    useEffect(() => {
+        if (!rebookId || rebookAppliedRef.current) return;
+        if (rebookQuery.isError) {
+            rebookAppliedRef.current = true;
+            setRebookNotice({ tone: 'warning', title: "Couldn't load your earlier request", text: 'Please fill in the details below.' });
+            return;
+        }
+        if (!rebookQuery.data || catalogueLoading || definitions.length === 0) return;
+        rebookAppliedRef.current = true;
+        const { values, serviceStillOffered } = buildRebookValues(rebookQuery.data, definitions);
+        rebookPrefillRef.current = values;
+        reset(values);
+        setRebookNotice(serviceStillOffered
+            ? { tone: 'info', title: 'Requesting again', text: `We filled in the details from your earlier request${rebookQuery.data.trackingId ? ` (${rebookQuery.data.trackingId})` : ''}. Check them and choose a new pickup time.` }
+            : { tone: 'warning', title: 'Requesting again', text: 'We filled in your device and address. The repair you chose before is no longer offered - please choose a repair, then a pickup time.' });
+    }, [rebookId, rebookQuery.data, rebookQuery.isError, catalogueLoading, definitions, reset]);
+
     // Live values for the summary card (presentation only).
     const watchedValues = useWatch({ control });
     const descriptionLength = (watchedValues?.damageDescription || '').length;
@@ -149,11 +183,14 @@ const RepairRequestV2Form = () => {
     // selection rather than silently submitting a mismatched pair.
     const previousCategoryRef = useRef(selectedProductCategorySlug);
     useEffect(() => {
-        if (previousCategoryRef.current !== undefined && previousCategoryRef.current !== selectedProductCategorySlug) {
+        const prefill = rebookPrefillRef.current;
+        const isPrefilledPair = prefill && selectedProductCategorySlug === prefill.productCategorySlug
+            && getValues('serviceDefinitionId') === prefill.serviceDefinitionId;
+        if (!isPrefilledPair && previousCategoryRef.current !== undefined && previousCategoryRef.current !== selectedProductCategorySlug) {
             setValue('serviceDefinitionId', '');
         }
         previousCategoryRef.current = selectedProductCategorySlug;
-    }, [selectedProductCategorySlug, setValue]);
+    }, [selectedProductCategorySlug, setValue, getValues]);
 
     // Same rationale as the category->service clear above: when the region
     // changes, a previously-picked district can no longer belong to it, so
@@ -161,13 +198,16 @@ const RepairRequestV2Form = () => {
     // Local UX correctness only - the district data source is unchanged.
     const previousRegionRef = useRef(selectedRegion);
     useEffect(() => {
-        if (previousRegionRef.current !== undefined && previousRegionRef.current !== selectedRegion) {
+        const prefill = rebookPrefillRef.current;
+        const isPrefilledPair = prefill && selectedRegion === prefill.serviceLocation.region
+            && getValues('serviceLocation.district') === prefill.serviceLocation.district;
+        if (!isPrefilledPair && previousRegionRef.current !== undefined && previousRegionRef.current !== selectedRegion) {
             setValue('serviceLocation.district', '');
             // Pickup times are per region, so a chosen time no longer applies.
             setValue('pickupChoice', '');
         }
         previousRegionRef.current = selectedRegion;
-    }, [selectedRegion, setValue]);
+    }, [selectedRegion, setValue, getValues]);
 
     // Phase H: a selected service can go inactive (drop out of a background
     // refetch) after the customer already picked it - detected by it no
@@ -265,6 +305,8 @@ const RepairRequestV2Form = () => {
         }
         // Reset the flow in place - a fresh form, never an auto-submit.
         reset();
+        rebookPrefillRef.current = null;
+        setRebookNotice(null);
         submittedValuesRef.current = null;
         setCreatedRequestId(null);
         setStage('form');
@@ -345,6 +387,8 @@ const RepairRequestV2Form = () => {
                     title="Request a repair"
                     description="Four short steps. No payment is needed to submit."
                 />
+
+                {rebookNotice && <FormAlert alert={rebookNotice} />}
 
                 {submitProblem !== 0 && (
                     <FormAlert

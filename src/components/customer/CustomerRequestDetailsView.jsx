@@ -1,5 +1,9 @@
 import { useState } from 'react';
 import { motion as Motion } from 'motion/react';
+import { Link } from 'react-router';
+import { RotateCcw } from 'lucide-react';
+import { buttonVariants } from '../ui/button-variants';
+import { canRebook, rebookPath } from '../../utils/createRequestFlow';
 import ServiceSpine from '../spine/ServiceSpine';
 import DamageImageManager from '../damage-images/DamageImageManager';
 import InspectionSection from '../inspection/InspectionSection';
@@ -103,6 +107,14 @@ function CustomerRequestDetailsView({ request, sections, isV2Request, damageImag
                         )}
                         {focus === 'payment' && <V2PaymentSection requestId={request._id} bare />}
                         {focus === 'handover' && <ReceiptConfirmationSection requestId={request._id} request={request} isOwner />}
+                        {canRebook(request) && (
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+                                <Link to={rebookPath(request)} className={buttonVariants({ variant: 'primary' })}>
+                                    <RotateCcw aria-hidden="true" /> Request again
+                                </Link>
+                                <p className="text-body-sm text-ds-muted-foreground">Opens a new request with this device, repair and address filled in.</p>
+                            </div>
+                        )}
                     </NextStepPanel>
 
                     {show.request && (

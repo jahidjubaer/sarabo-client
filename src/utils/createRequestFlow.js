@@ -64,3 +64,42 @@ export function getSuccessActions(requestId) {
         createAnother: '/dashboard/create-request',
     };
 }
+
+// ---- Request again (rebooking) ----
+// A cancelled request can be requested again: the create form opens with its
+// device, repair, problem and address filled in. The pickup time is never
+// copied - the old one has passed - and nothing is sent until the customer
+// submits, so the server checks everything as for any new request.
+export function canRebook(request) {
+    return request?.schemaVersion === 2 && request?.deliveryStatus === 'cancelled';
+}
+
+export function rebookPath(request) {
+    return `/dashboard/create-request?rebook=${encodeURIComponent(request._id)}`;
+}
+
+// Form values from an earlier request. The repair is kept only if it is still
+// offered for that device (`definitions` is the current public catalogue);
+// otherwise `serviceStillOffered` is false and the customer picks again.
+export function buildRebookValues(request, definitions) {
+    const product = request?.product || {};
+    const location = request?.serviceLocation || {};
+    const definitionId = request?.service?.definitionId;
+    const stillOffered = !!definitionId && (definitions || []).some(
+        (def) => def.id === definitionId && def.productCategorySlug === product.categorySlug
+    );
+    const text = (value) => (typeof value === 'string' ? value : '');
+    return {
+        serviceStillOffered: stillOffered,
+        values: {
+            productCategorySlug: text(product.categorySlug),
+            productBrand: text(product.brand),
+            productModel: text(product.model),
+            productSerialNumber: text(product.serialNumber),
+            serviceDefinitionId: stillOffered ? definitionId : '',
+            damageDescription: text(request?.damage?.description),
+            serviceLocation: { region: text(location.region), district: text(location.district), address: text(location.address) },
+            pickupChoice: '',
+        },
+    };
+}
