@@ -14,6 +14,9 @@ export function getPaymentErrorMessage(error) {
             if (code === 'CHECKOUT_CREATION_IN_PROGRESS') {
                 return 'A payment session is already being started for this request. Please wait a moment and try again.';
             }
+            if (code === 'INSPECTION_FEE_REFUNDED') {
+                return "The technician you chose couldn't be booked after all, so your inspection fee is being refunded. Please choose another technician on your request.";
+            }
             if (code === 'PAYMENT_NOT_AVAILABLE') {
                 return 'Payment is not available for this request right now.';
             }

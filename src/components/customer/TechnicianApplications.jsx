@@ -16,6 +16,8 @@ const ERROR_COPY = {
     TECHNICIAN_BUSY: 'That technician is on another job right now. Choose another, or try again later.',
     TECHNICIAN_NOT_ELIGIBLE: 'That technician can no longer take this repair. Please choose another.',
     APPLICATION_NOT_PENDING: 'That application is no longer open.',
+    CHECKOUT_CREATION_IN_PROGRESS: 'The payment page is already opening. Please wait a moment and try again.',
+    CHECKOUT_UNAVAILABLE: "The payment page couldn't be opened. Please try again.",
     JOB_NOT_OPEN: 'A technician has already been chosen for this request.',
 };
 
@@ -35,6 +37,11 @@ function TechnicianApplications({ request }) {
     const accept = useMutation({
         mutationFn: (application) => acceptApplication(axiosSecure, request._id, application.id),
         onSuccess: (result) => {
+            // A fee: pay it on Stripe; the technician is booked once it is paid.
+            if (result.checkoutUrl) {
+                window.location.href = result.checkoutUrl;
+                return;
+            }
             setChoosing(null);
             queryClient.invalidateQueries({ queryKey: jobPortalKeys.applications(request._id) });
             queryClient.invalidateQueries({ queryKey: ['repair-requests', request._id] });
@@ -91,17 +98,19 @@ function TechnicianApplications({ request }) {
                 open={Boolean(choosing)}
                 onOpenChange={(open) => { if (!open) setChoosing(null); }}
                 title={choosing ? `Choose ${choosing.technician.name}?` : ''}
-                description="They will be booked for your pickup time and the other applications will be closed."
+                description={choosing && choosing.inspectionFee > 0
+                    ? 'You pay the inspection fee now to book their visit. Once it is paid, they are booked for your pickup time and the other applications are closed.'
+                    : 'They will be booked for your pickup time and the other applications will be closed.'}
                 summary={choosing ? (
                     <dl className="space-y-1 text-body-sm">
                         <div className="flex justify-between gap-3"><dt className="text-ds-muted-foreground">Estimate</dt><dd className="ds-numeric font-semibold">{formatMoneyRange(choosing.estimateMin, choosing.estimateMax, 'BDT')}</dd></div>
                         <div className="flex justify-between gap-3"><dt className="text-ds-muted-foreground">Inspection fee</dt><dd className="ds-numeric font-semibold">{formatMoney(choosing.inspectionFee, 'BDT')}</dd></div>
-                        <p className="pt-1 text-micro text-ds-muted-foreground">The final price is set after the technician inspects the device. The inspection fee counts toward it if you go ahead.</p>
+                        <p className="pt-1 text-micro text-ds-muted-foreground">The final price is set after the technician inspects the device. The inspection fee counts toward it if you go ahead. If they can't be booked after you pay, it is refunded.</p>
                     </dl>
                 ) : null}
-                confirmLabel="Choose technician"
+                confirmLabel={choosing && choosing.inspectionFee > 0 ? `Pay ${formatMoney(choosing.inspectionFee, 'BDT')} and book` : 'Choose technician'}
                 busy={accept.isPending}
-                busyLabel="Booking…"
+                busyLabel={choosing && choosing.inspectionFee > 0 ? 'Opening payment…' : 'Booking…'}
                 onConfirm={() => accept.mutate(choosing)}
             />
         </>
