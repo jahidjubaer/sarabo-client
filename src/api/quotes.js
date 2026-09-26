@@ -33,3 +33,10 @@ export async function cancelAfterQuoteRejection(axiosSecure, requestId) {
     const res = await axiosSecure.post(`/repair-requests/${requestId}/quote/cancel-request`);
     return res.data;
 }
+
+// The customer ends a request after declining its quote (declined-quote
+// follow-through). No body - the server checks ownership and state.
+export async function closeDeclinedRequest(axiosSecure, requestId) {
+    const res = await axiosSecure.post(`/repair-requests/${requestId}/quote/close`);
+    return res.data;
+}

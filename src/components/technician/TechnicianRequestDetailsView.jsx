@@ -30,7 +30,7 @@ function nextStepModel({ request, decisionPending, isAssignedTechnicianView, can
     if (advance) return { focus: 'advance', tone: 'action', eyebrow: 'Your next step', title: advance.label, description: presentation.technicianNextStep };
     if (canInspect) return { focus: 'inspection', tone: 'action', eyebrow: 'Your next step', title: 'Inspect the device', description: 'Record what you found. The customer sees your findings next to the quote.' };
     if (canSubmitQuote) return { focus: 'quote', tone: 'action', eyebrow: 'Your next step', title: 'Write the quote', description: 'Itemise labour, parts and anything extra. The customer approves it before any work starts.' };
-    if (status === 'quote_rejected' && isAssignedTechnicianView) return { focus: 'declined', tone: 'action', eyebrow: 'Your next step', title: 'Revise the quote or close the job', description: 'The customer declined your quote.' };
+    if (status === 'quote_rejected' && isAssignedTechnicianView) return { focus: 'declined', tone: 'action', eyebrow: 'Your next step', title: 'Revise the quote or close the job', description: 'The customer declined your quote. If you do neither within 3 days, the job closes by itself.' };
     if (isAssignedTechnicianView && (status === 'payment_completed' || status === 'repair_in_progress')) {
         return { focus: 'repair', tone: 'action', eyebrow: status === 'payment_completed' ? 'Your next step' : 'In repair', title: status === 'payment_completed' ? 'Start the repair' : 'Post updates and finish the repair', description: 'The customer has paid.' };
     }

@@ -58,7 +58,7 @@ function nextStepModel(request) {
             tone: 'closed',
             eyebrow: 'No admin action',
             title: presentation.label,
-            description: status === 'quote_rejected' ? 'The customer declined the quote. The technician can revise it or close the job.' : presentation.customerDescription,
+            description: status === 'quote_rejected' ? 'The customer declined the quote. The technician can revise it or close the job; the customer can end it too. It closes by itself after 3 days with no new quote.' : presentation.customerDescription,
         };
     }
     return { tone: 'waiting', eyebrow: 'No admin action', title: presentation.label, description: presentation.technicianDescription || presentation.customerDescription };

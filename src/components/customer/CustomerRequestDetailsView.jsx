@@ -16,6 +16,7 @@ import { WorkspaceContextPanels } from '../workspace/WorkspaceContextPanels';
 import { PickupRescheduleSheet } from '../pickup/PickupRescheduleSheet';
 import { TechnicianApplications } from './TechnicianApplications';
 import { InspectionFeeNote } from './InspectionFeeNote';
+import { EndDeclinedRequest } from './EndDeclinedRequest';
 import { Button } from '../ui/button';
 import { canChangePickup } from '../../utils/pickupSlots';
 import { NextStepPanel } from '../workspace/NextStepPanel';
@@ -56,6 +57,15 @@ function nextStepModel(request, action) {
     }
     if (action?.kind === 'handover') {
         return { tone: 'action', eyebrow: 'Your next step', title: 'Confirm you have your device', description: 'Your repair is complete. Confirm once the device is back in your hands.' };
+    }
+    // Declined-quote follow-through: waiting on a revised quote, which the
+    // customer may stop waiting for; it closes by itself after 3 days.
+    if (request?.deliveryStatus === 'quote_rejected' && request?.schemaVersion === 2 && !request?.isPaid) {
+        return {
+            tone: 'waiting', eyebrow: 'Waiting on your technician', title: 'You declined the quote',
+            description: "Your technician may send a revised quote. If they don't within 3 days, the request closes by itself. You can also end it now.",
+            endDeclined: true,
+        };
     }
     if (group === 'completed') {
         return { tone: 'done', eyebrow: 'Done', title: handover?.confirmed ? 'Device received' : presentation.label, description: handover?.confirmed ? 'Thanks for confirming. You can review your technician below.' : presentation.customerDescription };
@@ -123,6 +133,7 @@ function CustomerRequestDetailsView({ request, sections, isV2Request, damageImag
                         {focus === 'handover' && <ReceiptConfirmationSection requestId={request._id} request={request} isOwner />}
                         {model.chooser && <TechnicianApplications request={request} />}
                         <InspectionFeeNote request={request} />
+                        {model.endDeclined && <EndDeclinedRequest request={request} />}
                         {focus === 'add-photo' && (
                             <a href="#repair-request" className={buttonVariants({ variant: 'action' })}>
                                 <Camera aria-hidden="true" /> Add a photo

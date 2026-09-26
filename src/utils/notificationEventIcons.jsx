@@ -46,6 +46,8 @@ const ICON_BY_TYPE = {
     application_not_chosen: UserX,
     inspection_fee_refunded: Undo2,
     booking_cancelled_by_customer: CalendarX,
+    declined_request_closed: CalendarX,
+    declined_request_auto_closed: CalendarX,
 };
 
 // Returns a rendered element (not a component reference) - this is a plain
