@@ -87,9 +87,18 @@ const V2PaymentSection = ({ requestId, bare = false }) => {
         if (redirecting) return;
         setRedirecting(true);
         try {
-            const { url } = await createV2Checkout(axiosSecure, requestId);
-            if (!url) throw new Error('missing checkout url');
-            window.location.href = url;
+            const result = await createV2Checkout(axiosSecure, requestId);
+            // The inspection fee already covered the whole quote.
+            if (result.paidWithoutCharge) {
+                notify.success('Nothing left to pay - your inspection fee covered it. The repair can start.');
+                queryClient.invalidateQueries({ queryKey: ['repair-requests', requestId] });
+                queryClient.invalidateQueries({ queryKey: paymentKeys.all });
+                queryClient.invalidateQueries({ queryKey: ['quote'] });
+                setRedirecting(false);
+                return;
+            }
+            if (!result.url) throw new Error('missing checkout url');
+            window.location.href = result.url;
         } catch (error) {
             if (import.meta.env.DEV) console.error('V2 checkout creation failed:', error);
             notify.error(getPaymentErrorMessage(error));
@@ -103,9 +112,15 @@ const V2PaymentSection = ({ requestId, bare = false }) => {
                 <span className="text-body-sm font-semibold text-ds-muted-foreground">Amount due</span>
                 <span className="ds-numeric text-title text-ds-foreground">{formatMoney(eligibility.amount, eligibility.currency)}</span>
             </div>
+            {eligibility.inspectionCredit > 0 && (
+                <p className="text-body-sm text-ds-muted-foreground">
+                    Quote <span className="ds-numeric font-semibold text-ds-foreground">{formatMoney(eligibility.quoteTotal, eligibility.currency)}</span>
+                    {' '}minus the inspection fee you already paid, <span className="ds-numeric font-semibold text-ds-foreground">{formatMoney(eligibility.inspectionCredit, eligibility.currency)}</span>.
+                </p>
+            )}
             <Button variant="action" size="lg" onClick={handlePay} disabled={redirecting} className="w-full sm:w-auto">
                 <CreditCard aria-hidden="true" />
-                {redirecting ? 'Starting payment…' : `Pay ${formatMoney(eligibility.amount, eligibility.currency)}`}
+                {redirecting ? 'Starting payment…' : eligibility.amount === 0 ? 'Confirm - nothing to pay' : `Pay ${formatMoney(eligibility.amount, eligibility.currency)}`}
             </Button>
             <p className="flex items-center gap-1.5 text-micro text-ds-muted-foreground">
                 <Lock aria-hidden="true" className="size-3.5" /> Secure payment powered by Stripe

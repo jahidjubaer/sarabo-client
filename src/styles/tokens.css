@@ -89,6 +89,23 @@
   --ds-danger-subtle-foreground: #a3231b;
   --ds-neutral-subtle: #eff0ee;
   --ds-neutral-subtle-foreground: #5c6b73;
+
+  /* Charts (reports phase). Two categorical series, validated for colour-blind
+   * separation and contrast against this surface; blue first, orange second.
+   * Heat steps are one blue hue, light -> dark, each with a text colour that
+   * clears 4.4:1 on it. */
+  --ds-chart-1: #2a78d6;
+  --ds-chart-2: #eb6834;
+  --ds-heat-0: #eff0ee;
+  --ds-heat-0-foreground: #1a2a30;
+  --ds-heat-1: #cde2fb;
+  --ds-heat-1-foreground: #0d366b;
+  --ds-heat-2: #86b6ef;
+  --ds-heat-2-foreground: #0d366b;
+  --ds-heat-3: #2a78d6;
+  --ds-heat-3-foreground: #ffffff;
+  --ds-heat-4: #184f95;
+  --ds-heat-4-foreground: #ffffff;
 }
 
 .dark {
@@ -153,6 +170,21 @@
   --ds-danger-subtle-foreground: #f4a19b;
   --ds-neutral-subtle: #1b2b34;
   --ds-neutral-subtle-foreground: #93a5ad;
+
+  /* Dark mode's own steps, validated against the dark card surface. Heat
+   * gets brighter as it gets busier. */
+  --ds-chart-1: #3987e5;
+  --ds-chart-2: #d95926;
+  --ds-heat-0: #1b2b34;
+  --ds-heat-0-foreground: #dbe6ea;
+  --ds-heat-1: #104281;
+  --ds-heat-1-foreground: #ffffff;
+  --ds-heat-2: #1c5cab;
+  --ds-heat-2-foreground: #ffffff;
+  --ds-heat-3: #3987e5;
+  --ds-heat-3-foreground: #06131c;
+  --ds-heat-4: #86b6ef;
+  --ds-heat-4-foreground: #06131c;
 }
 
 /* `@theme inline` emits utilities as var(--ds-*) references, so the `.dark`

@@ -46,6 +46,9 @@ const NotificationsPage = lazy(() => import("../pages/Dashboard/Notifications/No
 const Wallet = lazy(() => import("../pages/Dashboard/Wallet/Wallet"));
 const WithdrawalRequests = lazy(() => import("../pages/Dashboard/WithdrawalRequests/WithdrawalRequests"));
 const AdminFeedbackPage = lazy(() => import("../pages/Dashboard/TechnicianFeedback/AdminFeedbackPage"));
+const ServiceCatalogue = lazy(() => import("../pages/Dashboard/ServiceCatalogue/ServiceCatalogue"));
+const Reports = lazy(() => import("../pages/Dashboard/Reports/Reports"));
+const JobPortal = lazy(() => import("../pages/Dashboard/JobPortal/JobPortal"));
 
 export const router = createBrowserRouter([
   {
@@ -191,6 +194,11 @@ export const router = createBrowserRouter([
         element: <TechnicianRoute><AssignedJobs></AssignedJobs></TechnicianRoute>
       },
       {
+        // Open repair requests technicians can apply for (job-portal phase B).
+        path: 'job-portal',
+        element: <TechnicianRoute><JobPortal></JobPortal></TechnicianRoute>
+      },
+      {
         // Assigned technician's detail view (Phase 6.4 Unit 4) - reuses the
         // shared RequestDetails page (which renders the inspection form/summary
         // for the assigned technician). Server-side getRepairRequestById already
@@ -245,6 +253,16 @@ export const router = createBrowserRouter([
         // technician-earning control on the request detail view.
         path: 'withdrawal-requests',
         element: <AdminRoute><WithdrawalRequests></WithdrawalRequests></AdminRoute>
+      },
+      {
+        // Admin service catalogue: prices and on/off for each repair service.
+        path: 'service-catalogue',
+        element: <AdminRoute><ServiceCatalogue></ServiceCatalogue></AdminRoute>
+      },
+      {
+        // Admin reports: demand, completion, regions, pickups, workload.
+        path: 'reports',
+        element: <AdminRoute><Reports></Reports></AdminRoute>
       }
     ]
       }

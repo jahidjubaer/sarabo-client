@@ -32,6 +32,7 @@ below) before running the dev server.
 | `npm run lint` | Run ESLint |
 | `npm run build` | Production build to `dist/` |
 | `npm run preview` | Preview the production build locally |
+| `npm run test:e2e` | Browser tests (Playwright) against a production build with a faked API - no keys or accounts needed. First time: `npx playwright install chromium` |
 
 ## Environment variables
 

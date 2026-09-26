@@ -46,8 +46,10 @@ const PaymentSuccess = () => {
     const paidRequest = Array.isArray(cachedRequests) && paymentInfo.trackingId
         ? cachedRequests.find((request) => request.trackingId === paymentInfo.trackingId)
         : null;
-    const returnPath = paidRequest ? `/dashboard/my-requests/${paidRequest._id}` : '/dashboard/my-requests';
-    const returnLabel = paidRequest ? 'Back to your repair' : 'View my repairs';
+    const requestIdForReturn = paymentInfo.requestId || paidRequest?._id || null;
+    const returnPath = requestIdForReturn ? `/dashboard/my-requests/${requestIdForReturn}` : '/dashboard/my-requests';
+    const returnLabel = requestIdForReturn ? 'Back to your repair' : 'View my repairs';
+    const isInspectionFee = paymentInfo.purpose === 'inspection_fee';
 
     useEffect(() => {
         if (!sessionId) return;
@@ -62,7 +64,11 @@ const PaymentSuccess = () => {
             .then(res => {
                 setPaymentInfo({
                     transactionId: res.data.transactionId,
-                    trackingId: res.data.trackingId
+                    trackingId: res.data.trackingId,
+                    // Job-portal phase C: an inspection fee books the technician.
+                    purpose: res.data.purpose || 'repair',
+                    requestId: res.data.requestId || null,
+                    technicianName: res.data.technicianName || null,
                 });
                 setAlreadyProcessed(!!res.data.alreadyProcessed);
                 setStatus('verified');
@@ -162,12 +168,14 @@ const PaymentSuccess = () => {
                                 <CircleCheckBig className="size-6" />
                             </span>
                             <h1 className="mt-4 text-heading text-ds-foreground">
-                                {alreadyProcessed ? 'Payment already confirmed' : 'Payment successful'}
+                                {alreadyProcessed ? 'Payment already confirmed' : isInspectionFee ? 'Inspection fee paid' : 'Payment successful'}
                             </h1>
                             <p className="mt-2 text-body-sm text-ds-muted-foreground">
-                                {alreadyProcessed
-                                    ? 'This payment was already confirmed for your repair request.'
-                                    : 'Your repair request payment has been confirmed.'}
+                                {isInspectionFee
+                                    ? `${paymentInfo.technicianName || 'Your technician'} is booked for your pickup time. The fee counts toward the final price if you go ahead with the repair.`
+                                    : alreadyProcessed
+                                        ? 'This payment was already confirmed for your repair request.'
+                                        : 'Your repair request payment has been confirmed.'}
                             </p>
 
                             {

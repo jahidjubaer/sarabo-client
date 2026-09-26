@@ -1,6 +1,6 @@
 import { createElement } from 'react';
 import { Link } from 'react-router';
-import { ArrowRight, Ban, CreditCard, MoreHorizontal, Trash2 } from 'lucide-react';
+import { ArrowRight, Ban, CreditCard, MoreHorizontal, RotateCcw, Trash2 } from 'lucide-react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { buttonVariants } from '../ui/button-variants';
@@ -12,6 +12,7 @@ import { canCancelRequest } from '../../utils/cancellationEligibility';
 import { canDeleteRequest } from '../../utils/deletionEligibility';
 import { getProductSummary, getAgreedPrice, getRequestAction, getRequestStatus, canOfferPayment } from '../../utils/customerRequestPresentation';
 import { getStatusPresentation } from '../../config/statusPresentation';
+import { canRebook, rebookPath } from '../../utils/createRequestFlow';
 import { getProductCategoryIcon } from '../../utils/productCategoryIcons';
 import { formatAbsoluteDateTime } from '../../utils/relativeTime';
 import { cn } from '../../lib/utils';
@@ -35,6 +36,8 @@ function RequestListItem({ request, onCancel, onDelete, onPay, cancellingId, del
     const showDelete = canDeleteRequest(request);
     const busy = cancellingId === request._id || deletingId === request._id;
     const needsYou = Boolean(action);
+    // A cancelled request can be requested again (a new request, prefilled).
+    const showRebook = canRebook(request);
 
     return (
         <Card className={cn('overflow-hidden transition-colors hover:border-ds-primary/40', needsYou && 'border-l-4 border-l-ds-action')}>
@@ -74,7 +77,7 @@ function RequestListItem({ request, onCancel, onDelete, onPay, cancellingId, del
                             <ArrowRight aria-hidden="true" />
                         </Link>
                     )}
-                    {(showCancel || showDelete) && (
+                    {(showCancel || showDelete || showRebook) && (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="iconLg" aria-label={`More actions for ${device}`} disabled={busy}>
@@ -82,6 +85,11 @@ function RequestListItem({ request, onCancel, onDelete, onPay, cancellingId, del
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-52">
+                                {showRebook && (
+                                    <DropdownMenuItem asChild>
+                                        <Link to={rebookPath(request)}><RotateCcw aria-hidden="true" /> Request again</Link>
+                                    </DropdownMenuItem>
+                                )}
                                 {showCancel && (
                                     <DropdownMenuItem variant="destructive" onSelect={() => onCancel(request)}>
                                         <Ban aria-hidden="true" /> Cancel request

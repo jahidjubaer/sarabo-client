@@ -1,47 +1,22 @@
 import { useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useLoaderData } from 'react-router';
-import { Check, ClipboardCheck, IdCard, LoaderCircle, MapPin, ShieldCheck, Wrench } from 'lucide-react';
+import { ClipboardCheck, IdCard, MapPin, ShieldCheck, Wrench } from 'lucide-react';
 import useAuth from '../../hooks/useAuth';
 import useAxiosSecure from '../../hooks/useAxiosSecure';
-import { useServiceDefinitions } from '../../hooks/useServiceDefinitions';
 import {
-    normalizeServiceDefinitions, deriveProductCategories, getServicesForProduct, humanizeSlug,
-} from '../../utils/serviceDefinitionCatalog';
-import {
-    buildTechnicianApplicationPayload, validateExpertiseSelections, deriveLevelForYears, MAX_EXPERIENCE_YEARS,
+    buildTechnicianApplicationPayload, validateExpertiseSelections, MAX_EXPERIENCE_YEARS,
 } from '../../utils/technicianExpertiseForm';
+import { ExpertisePicker } from '../../components/technician/ExpertisePicker';
+import { useExpertiseSelections } from '../../hooks/useExpertiseSelections';
 import { getTechnicianApplicationErrorMessage } from '../../utils/technicianApplicationErrorMessage';
 import { notify } from '../../lib/notify';
 import { FormField } from '../../components/common/FormField';
 import { LoadingButton } from '../../components/common/LoadingButton';
-import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert';
 import { Input } from '../../components/ui/input';
-import { cn } from '../../lib/utils';
 import { Select } from '../../components/ui/select';
 
 const notBlank = message => value => (value && value.trim().length > 0) || message;
-
-function CheckboxControl({ checked, onChange, children, className, labelClassName, ...props }) {
-    return (
-        <label className={cn('flex min-w-0 cursor-pointer items-start gap-3 text-body-sm text-ds-foreground', className)}>
-            <input
-                type="checkbox"
-                className="peer sr-only"
-                checked={checked}
-                onChange={onChange}
-                {...props}
-            />
-            <span
-                aria-hidden="true"
-                className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-ds-sm border border-ds-input bg-ds-background transition-colors peer-checked:border-ds-primary peer-checked:bg-ds-primary peer-focus-visible:ring-2 peer-focus-visible:ring-ds-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-ds-card"
-            >
-                <Check className={cn('size-3 text-ds-primary-foreground', checked ? 'opacity-100' : 'opacity-0')} strokeWidth={3} />
-            </span>
-            <span className={cn('min-w-0 break-words', labelClassName)}>{children}</span>
-        </label>
-    );
-}
 
 // Phase 8.7A: the application now collects the canonical matching profile the
 // eligible-technician matcher requires - service area (region/district) plus a
@@ -65,37 +40,12 @@ const BecomeTechnician = () => {
     const districtsByRegion = (region) => serviceAreas.filter(c => c.region === region).map(d => d.district);
     const technicianRegion = useWatch({ control, name: 'region' });
 
-    // Canonical expertise catalogue (public service definitions).
-    const { data: rawDefinitions, isLoading: definitionsLoading, isError: definitionsError } = useServiceDefinitions();
-    const definitions = useMemo(() => normalizeServiceDefinitions(rawDefinitions), [rawDefinitions]);
-    const productCategories = useMemo(() => deriveProductCategories(definitions), [definitions]);
-
-    // Expertise builder state: { [productSlug]: { repairSlugs: string[], experienceYears: string } }.
-    const [expertise, setExpertise] = useState({});
+    // Expertise builder state and the picker itself are shared with the
+    // technician's profile editor (components/technician/ExpertisePicker).
+    const {
+        selections: expertise, toggleProduct, toggleRepair, setYears,
+    } = useExpertiseSelections();
     const [expertiseError, setExpertiseError] = useState(null);
-
-    const toggleProduct = (slug) => {
-        setExpertise((prev) => {
-            const next = { ...prev };
-            if (next[slug]) delete next[slug];
-            else next[slug] = { repairSlugs: [], experienceYears: '' };
-            return next;
-        });
-    };
-    const toggleRepair = (productSlug, repairSlug) => {
-        setExpertise((prev) => {
-            const current = prev[productSlug] || { repairSlugs: [], experienceYears: '' };
-            const has = current.repairSlugs.includes(repairSlug);
-            const repairSlugs = has ? current.repairSlugs.filter((s) => s !== repairSlug) : [...current.repairSlugs, repairSlug];
-            return { ...prev, [productSlug]: { ...current, repairSlugs } };
-        });
-    };
-    const setYears = (productSlug, value) => {
-        setExpertise((prev) => {
-            const current = prev[productSlug] || { repairSlugs: [], experienceYears: '' };
-            return { ...prev, [productSlug]: { ...current, experienceYears: value } };
-        });
-    };
 
     const handleTechnicianApplication = (data) => {
         if (submitting) return;
@@ -295,7 +245,6 @@ const BecomeTechnician = () => {
                         <fieldset
                             className="min-w-0 overflow-hidden rounded-ds-lg border border-ds-border bg-ds-card"
                             aria-describedby={expertiseError ? 'expertise-error' : 'expertise-help'}
-                            aria-busy={definitionsLoading || undefined}
                         >
                             <legend className="sr-only">Technician expertise</legend>
                             <div className="p-5 sm:p-6">
@@ -306,113 +255,13 @@ const BecomeTechnician = () => {
                                 </p>
                             </div>
 
-                            {definitionsLoading && (
-                                <div className="flex items-center gap-3 border-t border-ds-border px-5 py-6 text-body-sm text-ds-muted-foreground sm:px-6" role="status" aria-live="polite">
-                                    <LoaderCircle aria-hidden="true" className="size-5 animate-spin text-ds-primary" />
-                                    Loading repair categories…
-                                </div>
-                            )}
-
-                            {definitionsError && (
-                                <div className="border-t border-ds-border p-5 sm:p-6">
-                                    <Alert tone="danger">
-                                        <Wrench aria-hidden="true" />
-                                        <AlertTitle>Repair categories could not be loaded</AlertTitle>
-                                        <AlertDescription>Please refresh and try again.</AlertDescription>
-                                    </Alert>
-                                </div>
-                            )}
-
-                            {!definitionsLoading && !definitionsError && productCategories.length === 0 && (
-                                <p className="border-t border-ds-border px-5 py-6 text-body-sm text-ds-muted-foreground sm:px-6">
-                                    No repair categories are available right now.
-                                </p>
-                            )}
-
-                            {productCategories.length > 0 && (
-                                <div className="border-t border-ds-border">
-                                    {productCategories.map((product) => {
-                                        const selected = !!expertise[product.slug];
-                                        const state = expertise[product.slug] || { repairSlugs: [], experienceYears: '' };
-                                        const services = getServicesForProduct(definitions, product.slug);
-                                        const level = deriveLevelForYears(state.experienceYears);
-                                        const repairsId = `repairs-${product.slug}`;
-                                        const levelId = `level-${product.slug}`;
-                                        return (
-                                            <div key={product.slug} className="border-b border-ds-border last:border-b-0">
-                                                <CheckboxControl
-                                                    className="px-5 py-4 transition-colors hover:bg-ds-muted/50 sm:px-6"
-                                                    labelClassName="font-semibold"
-                                                    checked={selected}
-                                                    onChange={() => toggleProduct(product.slug)}
-                                                    // aria-expanded is not valid on a checkbox; aria-controls
-                                                    // still points at the repair list the tick reveals.
-                                                    aria-controls={selected ? repairsId : undefined}
-                                                >
-                                                    {product.label}
-                                                </CheckboxControl>
-
-                                                {selected && (
-                                                    <div id={repairsId} className="space-y-5 border-t border-ds-border bg-ds-muted/40 px-5 py-5 sm:px-6 sm:pl-12">
-                                                        <fieldset>
-                                                            <legend className="text-body-sm font-semibold text-ds-foreground">Repairs you handle</legend>
-                                                            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                                                {services.map((svc) => (
-                                                                    <CheckboxControl
-                                                                        key={svc.repairCategorySlug}
-                                                                        checked={state.repairSlugs.includes(svc.repairCategorySlug)}
-                                                                        onChange={() => toggleRepair(product.slug, svc.repairCategorySlug)}
-                                                                    >
-                                                                        {humanizeSlug(svc.repairCategorySlug)}
-                                                                    </CheckboxControl>
-                                                                ))}
-                                                            </div>
-                                                        </fieldset>
-
-                                                        <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
-                                                            <FormField
-                                                                id={`years-${product.slug}`}
-                                                                label="Years of experience"
-                                                                required={state.repairSlugs.length > 0}
-                                                                hint={`Enter a whole number from 0 to ${MAX_EXPERIENCE_YEARS}.`}
-                                                            >
-                                                                <Input
-                                                                    id={`years-${product.slug}`}
-                                                                    type="number"
-                                                                    min="0"
-                                                                    max={MAX_EXPERIENCE_YEARS}
-                                                                    inputMode="numeric"
-                                                                    required={state.repairSlugs.length > 0}
-                                                                    value={state.experienceYears}
-                                                                    onChange={(e) => setYears(product.slug, e.target.value)}
-                                                                    className="w-full sm:w-32"
-                                                                    aria-describedby={level ? levelId : `years-${product.slug}-hint`}
-                                                                    placeholder="0"
-                                                                />
-                                                            </FormField>
-                                                            {level && (
-                                                                <p id={levelId} className="text-body-sm text-ds-muted-foreground sm:pb-2">
-                                                                    Derived level: <span className="font-semibold text-ds-foreground">{humanizeSlug(level)}</span>
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-
-                            {expertiseError && (
-                                <div className="border-t border-ds-border p-5 sm:p-6">
-                                    <Alert id="expertise-error" tone="danger">
-                                        <Wrench aria-hidden="true" />
-                                        <AlertTitle>Review your expertise</AlertTitle>
-                                        <AlertDescription>{expertiseError}</AlertDescription>
-                                    </Alert>
-                                </div>
-                            )}
+                            <ExpertisePicker
+                                selections={expertise}
+                                onToggleProduct={toggleProduct}
+                                onToggleRepair={toggleRepair}
+                                onYears={setYears}
+                                error={expertiseError}
+                            />
                         </fieldset>
 
                         <section className="border-t border-ds-border pt-6" aria-labelledby="submit-application-title">

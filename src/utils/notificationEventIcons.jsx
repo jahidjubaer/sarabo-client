@@ -7,6 +7,11 @@ import {
     BadgeCheck,
     CreditCard,
     Bell,
+    CalendarClock,
+    CalendarX,
+    UserMinus,
+    Briefcase,
+    Undo2,
 } from 'lucide-react';
 
 // Exact server event types (see sarabo-server's utils/notificationEvents.js)
@@ -29,6 +34,18 @@ const ICON_BY_TYPE = {
     repair_in_progress: Wrench,
     repair_completed: BadgeCheck,
     payment_confirmed: CreditCard,
+    // Pickup scheduling: reminders, a missed pickup, a job taken back.
+    pickup_reminder: CalendarClock,
+    pickup_reminder_technician: CalendarClock,
+    pickup_reschedule_requested: CalendarX,
+    assignment_withdrawn: UserMinus,
+    // Job portal and the inspection fee.
+    job_invitation: Briefcase,
+    application_received: UserPlus,
+    application_accepted: UserCheck,
+    application_not_chosen: UserX,
+    inspection_fee_refunded: Undo2,
+    booking_cancelled_by_customer: CalendarX,
 };
 
 // Returns a rendered element (not a component reference) - this is a plain

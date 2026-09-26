@@ -1,10 +1,14 @@
-import { Wrench, MapPin, BadgeCheck, Phone } from 'lucide-react';
+import { useState } from 'react';
+import { useSearchParams } from 'react-router';
+import { Wrench, MapPin, BadgeCheck, Phone, Pencil } from 'lucide-react';
 import { Card } from '../../../components/ui/card';
 import { Badge } from '../../../components/ui/badge';
 import { Skeleton } from '../../../components/ui/skeleton';
 import { useTechnicianProfile } from '../../../hooks/useTechnicianProfile';
 import { humanizeSlug } from '../../../utils/serviceDefinitionCatalog';
 import { StatusBadge } from '../../../components/common/StatusBadge';
+import { Button } from '../../../components/ui/button';
+import { ExpertiseEditor } from '../../../components/technician/ExpertiseEditor';
 
 // The technician's own professional record (Phase 9.2), from GET /technicians/me.
 //
@@ -67,6 +71,16 @@ function ExpertiseList({ expertise }) {
 
 function TechnicianProfileCard({ role }) {
     const { data, isPending, isError, error } = useTechnicianProfile(role);
+    // ?edit=expertise (the work queue's "add your expertise" link) opens the
+    // editor straight away; the param is removed once used.
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [editorOpen, setEditorOpen] = useState(() => searchParams.get('edit') === 'expertise');
+    const setEditor = (open) => {
+        setEditorOpen(open);
+        if (!open && searchParams.get('edit')) {
+            setSearchParams((params) => { params.delete('edit'); return params; }, { replace: true });
+        }
+    };
 
     if (role !== 'rider') return null;
 
@@ -99,17 +113,23 @@ function TechnicianProfileCard({ role }) {
 
     return (
         <div className="space-y-4">
-            <Card className="p-5 sm:p-6">
-                <div className="flex items-center gap-2">
-                    <Wrench aria-hidden="true" className="size-4 text-ds-primary" />
-                    <h2 className="text-base font-semibold text-ds-foreground">Professional information</h2>
+            <Card id="expertise" className="scroll-mt-24 p-5 sm:p-6">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                        <Wrench aria-hidden="true" className="size-4 text-ds-primary" />
+                        <h2 className="text-base font-semibold text-ds-foreground">Professional information</h2>
+                    </div>
+                    <Button variant={expertise.length ? 'outline' : 'primary'} size="sm" onClick={() => setEditor(true)}>
+                        <Pencil aria-hidden="true" />{expertise.length ? 'Edit expertise' : 'Add your expertise'}
+                    </Button>
                 </div>
                 <p className="mt-1 text-sm text-ds-muted-foreground">
-                    The specialisations you recorded on your application. These decide which repairs you can be matched to.
+                    Your specialisations. These decide which repairs you can be matched to.
                 </p>
                 <div className="mt-4">
                     <ExpertiseList expertise={expertise} />
                 </div>
+                <ExpertiseEditor open={editorOpen} onOpenChange={setEditor} technicianId={data.id} expertise={expertise} />
             </Card>
 
             <Card className="p-5 sm:p-6">

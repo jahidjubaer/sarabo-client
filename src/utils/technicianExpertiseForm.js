@@ -102,3 +102,22 @@ export function buildTechnicianApplicationPayload(profile, selections) {
         expertise: buildExpertiseFromSelections(selections),
     };
 }
+
+// Inverse of buildExpertiseFromSelections: turns a stored expertise array back
+// into picker selections, so an existing profile can be edited in the same
+// picker the application uses. Malformed entries are skipped, never guessed.
+export function selectionsFromExpertise(expertise) {
+    const selections = {};
+    for (const entry of Array.isArray(expertise) ? expertise : []) {
+        if (!entry || typeof entry.productCategorySlug !== 'string' || !entry.productCategorySlug) continue;
+        const repairSlugs = Array.isArray(entry.repairCategorySlugs)
+            ? entry.repairCategorySlugs.filter((slug) => typeof slug === 'string' && slug)
+            : [];
+        const years = Number(entry.experienceYears);
+        selections[entry.productCategorySlug] = {
+            repairSlugs: [...new Set(repairSlugs)],
+            experienceYears: Number.isFinite(years) ? String(years) : '',
+        };
+    }
+    return selections;
+}

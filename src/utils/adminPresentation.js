@@ -196,3 +196,27 @@ export function formatRecommendationReasons(reasons) {
 export function getServiceAreaLabel(matchLevel) {
     return SERVICE_AREA_LABELS[matchLevel] || (matchLevel ? humanizeSlug(matchLevel) : '');
 }
+
+// Why a technician cannot take a request (the eligible-technicians
+// endpoint's diagnostic reasonCodes). "Busy" and "already assigned" read the
+// same to an admin, so they share one label.
+const INELIGIBLE_REASON_LABELS = {
+    TECHNICIAN_NOT_APPROVED: 'Not approved yet',
+    TECHNICIAN_UNAVAILABLE: 'Busy on another repair',
+    TECHNICIAN_ALREADY_ASSIGNED: 'Busy on another repair',
+    TECHNICIAN_ROLE_INCONSISTENT: 'Account role needs fixing',
+    INCOMPLETE_TECHNICIAN_PROFILE: 'Profile incomplete',
+    PRODUCT_EXPERTISE_MISMATCH: "Doesn't repair this device",
+    REPAIR_EXPERTISE_MISMATCH: "Doesn't do this repair",
+    INSUFFICIENT_EXPERTISE_LEVEL: 'Expertise level too low',
+    OUTSIDE_SERVICE_REGION: 'Outside service area',
+};
+
+export function getIneligibleReasonLabels(technician) {
+    const labels = (Array.isArray(technician?.reasonCodes) ? technician.reasonCodes : [])
+        .map((code) => {
+            if (code === 'OUTSIDE_SERVICE_REGION' && technician.region) return `Outside service area (based in ${technician.region})`;
+            return INELIGIBLE_REASON_LABELS[code] || humanizeSlug(String(code).toLowerCase().replace(/_/g, '-'));
+        });
+    return [...new Set(labels)];
+}

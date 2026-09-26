@@ -1,4 +1,9 @@
+import { useState } from 'react';
 import { motion as Motion } from 'motion/react';
+import { Link } from 'react-router';
+import { Camera, CalendarClock, RotateCcw } from 'lucide-react';
+import { buttonVariants } from '../ui/button-variants';
+import { canRebook, rebookPath } from '../../utils/createRequestFlow';
 import ServiceSpine from '../spine/ServiceSpine';
 import DamageImageManager from '../damage-images/DamageImageManager';
 import InspectionSection from '../inspection/InspectionSection';
@@ -8,6 +13,11 @@ import RepairSection from '../repair/RepairSection';
 import ReceiptConfirmationSection from '../repair/ReceiptConfirmationSection';
 import CustomerTechnicianFeedback from '../feedback/customer/CustomerTechnicianFeedback';
 import { WorkspaceContextPanels } from '../workspace/WorkspaceContextPanels';
+import { PickupRescheduleSheet } from '../pickup/PickupRescheduleSheet';
+import { TechnicianApplications } from './TechnicianApplications';
+import { InspectionFeeNote } from './InspectionFeeNote';
+import { Button } from '../ui/button';
+import { canChangePickup } from '../../utils/pickupSlots';
 import { NextStepPanel } from '../workspace/NextStepPanel';
 import { StageSection } from '../workspace/StageSection';
 import { Card, CardContent } from '../ui/card';
@@ -26,6 +36,18 @@ function nextStepModel(request, action) {
     const group = getRequestGroup(request);
     const handover = getHandoverState(request);
 
+    // Job portal (phase B): a waiting request with a photo is open to
+    // technicians; the customer compares their applications and chooses.
+    if (!action && request?.schemaVersion === 2 && (request?.deliveryStatus || 'pending-pickup') === 'pending-pickup'
+        && !request?.technicianName && request?.damage?.imageCount > 0) {
+        return { tone: 'action', eyebrow: 'Your next step', title: 'Choose a technician', description: 'Technicians in your area send an estimate and their inspection fee. Compare them and choose one.', chooser: true };
+    }
+    if (action?.kind === 'add-photo') {
+        return { tone: 'action', eyebrow: 'Your next step', title: 'Add at least one photo', description: 'Technicians use photos to estimate the repair. Add a photo of the problem so they can see your request.' };
+    }
+    if (action?.kind === 'new-pickup-time') {
+        return { tone: 'action', eyebrow: 'Your next step', title: 'Choose a new pickup time', description: 'Your pickup was missed. Choose a new 2-hour window and your technician will collect the device then.' };
+    }
     if (action?.kind === 'quote-review') {
         return { tone: 'action', eyebrow: 'Your next step', title: 'Review and decide on your quote', description: 'Your technician has inspected the device. Approve to go ahead, or decline.' };
     }
@@ -60,6 +82,12 @@ function CustomerRequestDetailsView({ request, sections, isV2Request, damageImag
     const rank = getStatusRank(status);
     const cancelled = status === 'cancelled';
     const action = getRequestAction(request);
+    const [pickupSheetOpen, setPickupSheetOpen] = useState(false);
+    const pickupAction = canChangePickup(request) ? (
+        <Button variant="outline" size="sm" onClick={() => setPickupSheetOpen(true)}>
+            {request.pickupSlot ? 'Change' : 'Choose time'}
+        </Button>
+    ) : null;
     const model = nextStepModel(request, action);
     const handover = getHandoverState(request);
     const paid = isRequestPaid(request);
@@ -93,6 +121,26 @@ function CustomerRequestDetailsView({ request, sections, isV2Request, damageImag
                         )}
                         {focus === 'payment' && <V2PaymentSection requestId={request._id} bare />}
                         {focus === 'handover' && <ReceiptConfirmationSection requestId={request._id} request={request} isOwner />}
+                        {model.chooser && <TechnicianApplications request={request} />}
+                        <InspectionFeeNote request={request} />
+                        {focus === 'add-photo' && (
+                            <a href="#repair-request" className={buttonVariants({ variant: 'action' })}>
+                                <Camera aria-hidden="true" /> Add a photo
+                            </a>
+                        )}
+                        {focus === 'new-pickup-time' && (
+                            <Button variant="action" onClick={() => setPickupSheetOpen(true)}>
+                                <CalendarClock aria-hidden="true" /> Choose a new time
+                            </Button>
+                        )}
+                        {canRebook(request) && (
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+                                <Link to={rebookPath(request)} className={buttonVariants({ variant: 'primary' })}>
+                                    <RotateCcw aria-hidden="true" /> Request again
+                                </Link>
+                                <p className="text-body-sm text-ds-muted-foreground">Opens a new request with this device, repair and address filled in.</p>
+                            </div>
+                        )}
                     </NextStepPanel>
 
                     {show.request && (
@@ -178,8 +226,9 @@ function CustomerRequestDetailsView({ request, sections, isV2Request, damageImag
                 </div>
 
                 <aside aria-label="Repair details" className="space-y-4 lg:sticky lg:top-24">
-                    <WorkspaceContextPanels request={request} showCustomer={false} />
+                    <WorkspaceContextPanels request={request} showCustomer={false} pickupAction={pickupAction} />
                 </aside>
+                <PickupRescheduleSheet open={pickupSheetOpen} onOpenChange={setPickupSheetOpen} request={request} />
             </Motion.div>
         </Motion.div>
     );

@@ -1,17 +1,20 @@
+import { lazy, Suspense } from 'react';
 import { Link } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion as Motion, MotionConfig } from 'motion/react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell } from 'recharts';
-import { ArrowRight, Banknote, CircleCheckBig, Flag, ReceiptText, UserCheck, UserCog } from 'lucide-react';
+import { ArrowRight, Banknote, CalendarX, CircleCheckBig, Clock3, Flag, MapPinOff, ReceiptText, TriangleAlert, Undo2, UserCheck, UserCog } from 'lucide-react';
 import useAxiosSecure from '../../hooks/useAxiosSecure';
 import { walletKeys } from '../../hooks/walletKeys';
 import { useAdminFeedbackList } from '../../hooks/useTechnicianFeedback';
+import { useAdminAttention } from '../../hooks/useAdminAttention';
+import { attentionIdSets, flagsFor, attentionDeviceLabel, ATTENTION_FLAGS } from '../../utils/attentionPresentation';
+import { formatPickupSlot } from '../../utils/pickupSlots';
 import { PageHeader } from '../common/PageHeader';
 import { ErrorState } from '../common/ErrorState';
 import { CardSkeleton } from '../common/Skeletons';
+import { Skeleton } from '../ui/skeleton';
 import { Section } from '../common/Section';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
-import { ChartContainer, ChartTooltipContent } from '../ui/chart';
 import { buttonVariants } from '../ui/button-variants';
 import {
     summarizeStatusStats, statusChartData, categoryChartData, groupPaymentsByCurrency, summarizeTechnicians,
@@ -25,6 +28,19 @@ import { cn } from '../../lib/utils';
 
 const QUEUE_LIMIT = 6;
 const OVERVIEW_PEEK = { page: 1, limit: 5 };
+
+// recharts is most of this page's download, so the charts load separately
+// and the rest of the overview does not wait for them.
+const RequestBarChart = lazy(() => import('./RequestBarChart'));
+
+function LazyBarChart({ data, labelWidth }) {
+    const height = Math.max(data.length * 40, 200);
+    return (
+        <Suspense fallback={<Skeleton className="w-full" style={{ height }} />}>
+            <RequestBarChart data={data} labelWidth={labelWidth} height={height} />
+        </Suspense>
+    );
+}
 
 function ChartEmpty({ message }) {
     return <p className="py-10 text-center text-sm text-ds-muted-foreground">{message}</p>;
@@ -67,6 +83,40 @@ function QueueTile({ to, icon, label, count }) {
     );
 }
 
+// Pickups that are late or can't be matched, each linking to the list that
+// fixes it. Hidden when nothing is wrong.
+function AttentionStrip({ counts }) {
+    const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+    const items = [
+        counts.missedPickups > 0 && { key: 'missed', icon: CalendarX, text: `${plural(counts.missedPickups, 'pickup')} missed`, hint: 'Technician assigned, device not collected', to: '#needs-you-queue' },
+        counts.overdueWaiting > 0 && { key: 'overdue', icon: TriangleAlert, text: `${plural(counts.overdueWaiting, 'pickup')} overdue`, hint: 'Pickup time passed, no technician yet', to: '/dashboard/assign-technicians?view=overdue' },
+        counts.unchosen > 0 && { key: 'unchosen', icon: Clock3, text: `${plural(counts.unchosen, 'request')} with nobody chosen`, hint: 'Open 24 hours in the job portal - invite a technician', to: '/dashboard/assign-technicians?view=unchosen' },
+        counts.feeRefunds > 0 && { key: 'refunds', icon: Undo2, text: `${plural(counts.feeRefunds, 'refund')} waiting`, hint: 'Inspection fees Stripe has not refunded yet - retry them', to: '#needs-you-queue' },
+        counts.unmatchable > 0 && { key: 'unmatched', icon: MapPinOff, text: `${plural(counts.unmatchable, 'request')} with no local technician`, hint: 'Nobody in the region can take them', to: '/dashboard/assign-technicians?view=unmatched' },
+    ].filter(Boolean);
+    if (items.length === 0) return null;
+    return (
+        <nav aria-label="Pickups that need attention" className="mb-5 grid gap-3 rounded-ds-lg border border-ds-attention/40 bg-ds-attention-subtle p-3 sm:grid-cols-2 xl:grid-cols-4">
+            {items.map((item) => {
+                const ItemIcon = item.icon;
+                const content = (
+                    <>
+                        <ItemIcon aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-ds-attention-subtle-foreground" />
+                        <span className="min-w-0">
+                            <span className="block text-body-sm font-bold text-ds-foreground">{item.text}</span>
+                            <span className="block text-micro text-ds-attention-subtle-foreground">{item.hint}</span>
+                        </span>
+                    </>
+                );
+                const className = 'focus-ring flex min-h-11 items-start gap-2 rounded-ds p-2 hover:bg-ds-card/60';
+                return item.to.startsWith('#')
+                    ? <a key={item.key} href={item.to} className={className}>{content}</a>
+                    : <Link key={item.key} to={item.to} className={className}>{content}</Link>;
+            })}
+        </nav>
+    );
+}
+
 // One item in the combined queue: what it is, the one thing to do, and how
 // long it has been waiting.
 function QueueRow({ item, featured }) {
@@ -77,11 +127,11 @@ function QueueRow({ item, featured }) {
                 <ItemIcon aria-hidden="true" className="size-5" />
             </span>
             <div className="min-w-0 flex-1">
-                <p className="text-micro font-semibold text-ds-muted-foreground">{item.kind}</p>
+                <p className={cn('text-micro font-semibold', item.urgent ? 'text-ds-attention-subtle-foreground' : 'text-ds-muted-foreground')}>{item.kind}</p>
                 <p className="break-words text-body-sm font-bold text-ds-foreground">{item.title}</p>
                 <p className="flex flex-wrap gap-x-3 text-micro text-ds-muted-foreground">
                     {item.meta.filter(Boolean).map((part) => <span key={part}>{part}</span>)}
-                    {item.at && <span>Waiting since {formatRelativeTime(item.at)}</span>}
+                    {item.at && <span>{item.atLabel || 'Waiting since'} {formatRelativeTime(item.at)}</span>}
                 </p>
             </div>
             <Link
@@ -95,13 +145,43 @@ function QueueRow({ item, featured }) {
     );
 }
 
-function buildQueue({ requests, technicians, withdrawals, reports }) {
+// Kind line for a waiting request, most serious reason first.
+function requestKind(flags) {
+    if (flags.includes('overdue') && flags.includes('unmatched')) return 'Pickup time passed · no local technician';
+    if (flags.includes('overdue')) return ATTENTION_FLAGS.overdue.label;
+    if (flags.includes('unmatched')) return ATTENTION_FLAGS.unmatched.label;
+    return 'Needs a technician';
+}
+
+const REFUND_REASONS = {
+    booking_failed: 'Technician could not be booked',
+    technician_no_show: 'Technician did not come',
+    customer_cancelled: 'Customer cancelled in time',
+};
+
+function buildQueue({ requests, technicians, withdrawals, reports, attention }) {
+    const sets = attention ? attentionIdSets(attention) : null;
     const items = [
+        // A technician was assigned but the device was not collected in its window.
+        ...(attention?.missedPickups ?? []).map((entry) => ({
+            key: `missed-${entry.id}`, icon: CalendarX, kind: 'Pickup missed', title: attentionDeviceLabel(entry), urgent: true, priority: 3,
+            meta: [entry.technicianName && `Technician: ${entry.technicianName}`, entry.district, formatPickupSlot(entry.pickupSlot), entry.trackingId],
+            at: entry.pickupSlot?.endsAt, atLabel: 'Window ended', action: 'Open', to: `/dashboard/manage-repair-requests/${entry.id}`,
+        })),
+        // An inspection-fee refund Stripe has not completed (job-portal phase D).
+        ...(attention?.feeRefunds ?? []).map((entry) => ({
+            key: `refund-${entry.id}-${entry.paidAt}`, icon: Undo2, kind: 'Refund waiting', title: `${formatMoney(entry.amount, entry.currency)} inspection fee`, urgent: true, priority: 3,
+            meta: [REFUND_REASONS[entry.reason], entry.trackingId],
+            at: entry.paidAt, atLabel: 'Paid', action: 'Retry refund', to: `/dashboard/manage-repair-requests/${entry.id}`,
+        })),
         ...requests.map((request) => {
             const { device, category } = getProductSummary(request);
+            const flags = flagsFor(request._id, sets);
             return {
-                key: `request-${request._id}`, icon: UserCog, kind: 'Needs a technician', title: device,
-                meta: [category, request.senderDistrict || request.serviceLocation?.district, request.trackingId],
+                key: `request-${request._id}`, icon: flags.includes('unmatched') ? MapPinOff : UserCog, kind: requestKind(flags), title: device,
+                urgent: flags.length > 0,
+                priority: flags.includes('overdue') ? 2 : flags.includes('unmatched') ? 1 : 0,
+                meta: [category, request.senderDistrict || request.serviceLocation?.district, formatPickupSlot(request.pickupSlot), request.trackingId],
                 at: request.createdAt, action: 'Assign', to: `/dashboard/assign-technicians?request=${request._id}`,
             };
         }),
@@ -121,8 +201,9 @@ function buildQueue({ requests, technicians, withdrawals, reports }) {
             at: report.createdAt, action: 'Open', to: '/dashboard/technician-reports?status=open',
         })),
     ];
-    // Oldest first: whatever has waited longest is handled first.
-    return items.sort((a, b) => new Date(a.at || 0) - new Date(b.at || 0));
+    // Most urgent first - missed pickups, then overdue pickups, then requests
+    // no local technician can take - and oldest first within each.
+    return items.sort((a, b) => ((b.priority || 0) - (a.priority || 0)) || (new Date(a.at || 0) - new Date(b.at || 0)));
 }
 
 // Admin home (Phase 5): what needs an admin, then the workload, then the
@@ -155,6 +236,8 @@ function AdminOverview() {
         queryFn: async () => (await axiosSecure.get('/admin/withdrawals', { params: { status: 'requested', ...OVERVIEW_PEEK } })).data,
     });
     const reportsQuery = useAdminFeedbackList('reports', { ...OVERVIEW_PEEK, status: 'open' });
+    // Optional: if it fails, the queue simply has no attention flags.
+    const attentionQuery = useAdminAttention();
 
     const statsState = getArraySourceState(statsQuery);
     const requestsState = getArraySourceState(requestsQuery);
@@ -181,7 +264,7 @@ function AdminOverview() {
         withdrawals: withdrawalsReady ? withdrawalsQuery.data.total ?? withdrawals.length : null,
         reports: reportsReady ? reportsQuery.data.total ?? reports.length : null,
     };
-    const queue = buildQueue({ requests: awaiting, technicians: applications, withdrawals, reports });
+    const queue = buildQueue({ requests: awaiting, technicians: applications, withdrawals, reports, attention: attentionQuery.data });
     const knownCounts = Object.values(counts).filter((value) => typeof value === 'number');
     const totalWaiting = knownCounts.reduce((sum, value) => sum + value, 0);
     const allCountsKnown = knownCounts.length === 4;
@@ -207,7 +290,8 @@ function AdminOverview() {
 
                 <Motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-10">
                     <Motion.div variants={staggerItem}>
-                        <Section title="Needs you" description="Oldest first. Each count opens its list, already filtered.">
+                        <Section title="Needs you" description="Most urgent first, then oldest. Each count opens its list, already filtered.">
+                            {attentionQuery.data?.counts && <AttentionStrip counts={attentionQuery.data.counts} />}
                             <nav aria-label="Queues" className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
                                 <QueueTile to="/dashboard/assign-technicians" icon={UserCog} label="Need a technician" count={counts.awaiting} />
                                 <QueueTile to="/dashboard/approve-technicians?status=pending" icon={UserCheck} label="Applications to review" count={counts.applications} />
@@ -222,7 +306,7 @@ function AdminOverview() {
                                 </div>
                             )}
 
-                            <div className="rounded-ds-lg border border-ds-border bg-ds-card p-4 sm:p-5">
+                            <div id="needs-you-queue" className="scroll-mt-24 rounded-ds-lg border border-ds-border bg-ds-card p-4 sm:p-5">
                                 {queueLoading && queue.length === 0 ? (
                                     <div className="space-y-3">{[0, 1, 2].map((key) => <CardSkeleton key={key} className="h-16" />)}</div>
                                 ) : queue.length === 0 ? (
@@ -235,7 +319,7 @@ function AdminOverview() {
                                         <ul>{queue.slice(0, QUEUE_LIMIT).map((item, index) => <QueueRow key={item.key} item={item} featured={index === 0} />)}</ul>
                                         {queue.length > QUEUE_LIMIT && (
                                             <p className="mt-4 border-t border-ds-border pt-3 text-micro text-ds-muted-foreground">
-                                                Showing the {QUEUE_LIMIT} oldest. Use the counts above to see each full list.
+                                                Showing {QUEUE_LIMIT}: urgent pickups first, then the oldest. Use the counts above to see each full list.
                                             </p>
                                         )}
                                     </>
@@ -339,17 +423,7 @@ function AdminOverview() {
                                         {statusData.length === 0 ? (
                                             <ChartEmpty message="No repair requests yet." />
                                         ) : (
-                                            <ChartContainer height={Math.max(statusData.length * 40, 200)}>
-                                                <BarChart data={statusData} layout="vertical" margin={{ left: 8, right: 24, top: 4, bottom: 4 }}>
-                                                    <CartesianGrid horizontal={false} strokeDasharray="3 3" />
-                                                    <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} />
-                                                    <YAxis type="category" dataKey="label" width={150} tickLine={false} axisLine={false} />
-                                                    <Tooltip content={<ChartTooltipContent />} cursor={{ fill: 'var(--ds-muted)', opacity: 0.5 }} />
-                                                    <Bar dataKey="value" name="Requests" radius={[0, 4, 4, 0]} isAnimationActive={false}>
-                                                        {statusData.map((entry) => <Cell key={entry.key} fill={entry.fill} />)}
-                                                    </Bar>
-                                                </BarChart>
-                                            </ChartContainer>
+                                            <LazyBarChart data={statusData} labelWidth={150} />
                                         )}
                                     </CardContent>
                                 </Card>
@@ -376,15 +450,7 @@ function AdminOverview() {
                                         {categoryData.length === 0 ? (
                                             <ChartEmpty message="No categorised requests yet." />
                                         ) : (
-                                            <ChartContainer height={Math.max(categoryData.length * 40, 200)}>
-                                                <BarChart data={categoryData} layout="vertical" margin={{ left: 8, right: 24, top: 4, bottom: 4 }}>
-                                                    <CartesianGrid horizontal={false} strokeDasharray="3 3" />
-                                                    <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} />
-                                                    <YAxis type="category" dataKey="label" width={140} tickLine={false} axisLine={false} />
-                                                    <Tooltip content={<ChartTooltipContent />} cursor={{ fill: 'var(--ds-muted)', opacity: 0.5 }} />
-                                                    <Bar dataKey="value" name="Requests" radius={[0, 4, 4, 0]} fill="var(--ds-primary)" isAnimationActive={false} />
-                                                </BarChart>
-                                            </ChartContainer>
+                                            <LazyBarChart data={categoryData} labelWidth={140} />
                                         )}
                                     </CardContent>
                                 </Card>

@@ -3,6 +3,7 @@ import { humanizeSlug } from '../../utils/serviceDefinitionCatalog';
 import { formatMoneyRange, formatMoney } from '../../utils/currency';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { isLegacyRequest } from '../../utils/workspacePresentation';
+import { formatPickupSlot } from '../../utils/pickupSlots';
 
 // Compact, role-safe context panels for the workspace sidebar (Phase 7.6).
 // Never renders raw object dumps, ids, schemaVersion, or storage internals.
@@ -49,7 +50,9 @@ function formatEstimate(request) {
     return null;
 }
 
-function WorkspaceContextPanels({ request, showCustomer }) {
+// `pickupAction` is an optional control beside the pickup time (the customer's
+// "Change" button); other roles only see the time.
+function WorkspaceContextPanels({ request, showCustomer, pickupAction }) {
     const legacy = isLegacyRequest(request);
     const estimate = !legacy ? formatEstimate(request) : (Number.isFinite(Number(request?.cost)) ? formatCurrency(request.cost) : null);
     const approvedQuote = request?.quote && request.quote.status === 'approved' && Number.isFinite(Number(request.quote.totalAmount))
@@ -81,6 +84,15 @@ function WorkspaceContextPanels({ request, showCustomer }) {
                     <Row label="Address" value={[request.senderAddress, request.senderDistrict, request.senderRegion].filter(Boolean).join(', ') || null} stacked />
                 ) : (
                     <Row label="Location" value={[request.serviceLocation?.district, request.serviceLocation?.region].filter(Boolean).join(', ') || null} />
+                )}
+                {!legacy && (request.pickupSlot || pickupAction) && (
+                    <div className="py-2 text-body-sm">
+                        <dt className="text-ds-muted-foreground">Pickup</dt>
+                        <dd className="mt-0.5 flex flex-wrap items-center justify-between gap-2">
+                            <span className="font-semibold text-ds-foreground">{formatPickupSlot(request.pickupSlot) || 'Not scheduled'}</span>
+                            {pickupAction}
+                        </dd>
+                    </div>
                 )}
                 <Row label="Technician" value={request.technicianName} />
             </Panel>

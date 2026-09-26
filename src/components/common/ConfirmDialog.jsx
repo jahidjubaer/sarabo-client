@@ -14,6 +14,8 @@ import { LoadingButton } from './LoadingButton';
 //   summary         optional node shown between the description and the
 //                   buttons, e.g. the amount being approved.
 //   reasonMaxLength shows a live character count when set.
+//   confirmDisabled keeps the confirm button off, e.g. while the dialog is
+//                   still loading what confirming would do.
 //
 // While `busy` the dialog cannot be dismissed (Escape, overlay click and the
 // close button are all ignored), so a request in flight is never orphaned.
@@ -29,6 +31,7 @@ function ConfirmDialog({
     destructive = false,
     busy = false,
     busyLabel = 'Working…',
+    confirmDisabled = false,
     onConfirm,
     reason = false,
     reasonLabel = 'Reason',
@@ -100,7 +103,7 @@ function ConfirmDialog({
                 )}
                 <DialogFooter>
                     <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={busy}>{cancelLabel}</Button>
-                    <LoadingButton variant={variant} onClick={handleConfirm} loading={busy} loadingText={busyLabel}>
+                    <LoadingButton variant={variant} onClick={handleConfirm} loading={busy} loadingText={busyLabel} disabled={confirmDisabled}>
                         {confirmLabel}
                     </LoadingButton>
                 </DialogFooter>
