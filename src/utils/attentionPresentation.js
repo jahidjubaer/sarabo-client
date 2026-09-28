@@ -5,7 +5,7 @@ import { humanizeSlug } from './serviceDefinitionCatalog';
 export const ATTENTION_FLAGS = {
     overdue: { label: 'Pickup time passed', tone: 'attention' },
     unmatched: { label: 'No local technician', tone: 'danger' },
-    unchosen: { label: 'Nobody chosen in 24h', tone: 'attention' },
+    unchosen: { label: 'No offers in 24h', tone: 'attention' },
 };
 
 // Sets of request ids, for badging rows that come from other lists.

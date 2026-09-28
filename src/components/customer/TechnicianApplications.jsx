@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Award, Briefcase, CheckCircle2, MapPin, Star, Wrench } from 'lucide-react';
+import { Award, Briefcase, CheckCircle2, MapPin, Star, Wrench, XCircle } from 'lucide-react';
 import useAxiosSecure from '../../hooks/useAxiosSecure';
 import { useRequestApplications, jobPortalKeys } from '../../hooks/useJobPortal';
-import { acceptApplication } from '../../api/jobPortal';
+import { acceptApplication, declineApplication } from '../../api/jobPortal';
+import { DECLINE_REASONS } from '../../utils/jobBoard';
 import { humanizeSlug } from '../../utils/serviceDefinitionCatalog';
 import { formatMoney, formatMoneyRange } from '../../utils/currency';
 import { notify } from '../../lib/notify';
@@ -11,6 +12,9 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
 import { ConfirmDialog } from '../common/ConfirmDialog';
+import { ChoiceCard } from '../ui/choice-card';
+
+const DECLINE_NOTE_MAX = 300;
 
 const ERROR_COPY = {
     TECHNICIAN_BUSY: 'That technician is on another job right now. Choose another, or try again later.',
@@ -28,11 +32,30 @@ function Stat({ icon, children }) {
 
 // The customer compares technicians' applications and chooses one
 // (job-portal phase B). Shown on the customer's request while it is open.
+// Not happy with an offer (price, fee or anything else)? Rejecting it reposts
+// the request to the open jobs board; that technician may revise it once.
 function TechnicianApplications({ request }) {
     const axiosSecure = useAxiosSecure();
     const queryClient = useQueryClient();
     const { data, isPending } = useRequestApplications(request._id);
     const [choosing, setChoosing] = useState(null);
+    const [rejecting, setRejecting] = useState(null);
+    const [rejectReason, setRejectReason] = useState('price');
+    const refreshApplications = () => queryClient.invalidateQueries({ queryKey: jobPortalKeys.applications(request._id) });
+
+    const reject = useMutation({
+        mutationFn: ({ application, note }) => declineApplication(axiosSecure, request._id, application.id, { reason: rejectReason, note }),
+        onSuccess: () => {
+            setRejecting(null);
+            refreshApplications();
+            notify.success('Offer rejected. Your request is posted again for technicians.');
+        },
+        onError: (error) => {
+            setRejecting(null);
+            refreshApplications();
+            notify.error(ERROR_COPY[error?.response?.data?.code] || "That offer couldn't be rejected. Please try again.");
+        },
+    });
 
     const accept = useMutation({
         mutationFn: (application) => acceptApplication(axiosSecure, request._id, application.id),
@@ -57,8 +80,31 @@ function TechnicianApplications({ request }) {
 
     if (isPending) return <div className="space-y-3">{[0, 1].map((k) => <Skeleton key={k} className="h-28 w-full" />)}</div>;
     const pending = (data?.applications ?? []).filter((a) => a.status === 'pending');
+    const rejected = (data?.applications ?? []).filter((a) => a.status === 'declined');
+    const rejectedList = rejected.length > 0 ? (
+        <details className="rounded-ds-lg border border-ds-border p-3 text-body-sm">
+            <summary className="cursor-pointer font-medium text-ds-muted-foreground">Offers you rejected ({rejected.length})</summary>
+            <ul className="mt-2 space-y-1.5">
+                {rejected.map((a) => (
+                    <li key={a.id} className="flex flex-wrap justify-between gap-2 text-ds-muted-foreground">
+                        <span>{a.technician.name}{a.canReoffer ? ' - may send a revised offer' : ''}</span>
+                        <span className="ds-numeric">{formatMoneyRange(a.estimateMin, a.estimateMax, 'BDT')} · fee {formatMoney(a.inspectionFee, 'BDT')}</span>
+                    </li>
+                ))}
+            </ul>
+        </details>
+    ) : null;
     if (pending.length === 0) {
-        return <p className="text-body-sm text-ds-muted-foreground">No technician has applied yet. You'll be notified when one does - most apply within a day.</p>;
+        return (
+            <div className="space-y-3">
+                <p className="text-body-sm text-ds-muted-foreground">
+                    {rejected.length > 0
+                        ? "Your request is posted again. You'll be notified when a technician sends a new offer."
+                        : "No technician has applied yet. You'll be notified when one does - most apply within a day."}
+                </p>
+                {rejectedList}
+            </div>
+        );
     }
 
     return (
@@ -85,15 +131,56 @@ function TechnicianApplications({ request }) {
                                         <div><dt className="inline text-ds-muted-foreground">Inspection fee </dt><dd className="ds-numeric inline font-semibold text-ds-foreground">{formatMoney(application.inspectionFee, 'BDT')}</dd></div>
                                     </dl>
                                     {application.note && <p className="text-body-sm text-ds-foreground">“{application.note}”</p>}
+                                    {application.revised && <Badge tone="neutral">Revised offer</Badge>}
                                 </div>
-                                <Button variant="action" className="shrink-0" onClick={() => setChoosing(application)} disabled={accept.isPending}>
-                                    <CheckCircle2 aria-hidden="true" /> Choose
-                                </Button>
+                                <div className="flex shrink-0 flex-row gap-2 sm:flex-col">
+                                    <Button variant="action" onClick={() => setChoosing(application)} disabled={accept.isPending || reject.isPending}>
+                                        <CheckCircle2 aria-hidden="true" /> Choose
+                                    </Button>
+                                    <Button variant="outline" onClick={() => { setRejectReason('price'); setRejecting(application); }} disabled={accept.isPending || reject.isPending}>
+                                        <XCircle aria-hidden="true" /> Reject
+                                    </Button>
+                                </div>
                             </div>
                         </li>
                     );
                 })}
             </ul>
+            {rejectedList && <div className="mt-3">{rejectedList}</div>}
+            <ConfirmDialog
+                open={Boolean(rejecting)}
+                onOpenChange={(open) => { if (!open) setRejecting(null); }}
+                title={rejecting ? `Reject ${rejecting.technician.name}'s offer?` : ''}
+                description={rejecting && !rejecting.revised
+                    ? 'Your request is posted again for technicians. This technician may send you one revised offer.'
+                    : 'Your request is posted again for technicians. This was their revised offer, so they cannot send another.'}
+                summary={rejecting ? (
+                    <fieldset className="space-y-2">
+                        <legend className="mb-1 text-body-sm font-semibold text-ds-foreground">Why?</legend>
+                        {DECLINE_REASONS.map((option) => (
+                            <ChoiceCard
+                                key={option.value}
+                                name="reject-reason"
+                                value={option.value}
+                                label={option.label}
+                                checked={rejectReason === option.value}
+                                onChange={() => setRejectReason(option.value)}
+                                disabled={reject.isPending}
+                                className="[&_.text-subhead]:text-body-sm [&>span]:p-3"
+                            />
+                        ))}
+                    </fieldset>
+                ) : null}
+                reason
+                reasonLabel="Message to the technician (optional)"
+                reasonPlaceholder="For example: my budget is around 1,500 taka"
+                reasonMaxLength={DECLINE_NOTE_MAX}
+                confirmLabel="Reject and repost"
+                confirmVariant="destructive"
+                busy={reject.isPending}
+                busyLabel="Rejecting…"
+                onConfirm={(note) => reject.mutate({ application: rejecting, note })}
+            />
             <ConfirmDialog
                 open={Boolean(choosing)}
                 onOpenChange={(open) => { if (!open) setChoosing(null); }}

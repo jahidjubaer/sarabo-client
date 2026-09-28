@@ -31,7 +31,7 @@ const VIEW_OPTIONS = [
     { value: 'all', label: 'All waiting requests' },
     { value: 'overdue', label: 'Pickup time passed' },
     { value: 'unmatched', label: 'No local technician' },
-    { value: 'unchosen', label: 'Nobody chosen in 24h' },
+    { value: 'unchosen', label: 'No offers in 24h' },
 ];
 
 // Badges for a waiting request that needs attention (overdue-alerts phase).

@@ -36,7 +36,7 @@ const TECHNICIAN_SECTIONS = [
         heading: 'Repair Work',
         items: [
             { label: 'Overview', to: '/dashboard', icon: LayoutDashboard, end: true },
-            { label: 'Job portal', to: '/dashboard/job-portal', icon: Search },
+            { label: 'Find jobs', to: '/jobs', icon: Search },
             { label: 'Assigned jobs', to: '/dashboard/assigned-jobs', icon: ClipboardList },
             { label: 'Completed jobs', to: '/dashboard/completed-jobs', icon: CheckCheck },
             { label: 'Wallet', to: '/dashboard/wallet', icon: Wallet },
@@ -170,6 +170,7 @@ const PUBLIC_TITLES = [
     ['/services', 'Services'],
     ['/service-areas', 'Service areas'],
     ['/about', 'About'],
+    ['/jobs', 'Open jobs'],
     ['/track-request', 'Track a repair'],
     ['/track-request/:requestId', 'Track a repair'],
     ['/login', 'Sign in'],

@@ -19,7 +19,7 @@ const MAX_ESTIMATE = 100000;
 
 const ERROR_COPY = {
     JOB_NOT_OPEN: 'This job is no longer open.',
-    APPLICATION_CLOSED: 'Your application for this job has already been decided.',
+    APPLICATION_CLOSED: 'Your offer for this job is closed - the customer has already decided.',
     INSPECTION_FEE_TOO_HIGH: 'The inspection fee is above the limit for this repair.',
     INVALID_ESTIMATE: 'Please check the estimate.',
     TECHNICIAN_NOT_APPROVED: 'Only approved technicians can apply.',
@@ -32,12 +32,15 @@ function ApplicationForm({ job, onDone }) {
     const axiosSecure = useAxiosSecure();
     const queryClient = useQueryClient();
     const existing = job.myApplication?.status === 'pending' ? job.myApplication : null;
+    // The customer rejected the offer: one revised offer, starting from the old one.
+    const revising = job.myApplication?.status === 'declined' && job.myApplication.canReoffer ? job.myApplication : null;
+    const start = existing || revising;
     const { register, handleSubmit, setError, formState: { errors } } = useForm({
         defaultValues: {
-            estimateMin: existing ? String(existing.estimateMin) : '',
-            estimateMax: existing ? String(existing.estimateMax) : '',
-            inspectionFee: existing ? String(existing.inspectionFee) : String(job.maxInspectionFee),
-            note: existing?.note || '',
+            estimateMin: start ? String(start.estimateMin) : '',
+            estimateMax: start ? String(start.estimateMax) : '',
+            inspectionFee: start ? String(start.inspectionFee) : String(job.maxInspectionFee),
+            note: start?.note || '',
         },
     });
     const [formError, setFormError] = useState(null);
@@ -47,7 +50,7 @@ function ApplicationForm({ job, onDone }) {
         mutationFn: (payload) => applyForJob(axiosSecure, job.id, payload),
         onSuccess: () => {
             refresh();
-            notify.success(existing ? 'Application updated.' : 'Application sent. The customer will compare it with others.');
+            notify.success(existing ? 'Application updated.' : revising ? 'Revised offer sent. The customer will look at it again.' : 'Application sent. The customer will compare it with others.');
             onDone();
         },
         onError: (error) => { refresh(); setFormError(errorMessage(error, 'Your application could not be sent. Please try again.')); },
@@ -77,6 +80,11 @@ function ApplicationForm({ job, onDone }) {
     return (
         <form onSubmit={handleSubmit(onValid)} className="flex min-h-0 flex-1 flex-col" noValidate>
             <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 pb-6 sm:px-6">
+                {revising && (
+                    <p className="rounded-ds-lg bg-ds-attention-subtle p-3 text-body-sm text-ds-attention-subtle-foreground">
+                        The customer rejected your offer of <span className="ds-numeric font-semibold">{formatMoneyRange(revising.estimateMin, revising.estimateMax, 'BDT')}</span> (fee <span className="ds-numeric font-semibold">{formatMoney(revising.inspectionFee, 'BDT')}</span>). This is your one revised offer - if it is rejected too, you can't send another for this job.
+                    </p>
+                )}
                 <p className="rounded-ds-lg bg-ds-muted p-3 text-body-sm text-ds-muted-foreground">
                     Sarabo's usual price for this repair is <span className="ds-numeric font-semibold text-ds-foreground">{formatMoneyRange(job.catalogueEstimate.min, job.catalogueEstimate.max, job.catalogueEstimate.currency)}</span>.
                     {' '}Estimate from the photos and description; you give the final price after inspecting the device.
@@ -116,7 +124,7 @@ function ApplicationForm({ job, onDone }) {
                     <div className="flex flex-col-reverse gap-2 sm:flex-row">
                         <Button type="button" variant="outline" onClick={onDone} disabled={busy}>Cancel</Button>
                         <LoadingButton type="submit" variant="primary" loading={save.isPending} loadingText="Sending…">
-                            {existing ? 'Update application' : 'Send application'}
+                            {existing ? 'Update application' : revising ? 'Send revised offer' : 'Send application'}
                         </LoadingButton>
                     </div>
                 </div>
@@ -131,7 +139,7 @@ function JobApplicationSheet({ open, onOpenChange, job }) {
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent side="right" className="w-full max-w-full sm:max-w-xl">
                 <SheetHeader className="border-b border-ds-border">
-                    <SheetTitle>{job?.myApplication?.status === 'pending' ? 'Update your application' : 'Apply for this job'}</SheetTitle>
+                    <SheetTitle>{job?.myApplication?.status === 'pending' ? 'Update your application' : job?.myApplication?.status === 'declined' ? 'Send a revised offer' : 'Apply for this job'}</SheetTitle>
                     <SheetDescription>{job ? `${job.title} · ${job.district}` : ''}</SheetDescription>
                 </SheetHeader>
                 {open && job && <ApplicationForm job={job} onDone={() => onOpenChange(false)} />}

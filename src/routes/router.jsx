@@ -1,5 +1,5 @@
 import { lazy } from "react";
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, Navigate } from "react-router";
 import RootLayout from "../layouts/RootLayout";
 import Home from "../pages/Home/Home/Home";
 import AuthLayout from "../layouts/AuthLayout";
@@ -48,7 +48,7 @@ const WithdrawalRequests = lazy(() => import("../pages/Dashboard/WithdrawalReque
 const AdminFeedbackPage = lazy(() => import("../pages/Dashboard/TechnicianFeedback/AdminFeedbackPage"));
 const ServiceCatalogue = lazy(() => import("../pages/Dashboard/ServiceCatalogue/ServiceCatalogue"));
 const Reports = lazy(() => import("../pages/Dashboard/Reports/Reports"));
-const JobPortal = lazy(() => import("../pages/Dashboard/JobPortal/JobPortal"));
+const Jobs = lazy(() => import("../pages/Jobs/Jobs"));
 
 export const router = createBrowserRouter([
   {
@@ -95,6 +95,12 @@ export const router = createBrowserRouter([
       {
         path: 'about',
         Component: About
+      },
+      {
+        // Open jobs board: public summary; signed-in technicians see details
+        // and apply here (not in the dashboard).
+        path: 'jobs',
+        Component: Jobs
       },
       {
         path: 'track-request',
@@ -194,9 +200,9 @@ export const router = createBrowserRouter([
         element: <TechnicianRoute><AssignedJobs></AssignedJobs></TechnicianRoute>
       },
       {
-        // Open repair requests technicians can apply for (job-portal phase B).
+        // The job portal moved to the open jobs board; old links still work.
         path: 'job-portal',
-        element: <TechnicianRoute><JobPortal></JobPortal></TechnicianRoute>
+        element: <Navigate to="/jobs" replace />
       },
       {
         // Assigned technician's detail view (Phase 6.4 Unit 4) - reuses the

@@ -73,6 +73,7 @@ export const FOOTER_GROUPS = [
         heading: 'Sarabo',
         links: [
             { label: 'About', to: '/about' },
+            { label: 'Open jobs', to: '/jobs' },
             { label: 'Become a technician', to: BECOME_TECHNICIAN_ROUTE },
             { label: 'Take the tour', to: TOUR_ROUTE },
         ],
