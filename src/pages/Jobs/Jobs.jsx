@@ -1,117 +1,221 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { CalendarDays, LogIn, MapPin, RotateCcw, Users, Wrench } from 'lucide-react';
+import { LogIn, Search, SlidersHorizontal, X } from 'lucide-react';
 import useAuth from '../../hooks/useAuth';
 import useRole from '../../hooks/useRole';
 import { useJobPortal, useOpenJobs, jobPortalKeys } from '../../hooks/useJobPortal';
+import { useUrlFilters } from '../../hooks/useUrlFilters';
 import SectionHeader from '../../components/public/SectionHeader';
 import { JobCard } from '../../components/technician/JobCard';
 import { JobApplicationSheet } from '../../components/technician/JobApplicationSheet';
+import DamageImageManager from '../../components/damage-images/DamageImageManager';
 import { EmptyState } from '../../components/common/EmptyState';
 import { ErrorState } from '../../components/common/ErrorState';
 import { Skeleton } from '../../components/ui/skeleton';
-import { Badge } from '../../components/ui/badge';
-import { Card } from '../../components/ui/card';
+import { Input } from '../../components/ui/input';
+import { Select } from '../../components/ui/select';
+import { Button } from '../../components/ui/button';
 import { buttonVariants } from '../../components/ui/button-variants';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../components/ui/dialog';
 import { humanizeSlug } from '../../utils/serviceDefinitionCatalog';
-import { formatMoneyRange } from '../../utils/currency';
-import { formatPickupDate } from '../../utils/pickupSlots';
-import { formatRelativeTime } from '../../utils/relativeTime';
-import { jobTitle } from '../../utils/jobBoard';
-import { BECOME_TECHNICIAN_ROUTE } from '../../utils/publicContent';
-
-// A safe summary for anyone: no problem text, photos or address.
-function PublicJobCard({ job }) {
-    const headingId = `open-job-${job.id}`;
-    return (
-        <Card className="p-5" aria-labelledby={headingId}>
-            <article className="space-y-3">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                        <p className="text-micro font-semibold text-ds-muted-foreground">{humanizeSlug(job.product.categorySlug)}</p>
-                        <h2 id={headingId} className="text-subhead text-ds-foreground">{humanizeSlug(job.repairCategorySlug)}{job.product.brand ? ` · ${job.product.brand}` : ''}</h2>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                        {job.reposted && <Badge tone="neutral"><RotateCcw aria-hidden="true" />Reposted</Badge>}
-                        <Badge tone={job.offers > 0 ? 'neutral' : 'active'}><Users aria-hidden="true" />{job.offers > 0 ? `${job.offers} offer${job.offers === 1 ? '' : 's'}` : 'No offers yet'}</Badge>
-                    </div>
-                </div>
-                <p className="flex flex-wrap gap-x-4 gap-y-1 text-body-sm text-ds-muted-foreground">
-                    <span className="inline-flex items-center gap-1.5"><MapPin aria-hidden="true" className="size-4" />{job.district}, {job.region}</span>
-                    {job.pickupDate && <span className="inline-flex items-center gap-1.5"><CalendarDays aria-hidden="true" className="size-4" />Pickup {formatPickupDate(job.pickupDate)}</span>}
-                    {job.postedAt && <span>{job.reposted ? 'Reposted' : 'Posted'} {formatRelativeTime(job.postedAt)}</span>}
-                </p>
-                <p className="text-body-sm">
-                    <span className="text-ds-muted-foreground">Usual price </span>
-                    <span className="ds-numeric font-semibold text-ds-foreground">{formatMoneyRange(job.catalogueEstimate.min, job.catalogueEstimate.max, job.catalogueEstimate.currency)}</span>
-                </p>
-            </article>
-        </Card>
-    );
-}
+import {
+    jobTitle, toBoardJob, jobFilterOptions, filterJobs, sortJobs, countActiveJobFilters, JOB_SORTS, JOB_FILTER_DEFAULTS,
+} from '../../utils/jobBoard';
+import { cn } from '../../lib/utils';
 
 function JobsSkeleton() {
     return (
-        <div className="space-y-4" aria-busy="true">
-            {[0, 1, 2].map((k) => <Skeleton key={k} className="h-40 w-full" />)}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true">
+            {[0, 1, 2, 3, 4, 5].map((k) => <Skeleton key={k} className="h-96 w-full rounded-ds-xl" />)}
             <span role="status" className="sr-only">Loading open jobs…</span>
         </div>
     );
 }
 
+function FilterSelect({ id, label, value, onChange, children }) {
+    return (
+        <div className="min-w-0 space-y-1">
+            <label htmlFor={id} className="text-micro font-semibold text-ds-muted-foreground">{label}</label>
+            <Select id={id} size="sm" value={value} onChange={(event) => onChange(event.target.value)}>{children}</Select>
+        </div>
+    );
+}
+
+function Chip({ pressed, onClick, children }) {
+    return (
+        <button
+            type="button"
+            aria-pressed={pressed}
+            onClick={onClick}
+            className={cn(
+                'focus-ring inline-flex h-9 items-center rounded-full border px-3.5 text-body-sm font-semibold transition-colors',
+                pressed ? 'border-ds-primary bg-ds-primary text-ds-primary-foreground' : 'border-ds-border bg-ds-card text-ds-foreground hover:border-ds-input'
+            )}
+        >
+            {children}
+        </button>
+    );
+}
+
+// Search, filters and sort, kept in the URL so a refresh or shared link keeps them.
+function JobFilters({ filters, setFilters, options, isTechnician, shown, total }) {
+    const active = countActiveJobFilters(filters);
+    // Below sm the selects fold away so the jobs show first.
+    const [expanded, setExpanded] = useState(false);
+    const folded = active - (filters.q.trim() ? 1 : 0) + (filters.sort !== 'newest' ? 1 : 0);
+    const clear = () => setFilters({ q: '', region: 'all', device: 'all', repair: 'all', offers: 'all', mine: 'all' });
+    return (
+        <div className="space-y-3 rounded-ds-xl border border-ds-border bg-ds-card p-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))]">
+                <div className="min-w-0 space-y-1 sm:col-span-2 lg:col-span-1">
+                    <label htmlFor="jobs-search" className="text-micro font-semibold text-ds-muted-foreground">Search</label>
+                    <div className="flex gap-2">
+                    <div className="relative min-w-0 flex-1">
+                        <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ds-muted-foreground" />
+                        <Input
+                            id="jobs-search"
+                            type="search"
+                            value={filters.q}
+                            onChange={(event) => setFilters({ q: event.target.value })}
+                            placeholder="Brand, district, repair…"
+                            className="h-9 pl-9 text-body-sm"
+                        />
+                    </div>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="sm:hidden"
+                        aria-expanded={expanded}
+                        aria-controls="jobs-more-filters"
+                        onClick={() => setExpanded((v) => !v)}
+                    >
+                        <SlidersHorizontal aria-hidden="true" />Filters{folded > 0 ? ` (${folded})` : ''}
+                    </Button>
+                    </div>
+                </div>
+                <div id="jobs-more-filters" className={cn('contents', !expanded && 'max-sm:hidden')}>
+                <FilterSelect id="jobs-region" label="Region" value={filters.region} onChange={(region) => setFilters({ region })}>
+                    <option value="all">All regions</option>
+                    {options.regions.map((r) => <option key={r} value={r}>{r}</option>)}
+                </FilterSelect>
+                <FilterSelect id="jobs-device" label="Device" value={filters.device} onChange={(device) => setFilters({ device })}>
+                    <option value="all">All devices</option>
+                    {options.devices.map((d) => <option key={d} value={d}>{humanizeSlug(d)}</option>)}
+                </FilterSelect>
+                <FilterSelect id="jobs-repair" label="Repair" value={filters.repair} onChange={(repair) => setFilters({ repair })}>
+                    <option value="all">All repairs</option>
+                    {options.repairs.map((r) => <option key={r} value={r}>{humanizeSlug(r)}</option>)}
+                </FilterSelect>
+                <FilterSelect id="jobs-sort" label="Sort by" value={filters.sort} onChange={(sort) => setFilters({ sort })}>
+                    {JOB_SORTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                </FilterSelect>
+                </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+                <SlidersHorizontal aria-hidden="true" className="hidden size-4 text-ds-muted-foreground sm:block" />
+                <Chip pressed={filters.offers === 'none'} onClick={() => setFilters({ offers: filters.offers === 'none' ? 'all' : 'none' })}>No offers yet</Chip>
+                {isTechnician && (
+                    <>
+                        <Chip pressed={filters.mine === 'not-applied'} onClick={() => setFilters({ mine: filters.mine === 'not-applied' ? 'all' : 'not-applied' })}>Not applied</Chip>
+                        <Chip pressed={filters.mine === 'applied'} onClick={() => setFilters({ mine: filters.mine === 'applied' ? 'all' : 'applied' })}>My offers</Chip>
+                    </>
+                )}
+                <p className="ml-auto text-body-sm text-ds-muted-foreground" role="status">
+                    {shown === total ? `${total} job${total === 1 ? '' : 's'}` : `${shown} of ${total} jobs`}
+                </p>
+                {active > 0 && (
+                    <Button variant="ghost" size="sm" onClick={clear}><X aria-hidden="true" />Clear filters</Button>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// The grid, shared by both boards.
+function JobGrid({ jobs, mode, filters, setFilters, isTechnician, emptyTitle, emptyDescription, onApply, onPhotos }) {
+    const options = useMemo(() => jobFilterOptions(jobs), [jobs]);
+    const visible = useMemo(() => sortJobs(filterJobs(jobs, filters), filters.sort), [jobs, filters]);
+    if (jobs.length === 0) return <EmptyState title={emptyTitle} description={emptyDescription} />;
+    return (
+        <div className="space-y-5">
+            <JobFilters filters={filters} setFilters={setFilters} options={options} isTechnician={isTechnician} shown={visible.length} total={jobs.length} />
+            {visible.length === 0 ? (
+                <EmptyState title="No jobs match these filters" description="Try another region or device, or clear the filters." />
+            ) : (
+                <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label="Open jobs">
+                    {visible.map((job) => <li key={job.id}><JobCard job={job} mode={mode} onApply={onApply} onPhotos={onPhotos} /></li>)}
+                </ul>
+            )}
+        </div>
+    );
+}
+
 // Signed-in technicians: the jobs they can take, with details and photos.
-function TechnicianBoard() {
+function TechnicianBoard({ filters, setFilters }) {
     const queryClient = useQueryClient();
     const { data, isPending, isPaused, isError } = useJobPortal();
-    // The sheet keeps its job while it animates closed.
+    // Both keep their job while they animate closed.
     const [sheet, setSheet] = useState({ open: false, job: null });
-    const jobs = (data?.jobs ?? []).map((job) => ({ ...job, title: jobTitle(job) }));
+    const [photos, setPhotos] = useState({ open: false, job: null });
+    const jobs = useMemo(() => (data?.jobs ?? []).map(toBoardJob), [data]);
 
     if (!data && (isError || isPaused)) {
         return <ErrorState title="Couldn't load open jobs" description="Please try again in a moment." onRetry={() => queryClient.resetQueries({ queryKey: jobPortalKeys.portal })} />;
     }
+    if (isPending && !isPaused) return <JobsSkeleton />;
     return (
         <>
-            {isPending && !isPaused ? <JobsSkeleton /> : jobs.length === 0 ? (
-                <EmptyState title="No open jobs for you right now" description="New repair requests in your region for the repairs you do appear here." />
-            ) : (
-                <div className="space-y-4">
-                    {jobs.map((job) => <JobCard key={job.id} job={job} onApply={(picked) => setSheet({ open: true, job: picked })} />)}
-                </div>
-            )}
+            <JobGrid
+                jobs={jobs}
+                mode="technician"
+                isTechnician
+                filters={filters}
+                setFilters={setFilters}
+                emptyTitle="No open jobs for you right now"
+                emptyDescription="New repair requests in your region for the repairs you do appear here - you'll get a notification too."
+                onApply={(job) => setSheet({ open: true, job: { ...job.raw, title: jobTitle(job.raw) } })}
+                onPhotos={(job) => setPhotos({ open: true, job })}
+            />
             <JobApplicationSheet open={sheet.open} onOpenChange={(open) => setSheet((current) => ({ ...current, open }))} job={sheet.job} />
+            <Dialog open={photos.open} onOpenChange={(open) => setPhotos((current) => ({ ...current, open }))}>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>Customer's photos</DialogTitle>
+                        <DialogDescription>{photos.job ? `${humanizeSlug(photos.job.repairSlug)} · ${photos.job.district}` : ''}</DialogDescription>
+                    </DialogHeader>
+                    {photos.open && photos.job && <DamageImageManager requestId={photos.job.id} canEdit={false} />}
+                </DialogContent>
+            </Dialog>
         </>
     );
 }
 
 // Everyone else: the public summary, and how to start applying.
-function PublicBoard({ signedIn }) {
+function PublicBoard({ signedIn, filters, setFilters }) {
     const queryClient = useQueryClient();
     const { data, isPending, isPaused, isError } = useOpenJobs();
-    const jobs = data?.jobs ?? [];
+    const jobs = useMemo(() => (data?.jobs ?? []).map(toBoardJob), [data]);
     return (
         <div className="space-y-6">
-            <div className="flex flex-col gap-3 rounded-ds-xl border border-ds-border bg-ds-card p-5 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-body-sm text-ds-muted-foreground">
-                    {signedIn
-                        ? 'Only approved Sarabo technicians can see the full details and send offers.'
-                        : 'Are you a Sarabo technician? Sign in to see the problem, photos and pickup time, and send your offer.'}
-                </p>
-                {signedIn ? (
-                    <Link to={BECOME_TECHNICIAN_ROUTE} className={buttonVariants({ variant: 'outline' })}><Wrench aria-hidden="true" />Become a technician</Link>
-                ) : (
-                    <Link to="/login" state="/jobs" className={buttonVariants({ variant: 'action' })}><LogIn aria-hidden="true" />Sign in to apply</Link>
-                )}
-            </div>
+            {!signedIn && (
+                <div className="flex flex-col gap-3 rounded-ds-xl bg-ds-ink p-5 text-ds-ink-foreground sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-body-sm">Are you a Sarabo technician? Sign in to see the problem, the customer's photos and the pickup time, and send your offer.</p>
+                    <Link to="/login" state="/jobs" className={cn(buttonVariants({ variant: 'action' }), 'shrink-0')}><LogIn aria-hidden="true" />Sign in to apply</Link>
+                </div>
+            )}
             {!data && (isError || isPaused) ? (
                 <ErrorState title="Couldn't load open jobs" description="Please try again in a moment." onRetry={() => queryClient.resetQueries({ queryKey: jobPortalKeys.openJobs })} />
-            ) : isPending && !isPaused ? <JobsSkeleton /> : jobs.length === 0 ? (
-                <EmptyState title="No open jobs right now" description="New repair requests appear here as customers post them." />
-            ) : (
-                <ul className="space-y-4" aria-label="Open jobs">
-                    {jobs.map((job) => <li key={job.id}><PublicJobCard job={job} /></li>)}
-                </ul>
+            ) : isPending && !isPaused ? <JobsSkeleton /> : (
+                <JobGrid
+                    jobs={jobs}
+                    mode={signedIn ? 'member' : 'guest'}
+                    isTechnician={false}
+                    filters={filters}
+                    setFilters={setFilters}
+                    emptyTitle="No open jobs right now"
+                    emptyDescription="New repair requests appear here as customers post them."
+                />
             )}
         </div>
     );
@@ -120,17 +224,19 @@ function PublicBoard({ signedIn }) {
 // Open jobs board (/jobs, outside the dashboard). Customers' repair requests
 // appear here once they have a photo. Technicians send an estimate and an
 // inspection fee; the customer accepts one or rejects it, which reposts the
-// request here.
+// request here. Cards show the device photo; the customer's own photos are
+// only shown to signed-in technicians.
 const Jobs = () => {
     const { user, loading } = useAuth();
     const { role, roleLoading } = useRole();
+    const [filters, setFilters] = useUrlFilters(JOB_FILTER_DEFAULTS);
     const resolving = loading || (user && roleLoading);
     const isTechnician = Boolean(user) && role === 'rider';
 
     return (
         <div>
             <header className="px-4 pb-4 pt-12 sm:px-6 lg:px-8 lg:pt-20">
-                <div className="mx-auto max-w-4xl">
+                <div className="mx-auto max-w-6xl">
                     <SectionHeader
                         as="h1"
                         id="page-title"
@@ -141,8 +247,10 @@ const Jobs = () => {
                 </div>
             </header>
             <section aria-labelledby="page-title" className="px-4 pb-20 pt-6 sm:px-6 lg:px-8">
-                <div className="mx-auto max-w-4xl">
-                    {resolving ? <JobsSkeleton /> : isTechnician ? <TechnicianBoard /> : <PublicBoard signedIn={Boolean(user)} />}
+                <div className="mx-auto max-w-6xl">
+                    {resolving ? <JobsSkeleton /> : isTechnician
+                        ? <TechnicianBoard filters={filters} setFilters={setFilters} />
+                        : <PublicBoard signedIn={Boolean(user)} filters={filters} setFilters={setFilters} />}
                 </div>
             </section>
         </div>

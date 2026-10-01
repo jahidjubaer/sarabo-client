@@ -30,7 +30,43 @@ test('/jobs lists open jobs for a signed-out visitor and offers sign-in to apply
     await expect(list.getByText('Reposted').first()).toBeVisible();
     await expect(list.getByText('2 offers')).toBeVisible();
     await expect(list.getByText('No offers yet')).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Sign in to apply' })).toHaveAttribute('href', '/login');
+    await expect(page.getByRole('link', { name: 'Sign in to apply' }).first()).toHaveAttribute('href', '/login');
+    await expect(list.getByRole('link', { name: 'Sign in to apply' })).toHaveCount(2);
+});
+
+test('/jobs filters and sorts the open jobs, and keeps them in the address', async ({ page, api }) => {
+    api.on('GET', '/jobs', { status: 200, json: JOBS });
+    await page.goto('/jobs');
+    const list = page.getByRole('list', { name: 'Open jobs' });
+    await expect(list.getByRole('listitem')).toHaveCount(2);
+    // On phones the selects sit behind a "Filters" button.
+    const more = page.getByRole('button', { name: /^Filters/ });
+    if (await more.isVisible()) await more.click();
+
+    await page.getByLabel('Region').selectOption('Chattogram');
+    await expect(list.getByRole('listitem')).toHaveCount(1);
+    await expect(list.getByText('Cumilla, Chattogram')).toBeVisible();
+    await expect(page).toHaveURL(/region=Chattogram/);
+    await expect(page.getByText('1 of 2 jobs')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Clear filters' }).click();
+    await expect(list.getByRole('listitem')).toHaveCount(2);
+
+    await page.getByRole('button', { name: 'No offers yet' }).click();
+    await expect(list.getByRole('listitem')).toHaveCount(1);
+    await expect(list.getByText('Cumilla, Chattogram')).toBeVisible();
+    await page.getByRole('button', { name: 'No offers yet' }).click();
+
+    await page.getByLabel('Search').fill('samsung');
+    await expect(list.getByRole('listitem')).toHaveCount(1);
+    await expect(list.getByText('Gazipur, Dhaka')).toBeVisible();
+    await page.getByLabel('Search').fill('');
+    await expect(list.getByRole('listitem')).toHaveCount(2);
+
+    // Highest price first: the laptop (up to 8,000) before the phone (6,000).
+    await page.getByLabel('Sort by').selectOption('price-high');
+    await expect(list.getByRole('listitem').first()).toContainText('Cumilla, Chattogram');
+    await expect(page).toHaveURL(/sort=price-high/);
 });
 
 test('/jobs shows an empty state when nothing is open', async ({ page, api }) => {

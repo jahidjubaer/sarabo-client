@@ -48,6 +48,7 @@ const ICON_BY_TYPE = {
     // Open jobs board: an offer was rejected; a job is open again.
     application_declined: UserX,
     job_reposted: RotateCcw,
+    job_posted: Briefcase,
     inspection_fee_refunded: Undo2,
     booking_cancelled_by_customer: CalendarX,
     declined_request_closed: CalendarX,
