@@ -97,6 +97,18 @@ export function shouldShowCreateRequestLink({ user, role } = {}) {
     return !user || role === 'user';
 }
 
+// Signed-in technicians get "Find jobs" in the slot customers use for
+// "Request a repair" (open jobs board, /jobs).
+export const FIND_JOBS_ROUTE = '/jobs';
+
+export function shouldShowFindJobsLink({ user, role } = {}) {
+    return Boolean(user) && role === 'rider';
+}
+
+export function getFindJobsAction() {
+    return { label: 'Find jobs', to: FIND_JOBS_ROUTE };
+}
+
 export function getRequestRepairAction() {
     return { label: 'Request a repair', to: REQUEST_REPAIR_ROUTE };
 }

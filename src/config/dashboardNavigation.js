@@ -148,12 +148,14 @@ const CUSTOMER_TABS = [
     { label: 'Account', to: '/dashboard/profile', icon: User },
 ];
 
+// "Find jobs" (the open jobs board) is the technician's centre tab, as "New
+// request" is the customer's. Account stays in the header's user menu.
 const TECHNICIAN_TABS = [
     { label: 'Home', to: '/dashboard', icon: LayoutDashboard, end: true },
-    { label: 'Jobs', to: '/dashboard/assigned-jobs', icon: ClipboardList },
+    { label: 'My jobs', to: '/dashboard/assigned-jobs', icon: ClipboardList },
+    { label: 'Find jobs', to: '/jobs', icon: Search, emphasis: true },
     { label: 'Wallet', to: '/dashboard/wallet', icon: Wallet },
     { label: 'Alerts', to: '/dashboard/notifications', icon: Bell, badge: 'notifications' },
-    { label: 'Account', to: '/dashboard/profile', icon: User },
 ];
 
 export function getMobileTabs(role) {

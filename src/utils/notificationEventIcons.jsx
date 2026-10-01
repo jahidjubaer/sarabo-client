@@ -12,6 +12,7 @@ import {
     UserMinus,
     Briefcase,
     Undo2,
+    RotateCcw,
 } from 'lucide-react';
 
 // Exact server event types (see sarabo-server's utils/notificationEvents.js)
@@ -44,6 +45,9 @@ const ICON_BY_TYPE = {
     application_received: UserPlus,
     application_accepted: UserCheck,
     application_not_chosen: UserX,
+    // Open jobs board: an offer was rejected; a job is open again.
+    application_declined: UserX,
+    job_reposted: RotateCcw,
     inspection_fee_refunded: Undo2,
     booking_cancelled_by_customer: CalendarX,
     declined_request_closed: CalendarX,

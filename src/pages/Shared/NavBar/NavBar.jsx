@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router';
-import { Menu } from 'lucide-react';
+import { Menu, Search } from 'lucide-react';
 import Logo from '../../../components/Logo/Logo';
 import useAuth from '../../../hooks/useAuth';
 import useRole from '../../../hooks/useRole';
@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../.
 import { buttonVariants } from '../../../components/ui/button-variants';
 import {
     PUBLIC_NAV_LINKS, shouldShowCreateRequestLink, getRequestRepairAction, isPublicNavLinkActive,
+    shouldShowFindJobsLink, getFindJobsAction,
 } from '../../../utils/publicContent';
 import { ROLE_SHORTCUTS } from './roleShortcuts';
 import { cn } from '../../../lib/utils';
@@ -67,6 +68,9 @@ const NavBar = () => {
     const roleShortcut = roleKnown ? ROLE_SHORTCUTS[role] : null;
     const showRequestCta = shouldShowCreateRequestLink({ user, role });
     const requestAction = getRequestRepairAction();
+    const showFindJobs = roleKnown && shouldShowFindJobsLink({ user, role });
+    const findJobsAction = getFindJobsAction();
+    const onJobs = isPublicNavLinkActive(location.pathname, findJobsAction);
 
     return (
         <header className="sticky top-0 z-50 border-b border-ds-border bg-ds-background/95 backdrop-blur supports-[backdrop-filter]:bg-ds-background/85">
@@ -115,6 +119,11 @@ const NavBar = () => {
                                 {showRequestCta && (
                                     <Link to={requestAction.to} className={buttonVariants({ variant: 'action', size: 'lg' })} onClick={closeMobile}>
                                         {requestAction.label}
+                                    </Link>
+                                )}
+                                {showFindJobs && (
+                                    <Link to={findJobsAction.to} aria-current={onJobs ? 'page' : undefined} className={buttonVariants({ variant: 'action', size: 'lg' })} onClick={closeMobile}>
+                                        <Search aria-hidden="true" />{findJobsAction.label}
                                     </Link>
                                 )}
                                 {user ? (
@@ -169,6 +178,12 @@ const NavBar = () => {
                         <Link to={requestAction.to} aria-label={requestAction.label} className={buttonVariants({ variant: 'action', size: 'sm' })}>
                             <span className="sm:hidden">Request</span>
                             <span className="hidden sm:inline">{requestAction.label}</span>
+                        </Link>
+                    )}
+
+                    {showFindJobs && (
+                        <Link to={findJobsAction.to} aria-current={onJobs ? 'page' : undefined} className={buttonVariants({ variant: 'action', size: 'sm' })}>
+                            <Search aria-hidden="true" />{findJobsAction.label}
                         </Link>
                     )}
 
