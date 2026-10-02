@@ -180,6 +180,8 @@ const RepairRequestV2Form = () => {
     // through the same prefill guard as a rebook, so the effects below don't
     // clear the device/repair pair it just set.
     const aiStatus = useAiStatus();
+    // The photo the AI saw a device in; uploaded to the request once created.
+    const [aiPhoto, setAiPhoto] = useState(null);
     const applyAiDraft = (draft) => {
         const previous = getValues();
         const { values, filled } = buildAiDraftValues(previous, draft, definitions);
@@ -340,6 +342,7 @@ const RepairRequestV2Form = () => {
         setStage('form');
         setSubmitProblem(0);
         setStaleServiceNotice(false);
+        setAiPhoto(null);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -377,7 +380,7 @@ const RepairRequestV2Form = () => {
 
                     {review && <RepairRequestSummary review={review} />}
 
-                    <PostCreationDamageStep requestId={createdRequestId} onBusyChange={setImageBusy} />
+                    <PostCreationDamageStep requestId={createdRequestId} onBusyChange={setImageBusy} initialFiles={aiPhoto ? [aiPhoto] : undefined} />
 
                     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                         <Button onClick={goToRequestDetails} className="w-full sm:w-auto">
@@ -430,7 +433,7 @@ const RepairRequestV2Form = () => {
                 <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
                     <form id="repair-request-form" onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate className="min-w-0 space-y-5">
                         {aiStatus.data?.requestHelper === true && !catalogueLoading && definitions.length > 0 && (
-                            <AiRequestHelper onApply={applyAiDraft} onUndo={undoAiDraft} />
+                            <AiRequestHelper onApply={applyAiDraft} onUndo={undoAiDraft} onPhotoUsed={setAiPhoto} />
                         )}
                         <SectionShell step={1} stepId="device" title="Your device" description="Choose the device, then add the brand and model if you know them.">
                                 <div className="space-y-6">

@@ -13,7 +13,10 @@ import DamageImageManager from '../damage-images/DamageImageManager';
 // Navigation lives in the parent success view; this panel only reports its
 // in-flight upload state upward via onBusyChange so the parent can gate
 // "continue" while an upload is actually running.
-const PostCreationDamageStep = ({ requestId, onBusyChange }) => {
+//
+// `initialFiles`: a photo the customer already gave the AI helper, uploaded
+// straight away so they don't have to pick it again.
+const PostCreationDamageStep = ({ requestId, onBusyChange, initialFiles }) => {
     const headingRef = useRef(null);
 
     // Focus lands on this panel's heading the moment it mounts (right after a
@@ -42,7 +45,7 @@ const PostCreationDamageStep = ({ requestId, onBusyChange }) => {
             </div>
 
             <div className="mt-4">
-                <DamageImageManager requestId={requestId} canEdit onBusyChange={onBusyChange} />
+                <DamageImageManager requestId={requestId} canEdit onBusyChange={onBusyChange} initialFiles={initialFiles} />
             </div>
         </div>
     );
