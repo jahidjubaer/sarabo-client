@@ -87,7 +87,7 @@ function ApplicationForm({ job, onDone }) {
                 )}
                 <p className="rounded-ds-lg bg-ds-muted p-3 text-body-sm text-ds-muted-foreground">
                     Sarabo's usual price for this repair is <span className="ds-numeric font-semibold text-ds-foreground">{formatMoneyRange(job.catalogueEstimate.min, job.catalogueEstimate.max, job.catalogueEstimate.currency)}</span>.
-                    {' '}Estimate from the photos and description; you give the final price after inspecting the device.
+                    {' '}Estimate from the description (and photos, if the customer added any); you give the final price after inspecting the device.
                 </p>
                 <fieldset className="space-y-3">
                     <legend className="text-body-sm font-semibold text-ds-foreground">Your estimate for the repair</legend>

@@ -121,9 +121,13 @@ function JobCard({ job, mode, onApply, onPhotos }) {
                                     {state === 'pending' ? 'Update offer' : state === 'can-revise' ? 'Send revised offer' : 'Send offer'}
                                 </Button>
                             )}
-                            <Button variant="outline" className={state === 'closed' ? 'flex-1' : undefined} onClick={() => onPhotos(job)} aria-label={`View photos (${job.photoCount})`}>
-                                <Camera aria-hidden="true" />{state === 'closed' ? `Photos (${job.photoCount})` : job.photoCount}
-                            </Button>
+                            {job.photoCount > 0 ? (
+                                <Button variant="outline" className={state === 'closed' ? 'flex-1' : undefined} onClick={() => onPhotos(job)} aria-label={`View photos (${job.photoCount})`}>
+                                    <Camera aria-hidden="true" />{state === 'closed' ? `Photos (${job.photoCount})` : job.photoCount}
+                                </Button>
+                            ) : state === 'closed' && (
+                                <p className="flex-1 self-center text-center text-body-sm text-ds-muted-foreground">No photos added</p>
+                            )}
                         </>
                     )}
                     {mode === 'guest' && (

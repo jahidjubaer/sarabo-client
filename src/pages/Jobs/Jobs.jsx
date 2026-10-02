@@ -222,7 +222,7 @@ function PublicBoard({ signedIn, filters, setFilters }) {
 }
 
 // Open jobs board (/jobs, outside the dashboard). Customers' repair requests
-// appear here once they have a photo. Technicians send an estimate and an
+// appear here as soon as they are made. Technicians send an estimate and an
 // inspection fee; the customer accepts one or rejects it, which reposts the
 // request here. Cards show the device photo; the customer's own photos are
 // only shown to signed-in technicians.
