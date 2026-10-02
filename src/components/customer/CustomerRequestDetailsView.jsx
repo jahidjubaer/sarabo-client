@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion as Motion } from 'motion/react';
 import { Link } from 'react-router';
-import { Camera, CalendarClock, RotateCcw } from 'lucide-react';
+import { CalendarClock, RotateCcw } from 'lucide-react';
 import { buttonVariants } from '../ui/button-variants';
 import { canRebook, rebookPath } from '../../utils/createRequestFlow';
 import ServiceSpine from '../spine/ServiceSpine';
@@ -37,14 +37,12 @@ function nextStepModel(request, action) {
     const group = getRequestGroup(request);
     const handover = getHandoverState(request);
 
-    // Job portal (phase B): a waiting request with a photo is open to
-    // technicians; the customer compares their applications and chooses.
+    // Job portal: a waiting request is open to technicians from the moment it
+    // is made (photos are optional); the customer compares their offers and
+    // chooses one or rejects it.
     if (!action && request?.schemaVersion === 2 && (request?.deliveryStatus || 'pending-pickup') === 'pending-pickup'
-        && !request?.technicianName && request?.damage?.imageCount > 0) {
+        && !request?.technicianName) {
         return { tone: 'action', eyebrow: 'Your next step', title: 'Choose a technician', description: 'Technicians in your area send an estimate and their inspection fee. Compare them and choose one.', chooser: true };
-    }
-    if (action?.kind === 'add-photo') {
-        return { tone: 'action', eyebrow: 'Your next step', title: 'Add at least one photo', description: 'Technicians use photos to estimate the repair. Add a photo of the problem so they can see your request.' };
     }
     if (action?.kind === 'new-pickup-time') {
         return { tone: 'action', eyebrow: 'Your next step', title: 'Choose a new pickup time', description: 'Your pickup was missed. Choose a new 2-hour window and your technician will collect the device then.' };
@@ -134,11 +132,6 @@ function CustomerRequestDetailsView({ request, sections, isV2Request, damageImag
                         {model.chooser && <TechnicianApplications request={request} />}
                         <InspectionFeeNote request={request} />
                         {model.endDeclined && <EndDeclinedRequest request={request} />}
-                        {focus === 'add-photo' && (
-                            <a href="#repair-request" className={buttonVariants({ variant: 'action' })}>
-                                <Camera aria-hidden="true" /> Add a photo
-                            </a>
-                        )}
                         {focus === 'new-pickup-time' && (
                             <Button variant="action" onClick={() => setPickupSheetOpen(true)}>
                                 <CalendarClock aria-hidden="true" /> Choose a new time

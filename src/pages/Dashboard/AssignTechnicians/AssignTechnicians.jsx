@@ -109,10 +109,12 @@ const AssignTechnicians = () => {
         return getDeviceLabel(r).toLowerCase().includes(term) || (r.senderDistrict || r.serviceLocation?.district || '').toLowerCase().includes(term);
     }), [requests, search, view, attentionSets]);
 
-    // Job portal (phase B): a request with a photo is open for applications -
-    // the normal way is to invite a technician to apply, so the customer
-    // chooses. Direct assignment stays as an admin override.
-    const openForApplications = Boolean(selectedRequest) && selectedRequest.schemaVersion === 2 && (selectedRequest.damage?.imageCount ?? 0) > 0;
+    // Job portal: a waiting v2 request is open for applications from the
+    // moment it is made (photos are optional) - the normal way is to invite a
+    // technician to apply, so the customer chooses. Direct assignment stays
+    // as an admin override.
+    const openForApplications = Boolean(selectedRequest) && selectedRequest.schemaVersion === 2
+        && (selectedRequest.deliveryStatus || 'pending-pickup') === 'pending-pickup';
     const [invited, setInvited] = useState(() => new Set());
     const [invitingId, setInvitingId] = useState(null);
     // Remembered per request and technician, for this page visit.
