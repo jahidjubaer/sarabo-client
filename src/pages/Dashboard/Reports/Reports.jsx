@@ -4,6 +4,8 @@ import { TriangleAlert } from 'lucide-react';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import { useUrlFilters } from '../../../hooks/useUrlFilters';
 import { getAdminReport } from '../../../api/adminReports';
+import { useAiStatus } from '../../../hooks/useAiStatus';
+import { AiReportSummary } from '../../../components/admin/AiReportSummary';
 import { PageHeader } from '../../../components/common/PageHeader';
 import { Section } from '../../../components/common/Section';
 import { KpiStrip } from '../../../components/common/KpiStrip';
@@ -281,6 +283,7 @@ const Reports = () => {
         queryFn: () => getAdminReport(axiosSecure, days),
         placeholderData: keepPreviousData,
     });
+    const aiStatus = useAiStatus();
 
     const rangeControl = (
         <div className="flex items-center gap-2">
@@ -319,6 +322,8 @@ const Reports = () => {
         <div className="space-y-8">
             {header}
             <p className={cn('-mt-4 text-sm text-ds-muted-foreground transition-opacity', isFetching ? 'opacity-100' : 'opacity-0')} role="status" aria-live="polite">Updating…</p>
+
+            {aiStatus.data?.reportSummary === true && <AiReportSummary days={days} />}
 
             <Section title="Overview" description={`${REPORT_RANGES.find((r) => r.value === days)?.label}, compared with the ${period} days before.`}>
                 <KpiStrip
