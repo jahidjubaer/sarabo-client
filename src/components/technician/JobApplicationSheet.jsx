@@ -1,9 +1,13 @@
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useForm, useWatch } from 'react-hook-form';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Sparkles, TriangleAlert, Undo2 } from 'lucide-react';
 import useAxiosSecure from '../../hooks/useAxiosSecure';
 import { jobPortalKeys } from '../../hooks/useJobPortal';
-import { applyForJob, withdrawApplication } from '../../api/jobPortal';
+import { useAiStatus } from '../../hooks/useAiStatus';
+import { applyForJob, withdrawApplication, getPriceGuide, requestAiOfferNote } from '../../api/jobPortal';
+import { getAiHelperErrorMessage } from '../../api/aiHelper';
+import { getOfferWarnings } from '../../utils/offerGuide';
 import { wholeNumberRule } from '../../utils/serviceCatalogueForm';
 import { formatMoney, formatMoneyRange } from '../../utils/currency';
 import { notify } from '../../lib/notify';
@@ -11,11 +15,14 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFo
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import { MoneyInput } from '../ui/money-input';
+import { Select } from '../ui/select';
 import { FormField } from '../common/FormField';
 import { LoadingButton } from '../common/LoadingButton';
 
 const NOTE_MAX = 500;
 const MAX_ESTIMATE = 100000;
+// What the AI gets of the technician's own words, as a starting point.
+const AI_NOTES_MAX = 300;
 
 const ERROR_COPY = {
     JOB_NOT_OPEN: 'This job is no longer open.',
@@ -35,7 +42,7 @@ function ApplicationForm({ job, onDone }) {
     // The customer rejected the offer: one revised offer, starting from the old one.
     const revising = job.myApplication?.status === 'declined' && job.myApplication.canReoffer ? job.myApplication : null;
     const start = existing || revising;
-    const { register, handleSubmit, setError, formState: { errors } } = useForm({
+    const { register, handleSubmit, setError, setValue, getValues, control, formState: { errors } } = useForm({
         defaultValues: {
             estimateMin: start ? String(start.estimateMin) : '',
             estimateMax: start ? String(start.estimateMax) : '',
@@ -44,6 +51,39 @@ function ApplicationForm({ job, onDone }) {
         },
     });
     const [formError, setFormError] = useState(null);
+
+    // Price guide (no AI): the usual offer for this repair, and live warnings.
+    const guideQuery = useQuery({
+        queryKey: ['job-price-guide', job.id],
+        queryFn: () => getPriceGuide(axiosSecure, job.id),
+        staleTime: 5 * 60 * 1000,
+        retry: false,
+    });
+    const guide = guideQuery.data;
+    const [estimateMin, estimateMax, inspectionFee] = useWatch({ control, name: ['estimateMin', 'estimateMax', 'inspectionFee'] });
+    const warnings = getOfferWarnings(guide, { estimateMin, estimateMax, inspectionFee });
+
+    // "Write it for me": the AI drafts the note from the job and whatever the
+    // technician already typed there. Undo puts their own text back.
+    const aiStatus = useAiStatus();
+    const [noteLanguage, setNoteLanguage] = useState('en');
+    const [noteBefore, setNoteBefore] = useState(null);
+    const [noteError, setNoteError] = useState(null);
+    const writeNote = useMutation({
+        mutationFn: () => requestAiOfferNote(axiosSecure, job.id, {
+            language: noteLanguage,
+            technicianNotes: (getValues('note') || '').trim().slice(0, AI_NOTES_MAX),
+        }),
+        onSuccess: (note) => {
+            setNoteBefore(getValues('note') || '');
+            setValue('note', note, { shouldValidate: true, shouldDirty: true });
+        },
+        onError: (error) => setNoteError(getAiHelperErrorMessage(error)),
+    });
+    const undoNote = () => {
+        setValue('note', noteBefore, { shouldValidate: true, shouldDirty: true });
+        setNoteBefore(null);
+    };
 
     const refresh = () => queryClient.invalidateQueries({ queryKey: jobPortalKeys.portal });
     const save = useMutation({
@@ -86,7 +126,15 @@ function ApplicationForm({ job, onDone }) {
                     </p>
                 )}
                 <p className="rounded-ds-lg bg-ds-muted p-3 text-body-sm text-ds-muted-foreground">
-                    Sarabo's usual price for this repair is <span className="ds-numeric font-semibold text-ds-foreground">{formatMoneyRange(job.catalogueEstimate.min, job.catalogueEstimate.max, job.catalogueEstimate.currency)}</span>.
+                    {guide?.basis === 'offers' ? (
+                        <>
+                            Technicians usually offer <span className="ds-numeric font-semibold text-ds-foreground">{formatMoneyRange(guide.estimate.low, guide.estimate.high, guide.currency)}</span> for this repair
+                            {guide.inspectionFee ? <>, with an inspection fee of <span className="ds-numeric font-semibold text-ds-foreground">{formatMoneyRange(guide.inspectionFee.low, guide.inspectionFee.high, guide.currency)}</span></> : null}
+                            {' '}(from {guide.sampleSize} recent offers). Sarabo's listed price is {formatMoneyRange(job.catalogueEstimate.min, job.catalogueEstimate.max, job.catalogueEstimate.currency)}.
+                        </>
+                    ) : (
+                        <>Sarabo's usual price for this repair is <span className="ds-numeric font-semibold text-ds-foreground">{formatMoneyRange(job.catalogueEstimate.min, job.catalogueEstimate.max, job.catalogueEstimate.currency)}</span>.</>
+                    )}
                     {' '}Estimate from the description (and photos, if the customer added any); you give the final price after inspecting the device.
                 </p>
                 <fieldset className="space-y-3">
@@ -109,9 +157,48 @@ function ApplicationForm({ job, onDone }) {
                 >
                     <MoneyInput id="apply-inspection-fee" inputMode="numeric" {...register('inspectionFee', wholeNumberRule({ min: 0, max: job.maxInspectionFee, label: 'Inspection fee' }))} />
                 </FormField>
-                <FormField id="apply-note" label="Note for the customer" hint={`Optional. Up to ${NOTE_MAX} characters.`} error={errors.note?.message}>
-                    <Textarea id="apply-note" rows={3} maxLength={NOTE_MAX} placeholder="What you think is wrong, parts you may need…" {...register('note', { maxLength: { value: NOTE_MAX, message: `At most ${NOTE_MAX} characters.` } })} />
+                {warnings.length > 0 && (
+                    <ul aria-live="polite" className="space-y-2">
+                        {warnings.map((warning) => (
+                            <li key={warning.id} className="flex items-start gap-2 rounded-ds-lg bg-ds-attention-subtle p-3 text-body-sm text-ds-attention-subtle-foreground">
+                                <TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                                <span>{warning.text}</span>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+                <FormField
+                    id="apply-note"
+                    label="Note for the customer"
+                    hint={aiStatus.data?.offerHelper
+                        ? `Optional. Up to ${NOTE_MAX} characters. Type a few words (e.g. "probably the charging port") and let AI write the note.`
+                        : `Optional. Up to ${NOTE_MAX} characters.`}
+                    error={errors.note?.message}
+                >
+                    <Textarea id="apply-note" rows={4} maxLength={NOTE_MAX} placeholder="What you think is wrong, parts you may need…" {...register('note', { maxLength: { value: NOTE_MAX, message: `At most ${NOTE_MAX} characters.` } })} />
                 </FormField>
+                {aiStatus.data?.offerHelper === true && (
+                    <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <label htmlFor="apply-note-language" className="sr-only">Note language</label>
+                            <Select id="apply-note-language" value={noteLanguage} onChange={(event) => setNoteLanguage(event.target.value)} className="w-auto" disabled={writeNote.isPending}>
+                                <option value="en">English</option>
+                                <option value="bn">বাংলা</option>
+                            </Select>
+                            <LoadingButton type="button" variant="outline" loading={writeNote.isPending} loadingText="Writing…" onClick={() => { setNoteError(null); writeNote.mutate(); }}>
+                                <Sparkles aria-hidden="true" /> Write it for me
+                            </LoadingButton>
+                            {noteBefore !== null && !writeNote.isPending && (
+                                <Button type="button" variant="ghost" size="sm" onClick={undoNote}>
+                                    <Undo2 aria-hidden="true" /> Undo
+                                </Button>
+                            )}
+                        </div>
+                        {noteError ? <p role="alert" className="text-body-sm text-ds-destructive">{noteError}</p> : (
+                            <p className="text-micro text-ds-muted-foreground">AI drafts the note from the job and your words (sent to Google Gemini). Read it and change anything before sending.</p>
+                        )}
+                    </div>
+                )}
                 {formError ? <p role="alert" className="text-body-sm font-medium text-ds-destructive">{formError}</p> : null}
             </div>
             <SheetFooter className="border-t border-ds-border">

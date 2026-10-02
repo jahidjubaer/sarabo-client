@@ -34,3 +34,16 @@ export async function getOpenJobs(axiosPublic, params = {}) {
 export async function declineApplication(axiosSecure, requestId, applicationId, { reason, note }) {
     return (await axiosSecure.post(`/repair-requests/${requestId}/applications/${applicationId}/decline`, { reason, note })).data;
 }
+
+// Technician: the usual estimate and inspection fee for this job's service
+// (from recent offers, or the catalogue when there are too few). No AI.
+export async function getPriceGuide(axiosSecure, requestId) {
+    return (await axiosSecure.get(`/repair-requests/${requestId}/applications/price-guide`)).data.guide;
+}
+
+// Technician: an AI draft of the offer note. `technicianNotes` are a few of
+// the technician's own words to build on; `language` is 'en' or 'bn'.
+export async function requestAiOfferNote(axiosSecure, requestId, { language, technicianNotes }) {
+    const response = await axiosSecure.post(`/repair-requests/${requestId}/applications/ai-note`, { language, technicianNotes }, { timeout: 30000 });
+    return response.data.note;
+}
