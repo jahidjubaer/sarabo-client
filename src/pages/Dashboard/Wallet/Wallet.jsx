@@ -12,6 +12,7 @@ import { DataTable } from '../../../components/common/DataTable';
 import { EmptyState } from '../../../components/common/EmptyState';
 import { ErrorState } from '../../../components/common/ErrorState';
 import { FormField } from '../../../components/common/FormField';
+import { Input } from '../../../components/ui/input';
 import { LoadingButton } from '../../../components/common/LoadingButton';
 import { Card } from '../../../components/ui/card';
 import { MoneyInput } from '../../../components/ui/money-input';
@@ -39,7 +40,32 @@ const WITHDRAWAL_ERROR_COPY = {
     WITHDRAWAL_ALREADY_OPEN: 'You already have a withdrawal awaiting processing.',
     INVALID_WITHDRAWAL_AMOUNT: 'Enter a whole taka amount greater than zero.',
     INVALID_WITHDRAWAL: 'That withdrawal request was not accepted.',
+    INVALID_BKASH_NUMBER: 'Enter a valid bKash number, like 01XXXXXXXXX.',
+    INVALID_BKASH_ACCOUNT_NAME: 'Keep the account name under 60 characters.',
 };
+
+// Server errors about the bKash details belong under the bKash field.
+const BKASH_ERROR_CODES = ['INVALID_BKASH_NUMBER', 'INVALID_BKASH_ACCOUNT_NAME', 'INVALID_PAYOUT_METHOD'];
+
+// Same rule as the server: 01XXXXXXXXX, also accepting +880 / 880 and spaces
+// or dashes. Returns the 11-digit number, or null.
+function normalizeBkashNumber(raw) {
+    let digits = raw.replace(/[\s-]/g, '');
+    if (digits.startsWith('+880')) digits = `0${digits.slice(4)}`;
+    else if (digits.startsWith('880')) digits = `0${digits.slice(3)}`;
+    return /^01[3-9]\d{8}$/.test(digits) ? digits : null;
+}
+
+// "bKash 01712345678 · TrxID 9A7B6C5D4E" - the TrxID once an admin has paid it.
+function PayoutLine({ withdrawal }) {
+    if (!withdrawal.payout) return <span className="text-ds-muted-foreground">—</span>;
+    return (
+        <span className="text-ds-muted-foreground">
+            bKash <span className="ds-numeric text-ds-foreground">{withdrawal.payout.accountNumber}</span>
+            {withdrawal.payoutReference && <> · TrxID <span className="ds-numeric font-semibold text-ds-foreground">{withdrawal.payoutReference}</span></>}
+        </span>
+    );
+}
 
 function withdrawalErrorMessage(error) {
     const data = error?.response?.data;
@@ -52,6 +78,10 @@ const Wallet = () => {
     const queryClient = useQueryClient();
     const [amount, setAmount] = useState('');
     const [amountError, setAmountError] = useState('');
+    // null = not typed yet, so the field shows the number used last time.
+    const [bkashNumber, setBkashNumber] = useState(null);
+    const [bkashName, setBkashName] = useState(null);
+    const [bkashError, setBkashError] = useState('');
 
     const { data, isPending, isPaused, isError, refetch } = useTechnicianWallet();
 
@@ -60,14 +90,19 @@ const Wallet = () => {
         onSuccess: () => {
             setAmount('');
             setAmountError('');
-            notify.success('Withdrawal requested. An admin will process it.');
+            setBkashNumber(null);
+            setBkashName(null);
+            setBkashError('');
+            notify.success('Withdrawal requested. An admin will send it to your bKash.');
             queryClient.invalidateQueries({ queryKey: walletKeys.technician() });
         },
         onError: (error) => {
             // Shown against the field as well as in a toast: the field is where
             // the technician is looking, the toast is what they notice.
-            setAmountError(withdrawalErrorMessage(error));
-            notify.error(withdrawalErrorMessage(error));
+            const message = withdrawalErrorMessage(error);
+            if (BKASH_ERROR_CODES.includes(error?.response?.data?.code)) setBkashError(message);
+            else setAmountError(message);
+            notify.error(message);
         },
     });
 
@@ -106,6 +141,8 @@ const Wallet = () => {
     const availableBalance = data.availableBalance ?? 0;
     const hasOpenWithdrawal = !!data.hasOpenWithdrawal;
     const commissionPercent = Math.round((data.commissionRate ?? 0) * 100);
+    const bkashNumberValue = bkashNumber ?? data.lastPayout?.accountNumber ?? '';
+    const bkashNameValue = bkashName ?? data.lastPayout?.accountName ?? '';
 
     // Convenience only. The same three rules the server enforces, checked here
     // so a mistake is answered instantly instead of after a round trip.
@@ -123,12 +160,16 @@ const Wallet = () => {
         event.preventDefault();
         if (requestWithdrawal.isPending || hasOpenWithdrawal) return;
         const message = validate(amount);
-        if (message) {
-            setAmountError(message);
-            return;
-        }
-        setAmountError('');
-        requestWithdrawal.mutate({ amount: Number(amount.trim()) });
+        const number = normalizeBkashNumber(bkashNumberValue);
+        setAmountError(message);
+        setBkashError(number ? '' : 'Enter your bKash number, like 01XXXXXXXXX.');
+        if (message || !number) return;
+        requestWithdrawal.mutate({
+            amount: Number(amount.trim()),
+            payoutMethod: 'bkash',
+            bkashNumber: number,
+            ...(bkashNameValue.trim() ? { bkashAccountName: bkashNameValue.trim() } : {}),
+        });
     };
 
     const settlementColumns = [
@@ -191,6 +232,11 @@ const Wallet = () => {
             ),
         },
         {
+            key: 'payout',
+            header: 'Paid to',
+            cell: (row) => <span className="text-body-sm"><PayoutLine withdrawal={row} /></span>,
+        },
+        {
             key: 'processedAt',
             header: 'Processed',
             // Only ever a real timestamp from the server - a still-open
@@ -247,10 +293,39 @@ const Wallet = () => {
                             </button>
                         )}
                     </div>
+                    <div className="mt-3 space-y-3">
+                        <FormField
+                            id="withdrawal-bkash"
+                            label="Your bKash number"
+                            error={bkashError}
+                            hint="A personal bKash account. Sarabo sends the money with bKash Send Money."
+                        >
+                            <Input
+                                id="withdrawal-bkash"
+                                type="tel"
+                                inputMode="tel"
+                                autoComplete="tel"
+                                value={bkashNumberValue}
+                                onChange={(event) => { setBkashNumber(event.target.value); if (bkashError) setBkashError(''); }}
+                                placeholder="01XXXXXXXXX"
+                                disabled={hasOpenWithdrawal || requestWithdrawal.isPending}
+                            />
+                        </FormField>
+                        <FormField id="withdrawal-bkash-name" label="Name on the bKash account (optional)">
+                            <Input
+                                id="withdrawal-bkash-name"
+                                autoComplete="name"
+                                maxLength={60}
+                                value={bkashNameValue}
+                                onChange={(event) => setBkashName(event.target.value)}
+                                disabled={hasOpenWithdrawal || requestWithdrawal.isPending}
+                            />
+                        </FormField>
+                    </div>
                     <LoadingButton
                         type="submit"
                         variant="action"
-                        className="mt-2 w-full"
+                        className="mt-3 w-full"
                         loading={requestWithdrawal.isPending}
                         loadingText="Requesting…"
                         disabled={hasOpenWithdrawal || availableBalance <= 0}
@@ -263,6 +338,9 @@ const Wallet = () => {
                             <span className="ds-numeric font-semibold text-ds-foreground">
                                 {formatMoney(data.openWithdrawal?.amount, currency)}
                             </span>{' '}
+                            {data.openWithdrawal?.payout?.accountNumber && (
+                                <>to bKash <span className="ds-numeric font-semibold text-ds-foreground">{data.openWithdrawal.payout.accountNumber}</span>{' '}</>
+                            )}
                             awaiting processing. You can request another once it is settled.
                         </p>
                     )}
@@ -356,6 +434,7 @@ const Wallet = () => {
                                 Requested {row.requestedAt ? formatAbsoluteDateTime(row.requestedAt) : '—'}
                                 {row.processedAt ? ` · Processed ${formatAbsoluteDateTime(row.processedAt)}` : ''}
                             </p>
+                            {row.payout && <p className="mt-1 text-micro"><PayoutLine withdrawal={row} /></p>}
                         </div>
                     )}
                     empty={(

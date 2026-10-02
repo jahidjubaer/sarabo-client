@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { Banknote, Check, Info, X } from 'lucide-react';
+import { Banknote, Check, Copy, Info, X } from 'lucide-react';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import { useUrlFilters } from '../../../hooks/useUrlFilters';
 import { walletKeys } from '../../../hooks/walletKeys';
@@ -11,6 +11,10 @@ import { PageHeader } from '../../../components/common/PageHeader';
 import { EmptyState } from '../../../components/common/EmptyState';
 import { ErrorState } from '../../../components/common/ErrorState';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
+import { LoadingButton } from '../../../components/common/LoadingButton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../../components/ui/dialog';
+import { Input } from '../../../components/ui/input';
+import { Textarea } from '../../../components/ui/textarea';
 import { AdminDataTable } from '../../../components/admin/data-table/AdminDataTable';
 import { Button } from '../../../components/ui/button';
 import { Label } from '../../../components/ui/label';
@@ -20,11 +24,11 @@ import { Select } from '../../../components/ui/select';
 
 // Admin withdrawal queue (Phase 9).
 //
-// THIS RECORDS A PAYOUT, IT DOES NOT MAKE ONE. There is no bKash, Nagad, bank
-// or Stripe Connect integration behind "Mark paid" - an admin settles the money
-// out of band and then records that here. The confirm copy says so plainly,
-// because a control that silently implied a real transfer would be the single
-// most dangerous thing on this screen.
+// THIS RECORDS A PAYOUT, IT DOES NOT MAKE ONE. The technician gives a personal
+// bKash number; the admin sends the money from the bKash app with "Send Money"
+// and then records the bKash TrxID here. There is no bKash API behind "Mark
+// paid", and the copy says so plainly, because a control that silently implied
+// a real transfer would be the single most dangerous thing on this screen.
 //
 // EVERY FIGURE IS THE SERVER'S. The amount shown is the amount the server
 // reserved when the technician requested it; this page never sums, derives or
@@ -49,7 +53,14 @@ const PROCESS_ERROR_COPY = {
     WITHDRAWAL_NOT_FOUND: 'That withdrawal no longer exists.',
     INVALID_WITHDRAWAL_ID: 'That withdrawal reference was not valid.',
     ADMIN_REQUIRED: 'You no longer have permission to process withdrawals.',
+    BKASH_TRX_ID_REQUIRED: 'Enter the bKash TrxID of the payment you sent.',
+    INVALID_BKASH_TRX_ID: 'A bKash TrxID is 8-12 letters and digits, like 9A7B6C5D4E.',
+    BKASH_TRX_ID_ALREADY_USED: 'That TrxID is already recorded on another withdrawal. Check the bKash statement.',
 };
+
+// Codes that are about the TrxID the admin typed, shown under that field.
+const TRX_ERROR_CODES = ['BKASH_TRX_ID_REQUIRED', 'INVALID_BKASH_TRX_ID', 'BKASH_TRX_ID_ALREADY_USED'];
+const TRX_ID_PATTERN = /^[A-Z0-9]{8,12}$/;
 
 const PAGE_LIMIT = 20;
 const NOTE_MAX = 500;
@@ -57,6 +68,123 @@ const NOTE_MAX = 500;
 function processErrorMessage(error) {
     const data = error?.response?.data;
     return PROCESS_ERROR_COPY[data?.code] || data?.message || 'The withdrawal could not be processed. Please try again.';
+}
+
+async function copyText(text, label) {
+    try {
+        await navigator.clipboard.writeText(text);
+        notify.success(`${label} copied.`);
+    } catch {
+        notify.info(`${label}: ${text}`);
+    }
+}
+
+// The technician's bKash number with a copy button, so the admin can paste it
+// straight into the bKash app.
+function BkashNumber({ payout, className }) {
+    if (!payout) return <span className="text-ds-muted-foreground">Not given</span>;
+    return (
+        <div className={cn('min-w-0', className)}>
+            <div className="flex items-center gap-1">
+                <span className="ds-numeric whitespace-nowrap font-semibold text-ds-foreground">{payout.accountNumber}</span>
+                <Button
+                    variant="ghost" size="sm" className="size-8 shrink-0 p-0"
+                    aria-label={`Copy bKash number ${payout.accountNumber}`}
+                    onClick={() => copyText(payout.accountNumber, 'bKash number')}
+                >
+                    <Copy aria-hidden="true" className="size-3.5" />
+                </Button>
+            </div>
+            {payout.accountName && <div className="truncate text-xs text-ds-muted-foreground">{payout.accountName}</div>}
+        </div>
+    );
+}
+
+// Mark-paid asks for the bKash TrxID (required for bKash withdrawals) plus an
+// optional note. While busy it cannot be dismissed, like ConfirmDialog.
+function MarkPaidDialog({ withdrawal, busy, serverError, onClose, onConfirm }) {
+    const id = useId();
+    const [trxId, setTrxId] = useState('');
+    const [note, setNote] = useState('');
+    const [error, setError] = useState(null);
+    const needsTrx = !!withdrawal?.payout;
+    const shownError = error || serverError;
+
+    const handleOpenChange = (next) => {
+        if (next || busy) return;
+        setTrxId('');
+        setNote('');
+        setError(null);
+        onClose();
+    };
+
+    const handleConfirm = () => {
+        const value = trxId.trim().toUpperCase();
+        if (needsTrx && !value) return setError('Enter the bKash TrxID of the payment you sent.');
+        if (value && !TRX_ID_PATTERN.test(value)) return setError('A bKash TrxID is 8-12 letters and digits, like 9A7B6C5D4E.');
+        const noteCheck = validateNote(note);
+        if (!noteCheck.valid) return setError(noteCheck.message);
+        setError(null);
+        onConfirm({ bkashTrxId: value || undefined, note: note.trim() || undefined });
+    };
+
+    return (
+        <Dialog open={!!withdrawal} onOpenChange={handleOpenChange}>
+            <DialogContent className="max-w-md" showCloseButton={!busy}>
+                <DialogHeader>
+                    <DialogTitle>Record this payout as paid?</DialogTitle>
+                    {withdrawal && (
+                        <DialogDescription>
+                            {needsTrx
+                                ? 'Send the money from the bKash app with Send Money first, then enter the TrxID from the bKash confirmation. Sarabo does not send any money. This cannot be undone.'
+                                : 'This withdrawal has no bKash number (it was requested before bKash payouts). Record it only if you have already paid it. This cannot be undone.'}
+                        </DialogDescription>
+                    )}
+                </DialogHeader>
+                {withdrawal && (
+                    <dl className="grid grid-cols-2 gap-3 rounded-ds-lg bg-ds-muted px-4 py-3 text-body-sm">
+                        <div>
+                            <dt className="text-ds-muted-foreground">Amount</dt>
+                            <dd className="ds-numeric text-heading text-ds-foreground">{formatMoney(withdrawal.amount, withdrawal.currency)}</dd>
+                        </div>
+                        <div>
+                            <dt className="text-ds-muted-foreground">Send to bKash</dt>
+                            <dd><BkashNumber payout={withdrawal.payout} /></dd>
+                        </div>
+                        <div className="col-span-2">
+                            <dt className="text-ds-muted-foreground">Technician</dt>
+                            <dd className="truncate text-ds-foreground">{withdrawal.technicianName || withdrawal.technicianEmail}</dd>
+                        </div>
+                    </dl>
+                )}
+                <div className="space-y-1.5">
+                    <Label htmlFor={`${id}-trx`}>{needsTrx ? 'bKash TrxID' : 'bKash TrxID (optional)'}</Label>
+                    <Input
+                        id={`${id}-trx`}
+                        value={trxId}
+                        onChange={(event) => { setTrxId(event.target.value); if (error) setError(null); }}
+                        placeholder="e.g. 9A7B6C5D4E"
+                        autoComplete="off"
+                        spellCheck={false}
+                        className="ds-numeric uppercase"
+                        maxLength={20}
+                        disabled={busy}
+                        aria-invalid={shownError ? 'true' : 'false'}
+                        aria-describedby={shownError ? `${id}-error` : undefined}
+                    />
+                </div>
+                <div className="space-y-1.5">
+                    <Label htmlFor={`${id}-note`}>Note (optional)</Label>
+                    <Textarea id={`${id}-note`} rows={2} value={note} disabled={busy} onChange={(event) => setNote(event.target.value)} />
+                </div>
+                {shownError && <p id={`${id}-error`} role="alert" className="text-body-sm font-medium text-ds-destructive">{shownError}</p>}
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={busy}>Cancel</Button>
+                    <LoadingButton variant="primary" onClick={handleConfirm} loading={busy} loadingText="Working…">Record as paid</LoadingButton>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
 }
 
 function validateNote(value) {
@@ -77,6 +205,8 @@ const WithdrawalRequests = () => {
     // so mark-paid and reject can never both be open and the busy state always
     // belongs to the row actually being processed.
     const [pending, setPending] = useState(null);
+    // A TrxID problem reported by the server, shown inside the mark-paid dialog.
+    const [trxServerError, setTrxServerError] = useState(null);
 
     const filters = { status, page };
     const listQueryKey = walletKeys.adminList(filters);
@@ -98,14 +228,18 @@ const WithdrawalRequests = () => {
     const isUnavailableBeforeData = !hasUsablePage && (isPaused || isError);
 
     const processMutation = useMutation({
-        mutationFn: async ({ id, action, note }) => {
+        mutationFn: async ({ id, action, note, bkashTrxId }) => {
             const path = action === 'paid' ? 'mark-paid' : 'reject';
-            const res = await axiosSecure.post(`/admin/withdrawals/${id}/${path}`, note ? { note } : {});
+            const body = {};
+            if (note) body.note = note;
+            if (bkashTrxId) body.bkashTrxId = bkashTrxId;
+            const res = await axiosSecure.post(`/admin/withdrawals/${id}/${path}`, body);
             return res.data;
         },
         onSuccess: (result, variables) => {
             notify.success(variables.action === 'paid' ? 'Withdrawal recorded as paid.' : 'Withdrawal rejected.');
             setPending(null);
+            setTrxServerError(null);
             // The whole admin namespace, not just this page: processing a row
             // changes which status buckets it belongs to, so every cached filter
             // combination is now stale.
@@ -113,6 +247,7 @@ const WithdrawalRequests = () => {
         },
         onError: (mutationError) => {
             notify.error(processErrorMessage(mutationError));
+            if (TRX_ERROR_CODES.includes(mutationError?.response?.data?.code)) setTrxServerError(processErrorMessage(mutationError));
             // Deliberately NOT closing the dialog on a conflict: refreshing the
             // list underneath lets the admin see the row's real state without
             // losing the note they typed.
@@ -139,6 +274,18 @@ const WithdrawalRequests = () => {
                 </span>
             ),
             meta: { label: 'Amount' },
+        },
+        {
+            id: 'bkash', header: 'bKash', enableSorting: false, enableHiding: false,
+            cell: ({ row }) => (
+                <div>
+                    <BkashNumber payout={row.original.payout} />
+                    {row.original.payoutReference && (
+                        <div className="ds-numeric whitespace-nowrap text-xs text-ds-muted-foreground">TrxID {row.original.payoutReference}</div>
+                    )}
+                </div>
+            ),
+            meta: { label: 'bKash' },
         },
         {
             id: 'requested', header: 'Requested', enableSorting: false,
@@ -236,6 +383,13 @@ const WithdrawalRequests = () => {
                     <dd className="text-ds-foreground">{withdrawal.requestedAt ? formatAbsoluteDateTime(withdrawal.requestedAt) : '—'}</dd>
                 </div>
                 <div className="col-span-2">
+                    <dt className="text-ds-muted-foreground">bKash</dt>
+                    <dd>
+                        <BkashNumber payout={withdrawal.payout} />
+                        {withdrawal.payoutReference && <span className="ds-numeric text-ds-muted-foreground">TrxID {withdrawal.payoutReference}</span>}
+                    </dd>
+                </div>
+                <div className="col-span-2">
                     <dt className="text-ds-muted-foreground">Processed</dt>
                     <dd className="text-ds-foreground">
                         {withdrawal.processedAt ? formatAbsoluteDateTime(withdrawal.processedAt) : 'Not yet processed'}
@@ -274,7 +428,7 @@ const WithdrawalRequests = () => {
             />
             <p className="flex items-start gap-2 rounded-ds-lg bg-ds-muted p-3 text-body-sm text-ds-muted-foreground">
                 <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-                <span><strong className="font-semibold text-ds-foreground">Pay first, then record it here.</strong> Marking a withdrawal paid records a payout you have already made. Sarabo does not send any money.</span>
+                <span><strong className="font-semibold text-ds-foreground">Pay first, then record it here.</strong> Send the amount to the technician's bKash number with bKash Send Money, then mark it paid with the TrxID from the bKash confirmation. Sarabo does not send any money.</span>
             </p>
             <p className={cn("text-sm text-ds-muted-foreground transition-opacity", isFetching ? "opacity-100" : "opacity-0")} role="status" aria-live="polite">
                 Updating results…
@@ -308,23 +462,33 @@ const WithdrawalRequests = () => {
                 }
             />
 
+            <MarkPaidDialog
+                key={isMarkPaid ? pending.withdrawal.id : 'closed'}
+                withdrawal={isMarkPaid ? pending.withdrawal : null}
+                busy={processMutation.isPending}
+                serverError={trxServerError}
+                onClose={() => { setPending(null); setTrxServerError(null); }}
+                onConfirm={({ bkashTrxId, note }) => {
+                    setTrxServerError(null);
+                    processMutation.mutate({ id: pending.withdrawal.id, action: 'paid', note, bkashTrxId });
+                }}
+            />
+
             <ConfirmDialog
-                open={!!pending}
+                open={!!pending && !isMarkPaid}
                 onOpenChange={(next) => { if (!next) setPending(null); }}
-                title={isMarkPaid ? 'Record this payout as paid?' : 'Reject this withdrawal?'}
-                description={pending
-                    ? isMarkPaid
-                        ? `This records that you have already paid ${formatMoney(pending.withdrawal.amount, pending.withdrawal.currency)} to ${pending.withdrawal.technicianEmail} outside Sarabo. It does not transfer any money. It cannot be undone.`
-                        : `${formatMoney(pending.withdrawal.amount, pending.withdrawal.currency)} returns to ${pending.withdrawal.technicianEmail}'s available balance and they can request it again. It cannot be undone.`
+                title="Reject this withdrawal?"
+                description={pending && !isMarkPaid
+                    ? `${formatMoney(pending.withdrawal.amount, pending.withdrawal.currency)} returns to ${pending.withdrawal.technicianEmail}'s available balance and they can request it again. It cannot be undone.`
                     : undefined}
-                confirmLabel={isMarkPaid ? 'Record as paid' : 'Reject withdrawal'}
-                destructive={!isMarkPaid}
+                confirmLabel="Reject withdrawal"
+                destructive
                 busy={processMutation.isPending}
                 reason
-                reasonLabel={isMarkPaid ? 'Payout note (optional)' : 'Reason (optional)'}
-                reasonPlaceholder={isMarkPaid ? 'e.g. bKash reference, transfer date' : 'Why this request is being rejected'}
+                reasonLabel="Reason (optional)"
+                reasonPlaceholder="e.g. the bKash number is wrong"
                 validateReason={validateNote}
-                onConfirm={(note) => processMutation.mutate({ id: pending.withdrawal.id, action: pending.action, note })}
+                onConfirm={(note) => processMutation.mutate({ id: pending.withdrawal.id, action: 'rejected', note })}
             />
         </div>
     );
