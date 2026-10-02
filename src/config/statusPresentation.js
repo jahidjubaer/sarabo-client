@@ -35,7 +35,7 @@ import {
 // workflow rule. The actual per-status CTA (and whether it advances status or
 // navigates to the details screen) lives in utils/technicianJobPresentation.js.
 const STATUS_PRESENTATION = {
-    'pending-pickup': { label: 'Request Submitted', tone: 'waiting', icon: Clock, customerDescription: "We've received your repair request and will assign a technician soon.", customerNextStep: null, technicianDescription: 'Awaiting technician assignment.', technicianNextStep: null },
+    'pending-pickup': { label: 'Request Submitted', tone: 'waiting', icon: Clock, customerDescription: 'Technicians near you can send offers. Open the request to compare them and choose one.', customerNextStep: null, technicianDescription: 'Awaiting technician assignment.', technicianNextStep: null },
     // Phase 8.2: an admin has offered the request to a technician who has not
     // yet accepted. Customer copy stays calm/neutral (never mentions a
     // rejection); the technician is prompted to decide.
