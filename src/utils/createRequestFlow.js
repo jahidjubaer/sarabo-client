@@ -103,3 +103,33 @@ export function buildRebookValues(request, definitions) {
         },
     };
 }
+
+// "Describe your problem" (AI helper): lays an AI draft over what the customer
+// already filled in. Only fields the AI could tell are changed; a repair is
+// used only if it is still offered for that device, and changing the device
+// clears a repair chosen for the old one. `filled` is false when the draft
+// changed nothing, so the caller can say so instead of claiming success.
+export function buildAiDraftValues(current, draft, definitions) {
+    const values = { ...current, serviceLocation: { ...(current?.serviceLocation || {}) } };
+    if (!draft || typeof draft !== 'object') return { values, filled: false };
+    let filled = false;
+    const set = (field, value) => {
+        if (typeof value === 'string' && value.trim().length > 0) {
+            values[field] = value.trim();
+            filled = true;
+        }
+    };
+
+    const definition = (definitions || []).find((def) => def.id === draft.serviceDefinitionId) || null;
+    const categorySlug = definition ? definition.productCategorySlug : draft.productCategorySlug;
+    const knownCategory = (definitions || []).some((def) => def.productCategorySlug === categorySlug);
+    if (knownCategory) {
+        if (categorySlug !== values.productCategorySlug) values.serviceDefinitionId = '';
+        set('productCategorySlug', categorySlug);
+    }
+    if (definition) set('serviceDefinitionId', definition.id);
+    set('productBrand', draft.productBrand);
+    set('productModel', draft.productModel);
+    set('damageDescription', draft.damageDescription);
+    return { values, filled };
+}

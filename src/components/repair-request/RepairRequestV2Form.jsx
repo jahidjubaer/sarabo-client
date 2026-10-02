@@ -15,7 +15,7 @@ import {
     validateRepairRequestV2Form, buildRepairRequestV2Payload,
     DAMAGE_DESCRIPTION_MIN_LENGTH, DAMAGE_DESCRIPTION_MAX_LENGTH, BRAND_MODEL_MAX_LENGTH,
 } from '../../utils/repairRequestV2Form';
-import { buildReviewModel, getSuccessActions, buildRebookValues } from '../../utils/createRequestFlow';
+import { buildReviewModel, getSuccessActions, buildRebookValues, buildAiDraftValues } from '../../utils/createRequestFlow';
 import { getCreateRequestErrorMessage } from '../../utils/createRequestErrorMessage';
 import { notify } from '../../lib/notify';
 import { PageHeader } from '../common/PageHeader';
@@ -29,6 +29,8 @@ import { slideUp } from '../../theme/motion';
 import ServiceDefinitionSelector from './ServiceDefinitionSelector';
 import RepairRequestSummary from './RepairRequestSummary';
 import PostCreationDamageStep from './PostCreationDamageStep';
+import AiRequestHelper from './AiRequestHelper';
+import { useAiStatus } from '../../hooks/useAiStatus';
 import { MobileActionBar } from '../layout/MobileActionBar';
 import { FormAlert } from '../common/FormAlert';
 import { Card } from '../ui/card';
@@ -173,6 +175,24 @@ const RepairRequestV2Form = () => {
             ? { tone: 'info', title: 'Requesting again', text: `We filled in the details from your earlier request${rebookQuery.data.trackingId ? ` (${rebookQuery.data.trackingId})` : ''}. Check them and choose a new pickup time.` }
             : { tone: 'warning', title: 'Requesting again', text: 'We filled in your device and address. The repair you chose before is no longer offered - please choose a repair, then a pickup time.' });
     }, [rebookId, rebookQuery.data, rebookQuery.isError, catalogueLoading, definitions, reset]);
+
+    // "Describe your problem": the AI helper fills the form. Its values go
+    // through the same prefill guard as a rebook, so the effects below don't
+    // clear the device/repair pair it just set.
+    const aiStatus = useAiStatus();
+    const applyAiDraft = (draft) => {
+        const previous = getValues();
+        const { values, filled } = buildAiDraftValues(previous, draft, definitions);
+        if (!filled) return null;
+        rebookPrefillRef.current = values;
+        reset(values, { keepDefaultValues: true });
+        setStaleServiceNotice(false);
+        return previous;
+    };
+    const undoAiDraft = (previous) => {
+        rebookPrefillRef.current = previous;
+        reset(previous, { keepDefaultValues: true });
+    };
 
     // Live values for the summary card (presentation only).
     const watchedValues = useWatch({ control });
@@ -409,6 +429,9 @@ const RepairRequestV2Form = () => {
 
                 <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
                     <form id="repair-request-form" onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate className="min-w-0 space-y-5">
+                        {aiStatus.data?.requestHelper === true && !catalogueLoading && definitions.length > 0 && (
+                            <AiRequestHelper onApply={applyAiDraft} onUndo={undoAiDraft} />
+                        )}
                         <SectionShell step={1} stepId="device" title="Your device" description="Choose the device, then add the brand and model if you know them.">
                                 <div className="space-y-6">
                                     <ServiceDefinitionSelector
