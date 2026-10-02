@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { motion as Motion } from 'motion/react';
-import { ArrowRight, CreditCard, FileText, PackageCheck, Plus } from 'lucide-react';
+import { ArrowRight, CreditCard, FileText, PackageCheck, Plus, Users } from 'lucide-react';
 import useAuth from '../../hooks/useAuth';
 import useAxiosSecure from '../../hooks/useAxiosSecure';
 import { useServiceDefinitions } from '../../hooks/useServiceDefinitions';
@@ -15,7 +15,7 @@ import { buttonVariants } from '../ui/button-variants';
 import ServiceSpine from '../spine/ServiceSpine';
 import CategoryImage from '../public/CategoryImage';
 import {
-    getAgreedPrice, getProductSummary, getRequestAction, getRequestGroup, summarizeRequests,
+    getAgreedPrice, getProductSummary, getRequestAction, getRequestGroup, summarizeRequests, getPendingOfferCount, offersWaitingText,
 } from '../../utils/customerRequestPresentation';
 import { getStatusPresentation } from '../../config/statusPresentation';
 import { deriveProductCategories, normalizeServiceDefinitions } from '../../utils/serviceDefinitionCatalog';
@@ -34,12 +34,16 @@ function needsYouCopy(request, action) {
     const quoteTotal = Number.isFinite(Number(request?.quote?.totalAmount))
         ? formatMoney(request.quote.totalAmount, request.quote.currency)
         : null;
+    if (action.kind === 'choose-technician') {
+        return { Icon: Users, text: `${offersWaitingText(getPendingOfferCount(request))} - compare them and choose one` };
+    }
     if (action.kind === 'quote-review') {
-        return { Icon: FileText, text: quoteTotal ? `Your quote is ready: ${quoteTotal}` : 'Your quote is ready to review' };
+        return { Icon: FileText, text: quoteTotal ? `Your final price is ready: ${quoteTotal}` : 'Your final price is ready to review' };
     }
     if (action.kind === 'payment') {
-        const due = getAgreedPrice(request);
-        return { Icon: CreditCard, text: due ? `Pay ${due} to start the repair` : 'Pay to start the repair' };
+        // The amount left (final price minus the inspection fee) is shown on
+        // the request itself, where the server works it out.
+        return { Icon: CreditCard, text: 'Pay what is left of the final price to start the repair' };
     }
     return { Icon: PackageCheck, text: 'Repair complete. Confirm once you have your device back.' };
 }

@@ -40,7 +40,7 @@ function nextStepModel(request, action) {
     // Job portal: a waiting request is open to technicians from the moment it
     // is made (photos are optional); the customer compares their offers and
     // chooses one or rejects it.
-    if (!action && request?.schemaVersion === 2 && (request?.deliveryStatus || 'pending-pickup') === 'pending-pickup'
+    if ((!action || action.kind === 'choose-technician') && request?.schemaVersion === 2 && (request?.deliveryStatus || 'pending-pickup') === 'pending-pickup'
         && !request?.technicianName) {
         return { tone: 'action', eyebrow: 'Your next step', title: 'Choose a technician', description: 'Technicians in your area send an estimate and their inspection fee. Compare them and choose one.', chooser: true };
     }

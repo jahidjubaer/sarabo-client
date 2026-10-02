@@ -42,9 +42,23 @@ export function getRequestStatus(request) {
     return request?.deliveryStatus || 'pending-pickup';
 }
 
+// Technician offers waiting on an open request (the list endpoint sends
+// pendingOfferCount; a single request does not, so this is 0 there).
+export function getPendingOfferCount(request) {
+    const n = Number(request?.pendingOfferCount);
+    if (!Number.isInteger(n) || n <= 0) return 0;
+    if (request.schemaVersion !== 2 || getRequestStatus(request) !== 'pending-pickup' || request.technicianName) return 0;
+    return n;
+}
+
+export function offersWaitingText(count) {
+    return `${count} ${count === 1 ? 'offer' : 'offers'} waiting`;
+}
+
 export function getRequestGroup(request) {
     const handover = getHandoverState(request);
     if (handover && !handover.confirmed) return 'needs-action';
+    if (getPendingOfferCount(request) > 0) return 'needs-action';
     return STATUS_GROUP[getRequestStatus(request)] || 'active';
 }
 
@@ -100,6 +114,8 @@ export function getRequestAction(request) {
     const to = `/dashboard/my-requests/${request._id}`;
     const handover = getHandoverState(request);
     if (handover && !handover.confirmed) return { kind: 'handover', label: 'Confirm device received', to };
+    // Technicians sent offers: the customer compares them and chooses one.
+    if (getPendingOfferCount(request) > 0) return { kind: 'choose-technician', label: 'Choose a technician', to };
     // An admin asked for a new pickup time after a missed pickup.
     if (request.pickupRescheduleRequestedAt && ['assignment_pending', 'driver_assigned', 'rider_arriving'].includes(status)) {
         return { kind: 'new-pickup-time', label: 'Choose a new pickup time', to };

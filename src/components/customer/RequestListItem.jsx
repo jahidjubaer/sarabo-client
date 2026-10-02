@@ -10,7 +10,7 @@ import {
 import { StatusBadge } from '../common/StatusBadge';
 import { canCancelRequest } from '../../utils/cancellationEligibility';
 import { canDeleteRequest } from '../../utils/deletionEligibility';
-import { getProductSummary, getAgreedPrice, getRequestAction, getRequestStatus, canOfferPayment } from '../../utils/customerRequestPresentation';
+import { getProductSummary, getAgreedPrice, getRequestAction, getRequestStatus, canOfferPayment, getPendingOfferCount, offersWaitingText } from '../../utils/customerRequestPresentation';
 import { getStatusPresentation } from '../../config/statusPresentation';
 import { canRebook, rebookPath } from '../../utils/createRequestFlow';
 import { getProductCategoryIcon } from '../../utils/productCategoryIcons';
@@ -54,8 +54,14 @@ function RequestListItem({ request, onCancel, onDelete, onPay, cancellingId, del
                         <StatusBadge audience="customer" status={status} showIcon={false} />
                     </div>
                     <p className="text-body-sm text-ds-muted-foreground">
-                        {needsYou ? <span className="font-semibold text-ds-foreground">{action.label}. </span> : null}
-                        {needsYou ? presentation.customerNextStep || '' : presentation.customerDescription}
+                        {action?.kind === 'choose-technician' ? (
+                            <><span className="font-semibold text-ds-foreground">{offersWaitingText(getPendingOfferCount(request))}. </span>Compare them and choose one.</>
+                        ) : (
+                            <>
+                                {needsYou ? <span className="font-semibold text-ds-foreground">{action.label}. </span> : null}
+                                {needsYou ? presentation.customerNextStep || '' : presentation.customerDescription}
+                            </>
+                        )}
                     </p>
                     <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-micro text-ds-muted-foreground">
                         {(category || brandModel) && <span>{[category, brandModel].filter(Boolean).join(' · ')}</span>}
