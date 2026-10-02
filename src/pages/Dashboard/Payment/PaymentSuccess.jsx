@@ -9,6 +9,7 @@ import { Card } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { buttonVariants } from '../../../components/ui/button-variants';
 import { walletKeys } from '../../../hooks/walletKeys';
+import { ReceiptDownloadButton } from '../../../components/payments/ReceiptDownloadButton';
 
 // Gives the customer a moment to read the confirmation before moving on -
 // long enough to not feel rushed, short enough to not feel stuck.
@@ -20,7 +21,8 @@ const AUTO_REDIRECT_SECONDS = 5;
 // response only), the same invalidations, the same countdown. The copy still
 // claims only what the server actually confirmed - "Payment successful" is
 // shown ONLY after a verified response, and the already-processed wording is
-// preserved. No receipt, no invoice, no refund, no guarantee is implied.
+// preserved. Once verified, the customer can download a PDF receipt (built by
+// the server from the stored payment); doing so stops the auto-redirect.
 const PaymentSuccess = () => {
     const [searchParams] = useSearchParams();
     const sessionId = searchParams.get('session_id');
@@ -37,6 +39,7 @@ const PaymentSuccess = () => {
     const [canRetry, setCanRetry] = useState(false);
     const [retryCount, setRetryCount] = useState(0);
     const [secondsLeft, setSecondsLeft] = useState(AUTO_REDIRECT_SECONDS);
+    const [stayOnPage, setStayOnPage] = useState(false);
     const hasVerified = useRef(false);
 
     // Return the customer to the repair they just paid for. The verification
@@ -107,14 +110,14 @@ const PaymentSuccess = () => {
     // customer can still navigate manually at any time, and the countdown is
     // clearly visible rather than instant/surprising.
     useEffect(() => {
-        if (status !== 'verified') return;
+        if (status !== 'verified' || stayOnPage) return;
         if (secondsLeft <= 0) {
             navigate(returnPath);
             return;
         }
         const timer = setTimeout(() => setSecondsLeft(seconds => seconds - 1), 1000);
         return () => clearTimeout(timer);
-    }, [status, secondsLeft, navigate, returnPath]);
+    }, [status, secondsLeft, stayOnPage, navigate, returnPath]);
 
     const handleRetry = () => {
         hasVerified.current = false;
@@ -198,11 +201,19 @@ const PaymentSuccess = () => {
                                 </dl>
                             }
 
+                            <ReceiptDownloadButton
+                                transactionId={paymentInfo.transactionId}
+                                onDownload={() => setStayOnPage(true)}
+                                className="mt-4 w-full"
+                            />
+
                             {/* Visual only: announcing every tick made screen readers
                                 read the countdown once a second. */}
-                            <p className="mt-5 text-micro text-ds-muted-foreground" aria-hidden="true">
-                                Taking you back in {secondsLeft}s…
-                            </p>
+                            {!stayOnPage && (
+                                <p className="mt-5 text-micro text-ds-muted-foreground" aria-hidden="true">
+                                    Taking you back in {secondsLeft}s…
+                                </p>
+                            )}
 
                             <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                                 <Link to={returnPath} className={`${buttonVariants({ variant: 'primary' })} sm:flex-1`}>{returnLabel}</Link>

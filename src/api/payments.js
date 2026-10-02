@@ -21,3 +21,24 @@ export async function createV2Checkout(axiosSecure, requestId) {
     const res = await axiosSecure.post(`/repair-requests/${requestId}/checkout-session`, {});
     return res.data;
 }
+
+// Downloads the PDF receipt for one payment (the payer or an admin only).
+// The server builds it from the stored payment; the file is saved through a
+// temporary object URL.
+export async function downloadPaymentReceipt(axiosSecure, transactionId, fallbackName = 'sarabo-receipt.pdf') {
+    const res = await axiosSecure.get(`/payments/${encodeURIComponent(transactionId)}/receipt.pdf`, { responseType: 'blob' });
+    const disposition = res.headers?.['content-disposition'] || '';
+    const match = /filename="([^"]+)"/.exec(disposition);
+    const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+    try {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = match ? match[1] : fallbackName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+    } finally {
+        // Give the browser a moment to start the download first.
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+}

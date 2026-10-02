@@ -12,6 +12,7 @@ import { formatMoney } from '../../../utils/currency';
 import { formatAbsoluteDateTime } from '../../../utils/relativeTime';
 import { StatusBadge } from '../../../components/common/StatusBadge';
 import { getStatus } from '../../../config/status';
+import { ReceiptDownloadButton } from '../../../components/payments/ReceiptDownloadButton';
 
 // Payment History (Phase 12). A supporting account surface: it records what was
 // already paid, so it stays quiet - no marigold, no totals, no trends. Every
@@ -67,6 +68,15 @@ function PaymentRecord({ payment }) {
                     {payment.customerEmail || '—'}
                 </DetailRow>
             </dl>
+
+            <div className="mt-4 flex justify-end border-t border-ds-border pt-4">
+                <ReceiptDownloadButton
+                    transactionId={payment.transactionId}
+                    size="sm"
+                    className="max-sm:w-full"
+                    aria-label={`Download receipt (PDF) for ${payment.trackingId || 'this payment'}`}
+                />
+            </div>
         </Card>
     );
 }
