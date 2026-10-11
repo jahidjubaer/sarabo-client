@@ -19,3 +19,23 @@ for (const { path, title } of PAGES) {
         await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
     });
 }
+
+// Searching a covered sub-area goes to that area, not just its district.
+test('service areas: searching "Ambarkhana" zooms to Ambarkhana in Sylhet', async ({ page }) => {
+    await page.goto('/service-areas');
+    await page.getByRole('combobox', { name: /search a district/i }).fill('Ambarkhana');
+    await page.getByRole('option', { name: /Ambarkhana\s*Sylhet/ }).click();
+    await expect(page.getByRole('heading', { level: 2, name: 'Ambarkhana' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Ambarkhana', pressed: true })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Map showing Ambarkhana in Sylhet service area' })).toBeVisible();
+
+    // Another chip in the panel moves the map to that area.
+    await page.getByRole('button', { name: 'Zindabazar' }).click();
+    await expect(page.getByRole('heading', { level: 2, name: 'Zindabazar' })).toBeVisible();
+});
+
+test('service areas: a district name still opens the district', async ({ page }) => {
+    await page.goto('/service-areas?q=Sylhet');
+    await expect(page.getByRole('heading', { level: 2, name: 'Sylhet' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Map showing the Sylhet service area' })).toBeVisible();
+});

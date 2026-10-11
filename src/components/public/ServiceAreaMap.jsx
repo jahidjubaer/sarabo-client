@@ -1,15 +1,16 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { hasServiceAreaCoordinates } from '../../utils/serviceAreaPresentation';
+import { getAreaPoints, hasServiceAreaCoordinates } from '../../utils/serviceAreaPresentation';
 
 // Coverage map for the public Service Areas page.
 //
 // EVERY MARKER IS REAL. Each pin is placed from the latitude/longitude already
 // stored against that district in serviceAreas.json - the same file that powers
-// the create-request selectors. Nothing is geocoded, nothing is placed by hand,
-// and an area without well-formed coordinates is simply not plotted rather than
-// being guessed at.
+// the create-request selectors. Nothing is geocoded in the browser, nothing is
+// placed by hand, and an area without well-formed coordinates is simply not
+// plotted rather than being guessed at. (Sub-area points were looked up once,
+// offline, from OpenStreetMap and stored in that same file.)
 //
 // WHY LEAFLET. The previous OpenStreetMap `export/embed.html` iframe can show
 // exactly one marker and cannot be moved from our side, so it could not show
@@ -21,7 +22,13 @@ import { hasServiceAreaCoordinates } from '../../utils/serviceAreaPresentation';
 // four focusable pins would bury the rest of the page under tab stops, and the
 // labelled district selector is the operable equivalent. It selects the same
 // location and detail panel without requiring a map interaction.
+//
+// SUB-AREAS. When a district is in focus, its covered sub-areas that have a
+// stored point (`covered_area_points`, see serviceAreaPresentation.js) are
+// drawn as small labelled pins, and a searched or clicked sub-area such as
+// Ambarkhana gets street-level zoom instead of the district centre.
 const DEFAULT_ZOOM = 11;
+const PLACE_ZOOM = 15;
 const FIT_PADDING = [28, 28];
 
 // Marigold dot for a listed area, and a larger pin for the one in focus. Built
@@ -41,6 +48,21 @@ const focusIcon = L.divIcon({
     iconAnchor: [10, 10],
 });
 
+// A covered sub-area of the focused district, and the one being looked at.
+const placeIcon = L.divIcon({
+    className: '',
+    html: '<span class="block size-2.5 rounded-full border-2 border-ds-card bg-ds-primary shadow"></span>',
+    iconSize: [10, 10],
+    iconAnchor: [5, 5],
+});
+
+const placeFocusIcon = L.divIcon({
+    className: '',
+    html: '<span class="block size-4 rounded-full border-[3px] border-ds-card bg-ds-primary shadow-lg ring-4 ring-ds-primary/30"></span>',
+    iconSize: [16, 16],
+    iconAnchor: [8, 8],
+});
+
 function prefersReducedMotion() {
     return typeof window !== 'undefined'
         && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -48,7 +70,9 @@ function prefersReducedMotion() {
 
 // `className` sets the map's size and frame; without it the map uses a
 // framed, responsive default height.
-function ServiceAreaMap({ areas, focus, onSelect, className }) {
+// `focusPlace` is the name of a covered sub-area of `focus` to zoom to;
+// `onSelectPlace(area, name)` fires when one of those pins is clicked.
+function ServiceAreaMap({ areas, focus, focusPlace = null, onSelect, onSelectPlace, className }) {
     const containerRef = useRef(null);
     const mapRef = useRef(null);
     const layerRef = useRef(null);
@@ -57,6 +81,8 @@ function ServiceAreaMap({ areas, focus, onSelect, className }) {
     // re-creating every marker whenever the parent re-renders.
     const selectRef = useRef(onSelect);
     useEffect(() => { selectRef.current = onSelect; }, [onSelect]);
+    const selectPlaceRef = useRef(onSelectPlace);
+    useEffect(() => { selectPlaceRef.current = onSelectPlace; }, [onSelectPlace]);
 
     // Create the map once. Leaflet owns this DOM subtree from here on, so React
     // must never render children into it.
@@ -114,8 +140,33 @@ function ServiceAreaMap({ areas, focus, onSelect, className }) {
                 .addTo(layer);
         }
 
+        // The focused district's covered sub-areas, labelled.
+        const points = focus ? getAreaPoints(focus) : [];
+        const place = points.find((point) => point.name === focusPlace) || null;
+        for (const point of points) {
+            const isPlace = point === place;
+            L.marker([point.latitude, point.longitude], {
+                icon: isPlace ? placeFocusIcon : placeIcon,
+                keyboard: false,
+                title: `${point.name}, ${focus.district}`,
+                zIndexOffset: isPlace ? 2000 : 500,
+            })
+                .bindTooltip(point.name, { direction: 'top', offset: [0, -8], permanent: isPlace })
+                .on('click', () => selectPlaceRef.current?.(focus, point.name))
+                .addTo(layer);
+        }
+
         const animate = !prefersReducedMotion();
-        if (focus && hasServiceAreaCoordinates(focus)) {
+        if (place) {
+            // A searched sub-area (e.g. Ambarkhana): street-level, on the spot.
+            map.flyTo([place.latitude, place.longitude], PLACE_ZOOM, { animate, duration: 0.8 });
+        } else if (focus && hasServiceAreaCoordinates(focus) && points.length > 0) {
+            // A district with mapped sub-areas: frame the district and all of them.
+            map.flyToBounds(
+                L.latLngBounds([[focus.latitude, focus.longitude], ...points.map((p) => [p.latitude, p.longitude])]),
+                { padding: [48, 48], animate, duration: 0.8, maxZoom: 14 }
+            );
+        } else if (focus && hasServiceAreaCoordinates(focus)) {
             // The searched or selected district: go to it directly.
             map.flyTo([focus.latitude, focus.longitude], DEFAULT_ZOOM, { animate, duration: 0.8 });
         } else if (plottable.length > 0) {
@@ -127,7 +178,7 @@ function ServiceAreaMap({ areas, focus, onSelect, className }) {
         } else {
             map.setView([23.685, 90.356], 7, { animate: false });
         }
-    }, [areas, focus]);
+    }, [areas, focus, focusPlace]);
 
     // The background is forced (`bg-ds-muted!`) because leaflet.css paints
     // .leaflet-container a fixed light grey, which shows through as a pale slab
@@ -138,7 +189,7 @@ function ServiceAreaMap({ areas, focus, onSelect, className }) {
             ref={containerRef}
             role="region"
             aria-label={focus
-                ? `Map showing the ${focus.district} service area`
+                ? `Map showing ${focusPlace ? `${focusPlace} in ` : 'the '}${focus.district} service area`
                 : 'Map showing every listed Sarabo service area'}
             className={`z-0 w-full bg-ds-muted! ${className || 'h-64 rounded-ds-lg border border-ds-border sm:h-[26rem] lg:h-[32rem]'}`}
         />

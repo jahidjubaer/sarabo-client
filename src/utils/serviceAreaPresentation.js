@@ -40,6 +40,50 @@ export function hasServiceAreaCoordinates(area) {
     return Number.isFinite(area?.latitude) && Number.isFinite(area?.longitude);
 }
 
+// --- Covered sub-areas ("places") -------------------------------------------
+//
+// Each district may also carry `covered_area_points`: the latitude/longitude of
+// its covered sub-areas (Ambarkhana, Zindabazar, ...), looked up once from
+// OpenStreetMap and kept only when the result lies inside that same district.
+// A sub-area without a point is still listed and searchable; it simply falls
+// back to its district's pin.
+export function getAreaPoints(area) {
+    return (Array.isArray(area?.covered_area_points) ? area.covered_area_points : [])
+        .filter((point) => point && typeof point.name === 'string' && hasServiceAreaCoordinates(point));
+}
+
+// Sub-areas whose own name contains the query, as { area, point } pairs -
+// best first: exact name, then name starting with the query, then the rest.
+export function findPlaceMatches(areas, query) {
+    const q = (typeof query === 'string' ? query : '').trim().toLowerCase();
+    if (q.length < 2) return [];
+    const rank = (name) => (name === q ? 0 : name.startsWith(q) ? 1 : 2);
+    return (Array.isArray(areas) ? areas : [])
+        .filter(isArea)
+        .flatMap((area) => getAreaPoints(area).map((point) => ({ area, point })))
+        .filter(({ point }) => point.name.toLowerCase().includes(q))
+        .sort((a, b) => rank(a.point.name.toLowerCase()) - rank(b.point.name.toLowerCase())
+            || a.point.name.localeCompare(b.point.name));
+}
+
+// What a typed search should open: { area, point } when the query names a
+// sub-area ("ambarkhana" -> that spot in Sylhet), { area, point: null } for a
+// district, or null. A district's own name wins over a sub-area of the same
+// name, so "Sylhet" still means the district.
+export function resolveSearch(areas, query) {
+    const q = (typeof query === 'string' ? query : '').trim().toLowerCase();
+    if (!q) return null;
+    const list = filterServiceAreas(areas, q);
+    const district = list.filter(hasServiceAreaCoordinates).find((area) => area.district.toLowerCase() === q);
+    if (district) return { area: district, point: null };
+
+    const place = findPlaceMatches(areas, q)[0];
+    if (place && place.point.name.toLowerCase().startsWith(q)) return place;
+
+    const fallback = findSearchTarget(list, q);
+    return fallback ? { area: fallback, point: null } : null;
+}
+
 // The area a search should jump to. Prefers a district whose own name matches
 // (someone typing "Sylhet" means the district, not every area in the region),
 // then falls back to the first match in the already-filtered list, so a search
