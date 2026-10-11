@@ -54,6 +54,11 @@ const Hero = () => {
             onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setHovering(false); }}
             className="relative isolate flex min-h-[34rem] overflow-hidden bg-ds-ink sm:min-h-[38rem] lg:h-[calc(100svh-4rem)] lg:max-h-[52rem] lg:min-h-[36rem]"
         >
+            {/* The photo never sits behind the text: on phones it is a band
+                across the top, from md up it fills the right-hand side only.
+                Its inner edge fades into the ink background the text sits on,
+                so the copy is readable whatever the photo shows. */}
+            <div className="absolute inset-x-0 top-0 -z-20 h-64 sm:h-80 md:inset-y-0 md:left-[40%] md:h-auto xl:left-[46%]">
             {SLIDES.map((slide, slideIndex) => (
                 <img
                     key={slide.src}
@@ -66,19 +71,19 @@ const Hero = () => {
                     fetchPriority={slideIndex === 0 ? 'high' : undefined}
                     decoding="async"
                     className={cn(
-                        'absolute inset-0 -z-20 size-full object-cover transition-opacity duration-[1200ms] ease-in-out',
+                        'absolute inset-0 size-full object-cover transition-opacity duration-[1200ms] ease-in-out',
                         slide.position,
                         slideIndex === index ? 'opacity-100' : 'opacity-0'
                     )}
                 />
             ))}
+                {/* Edge fade into the ink background: bottom edge on phones,
+                    left edge from md up. */}
+                <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-ds-ink via-ds-ink/10 to-transparent md:bg-gradient-to-r md:from-ds-ink md:via-ds-ink/25 md:via-30% md:to-transparent md:to-60%" />
+            </div>
 
-            {/* Readability: a left-to-right scrim on wide screens, a bottom-up
-                one on phones where the text sits low over the photo. */}
-            <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-t from-[rgb(6_13_16/0.92)] via-[rgb(6_13_16/0.6)] to-[rgb(6_13_16/0.15)] md:bg-gradient-to-r md:from-[rgb(6_13_16/0.88)] md:via-[rgb(6_13_16/0.55)] md:to-transparent" />
-
-            <div className="mx-auto flex w-full max-w-6xl lg:max-w-[76rem] flex-col justify-end px-4 pb-24 pt-32 sm:px-6 md:justify-center md:pb-20 lg:px-8">
-                <div data-tour="request-repair" className="max-w-xl">
+            <div className="mx-auto flex w-full max-w-6xl lg:max-w-[76rem] flex-col justify-start px-4 pb-24 pt-56 sm:px-6 sm:pt-72 md:justify-center md:pb-20 md:pt-32 lg:px-8">
+                <div data-tour="request-repair" className="max-w-xl md:max-w-sm lg:max-w-md xl:max-w-xl">
                     <p className="ds-eyebrow text-ds-action">{HERO.eyebrow}</p>
                     <h1 id="home-hero-heading" className="mt-4 text-display text-ds-ink-foreground">
                         {HERO.headline}
