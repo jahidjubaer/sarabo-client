@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
-import { Check, X, Search, RefreshCw } from 'lucide-react';
+import { useId, useMemo, useState } from 'react';
+import { Check, X, Search, RefreshCw, Wallet } from 'lucide-react';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import { useUrlFilters } from '../../../hooks/useUrlFilters';
 import { PageHeader } from '../../../components/common/PageHeader';
@@ -19,6 +19,8 @@ import { getWorkStatusLabel, getWorkStatusTone, getExpertiseBadges, isTechnician
 import { getTechnicianApprovalErrorMessage } from '../../../utils/technicianApprovalErrorMessage';
 import { StatusBadge } from '../../../components/common/StatusBadge';
 import { Select } from '../../../components/ui/select';
+import { formatMoney } from '../../../utils/currency';
+import { walletKeys } from '../../../hooks/walletKeys';
 
 const EMPTY_TECHNICIANS = [];
 
@@ -96,6 +98,64 @@ function TechnicianExpertiseDetails({ technician }) {
     );
 }
 
+const PAYOUT_SOURCE_LABELS = {
+    open_withdrawal: 'from their open withdrawal request',
+    last_withdrawal: 'from their last withdrawal',
+    application_phone: 'their application phone number',
+};
+
+// Shown in the removal dialog for an approved technician: what the removal
+// will pay out (GET /technicians/:id/final-payout) and to which bKash number.
+// The server re-derives every figure when the removal is confirmed; this is
+// only so the admin sees it first and can supply or correct the number.
+function FinalPayoutSummary({ preview, isLoading, isError, bkashNumber, onBkashNumberChange, disabled }) {
+    const inputId = useId();
+    if (isLoading) return <p className="text-body-sm text-ds-muted-foreground">Checking the technician's wallet…</p>;
+    if (isError || !preview) return <p className="text-body-sm text-ds-destructive">Their wallet could not be checked. Close this and try again.</p>;
+
+    const amount = preview.payoutAmount;
+    return (
+        <div className="space-y-3 text-body-sm">
+            {amount > 0 ? (
+                <>
+                    <p className="text-ds-foreground">
+                        <Wallet aria-hidden="true" className="mr-1.5 inline size-4 align-[-3px] text-ds-primary" />
+                        Their balance of <strong className="ds-numeric">{formatMoney(amount, preview.currency)}</strong> will be added to Withdrawal Requests as a final payout to this bKash number.
+                    </p>
+                    <div className="space-y-1.5">
+                        <Label htmlFor={inputId}>bKash number</Label>
+                        <Input
+                            id={inputId}
+                            inputMode="tel"
+                            autoComplete="off"
+                            value={bkashNumber}
+                            disabled={disabled}
+                            onChange={(event) => onBkashNumberChange(event.target.value)}
+                            placeholder="01XXXXXXXXX"
+                        />
+                        <p className="text-micro text-ds-muted-foreground">
+                            {preview.suggestedPayout
+                                ? `Filled in ${PAYOUT_SOURCE_LABELS[preview.suggestedPayout.source] || 'from their records'}.`
+                                : 'No bKash number on record. Enter one to remove this technician.'}
+                        </p>
+                    </div>
+                </>
+            ) : (
+                <p className="text-ds-foreground">
+                    {preview.openWithdrawal
+                        ? `Their open withdrawal of ${formatMoney(preview.openWithdrawal.amount, preview.currency)} stays in Withdrawal Requests to be paid.`
+                        : 'They have no balance to pay out.'}
+                </p>
+            )}
+            {preview.pendingBalance > 0 && (
+                <p className="text-micro text-ds-muted-foreground">
+                    {formatMoney(preview.pendingBalance, preview.currency)} is still pending on unconfirmed repairs and is not included.
+                </p>
+            )}
+        </div>
+    );
+}
+
 // Technician applications (Phase 5). The approve/reject mutation
 // (PATCH /technicians/:id) and its error mapper are unchanged. What changed:
 // a decision is made from the details sheet, with the applicant's expertise
@@ -142,13 +202,41 @@ const ApproveTechnicians = () => {
     const pendingApplicationCount = technicians.filter((technician) => technician.status === 'pending').length;
     const detailsFor = detailsId ? technicians.find((technician) => technician._id === detailsId) || null : null;
 
+    // Removing an approved technician pays out their wallet, so the dialog
+    // first shows what that payout will be.
+    const isRemoval = decision?.status === 'rejected' && decision?.tech.status === 'approved';
+    // null until the admin edits the field; until then the suggestion is shown.
+    const [bkashNumber, setBkashNumber] = useState(null);
+    const payoutPreview = useQuery({
+        queryKey: ['technicians', decision?.tech._id, 'final-payout'],
+        queryFn: async () => (await axiosSecure.get(`/technicians/${decision.tech._id}/final-payout`)).data,
+        enabled: isRemoval,
+        staleTime: 0,
+        gcTime: 0,
+    });
+    const openDecision = (next) => {
+        setBkashNumber(null);
+        setDecision(next);
+    };
+    // Pre-fill once the suggestion arrives, without overwriting what the admin typed.
+    const suggestedNumber = payoutPreview.data?.suggestedPayout?.accountNumber || '';
+    const shownBkashNumber = bkashNumber ?? suggestedNumber;
+    const removalNeedsNumber = isRemoval && payoutPreview.data?.payoutAmount > 0 && !shownBkashNumber.trim();
+
     const updateStatus = (technician, status) => {
         if (pendingAction) return;
         setPendingAction({ id: technician._id, status });
-        axiosSecure.patch(`/technicians/${technician._id}`, { status })
-            .then(() => {
+        const body = isRemoval && payoutPreview.data?.payoutAmount > 0 ? { status, bkashNumber: shownBkashNumber.trim() } : { status };
+        axiosSecure.patch(`/technicians/${technician._id}`, body)
+            .then((res) => {
                 refetch();
-                notify.success(status === 'approved' ? `${technician.name} approved` : `${technician.name} rejected`);
+                const payout = res.data?.finalPayout;
+                if (payout && payout.action !== 'none') {
+                    queryClient.invalidateQueries({ queryKey: walletKeys.adminAll });
+                    notify.success(`${technician.name} removed. ${formatMoney(payout.amount, 'BDT')} added to Withdrawal Requests for bKash ${payout.bkashNumber}.`);
+                } else {
+                    notify.success(status === 'approved' ? `${technician.name} approved` : `${technician.name} rejected`);
+                }
             })
             .catch((error) => {
                 if (import.meta.env.DEV) console.error('Technician status update failed:', error);
@@ -341,12 +429,12 @@ const ApproveTechnicians = () => {
                             )}
                             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                                 {detailsFor.status !== 'rejected' && (
-                                    <Button variant="destructiveGhost" disabled={!!pendingAction} onClick={() => setDecision({ tech: detailsFor, status: 'rejected' })}>
+                                    <Button variant="destructiveGhost" disabled={!!pendingAction} onClick={() => openDecision({ tech: detailsFor, status: 'rejected' })}>
                                         <X aria-hidden="true" />{detailsFor.status === 'approved' ? 'Revoke approval' : 'Reject'}
                                     </Button>
                                 )}
                                 {detailsFor.status !== 'approved' && (
-                                    <Button variant="primary" disabled={!!pendingAction || !isTechnicianMatchable(detailsFor)} onClick={() => setDecision({ tech: detailsFor, status: 'approved' })}>
+                                    <Button variant="primary" disabled={!!pendingAction || !isTechnicianMatchable(detailsFor)} onClick={() => openDecision({ tech: detailsFor, status: 'approved' })}>
                                         <Check aria-hidden="true" />Approve
                                     </Button>
                                 )}
@@ -359,11 +447,26 @@ const ApproveTechnicians = () => {
             <ConfirmDialog
                 open={!!decision}
                 onOpenChange={(open) => { if (!open && !pendingAction) setDecision(null); }}
-                title={decision?.status === 'approved' ? `Approve ${decision?.tech.name}?` : `Reject ${decision?.tech.name}?`}
+                title={decision?.status === 'approved'
+                    ? `Approve ${decision?.tech.name}?`
+                    : isRemoval ? `Remove ${decision?.tech.name}?` : `Reject ${decision?.tech.name}?`}
                 description={decision?.status === 'approved'
                     ? 'They can then be matched to repair requests in their service area.'
                     : 'They will not be offered any repair requests. You can approve them later.'}
-                confirmLabel={decision?.status === 'approved' ? 'Approve technician' : 'Reject application'}
+                summary={isRemoval ? (
+                    <FinalPayoutSummary
+                        preview={payoutPreview.data}
+                        isLoading={payoutPreview.isPending}
+                        isError={payoutPreview.isError}
+                        bkashNumber={shownBkashNumber}
+                        onBkashNumberChange={setBkashNumber}
+                        disabled={!!pendingAction}
+                    />
+                ) : null}
+                confirmLabel={decision?.status === 'approved'
+                    ? 'Approve technician'
+                    : isRemoval ? 'Remove and pay out' : 'Reject application'}
+                confirmDisabled={isRemoval && (payoutPreview.isPending || payoutPreview.isError || removalNeedsNumber)}
                 destructive={decision?.status === 'rejected'}
                 busy={!!pendingAction}
                 onConfirm={() => updateStatus(decision.tech, decision.status)}

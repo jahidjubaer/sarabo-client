@@ -19,6 +19,16 @@ export function getTechnicianApprovalErrorMessage(error) {
             if (code === 'LINKED_USER_ROLE_CONFLICT') {
                 return 'This technician is linked to an admin account and cannot be changed here.';
             }
+            // Removing a technician pays out their balance to bKash first.
+            if (code === 'BKASH_NUMBER_REQUIRED') {
+                return 'This technician has money to be paid out but no bKash number on record. Enter their bKash number to remove them.';
+            }
+            if (code === 'INVALID_BKASH_NUMBER') {
+                return 'Enter a valid bKash number, like 01XXXXXXXXX.';
+            }
+            if (code === 'FINAL_PAYOUT_CONFLICT') {
+                return 'The technician\'s withdrawal changed while removing them. Please try again.';
+            }
             if (code === 'TECHNICIAN_STATUS_CONFLICT') {
                 return 'This technician application is in an inconsistent state and needs review before it can be updated. Please contact support.';
             }

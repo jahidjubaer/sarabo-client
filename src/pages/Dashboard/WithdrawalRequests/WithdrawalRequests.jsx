@@ -21,6 +21,14 @@ import { Label } from '../../../components/ui/label';
 import { cn } from '../../../lib/utils';
 import { StatusBadge } from '../../../components/common/StatusBadge';
 import { Select } from '../../../components/ui/select';
+import { Badge } from '../../../components/ui/badge';
+
+// Raised by the server when an admin removed this technician: their whole
+// remaining balance, paid like any other withdrawal.
+function FinalPayoutTag({ withdrawal }) {
+    if (withdrawal?.reason !== 'technician_removed') return null;
+    return <Badge tone="warning" className="mt-1">Final payout · technician removed</Badge>;
+}
 
 // Admin withdrawal queue (Phase 9).
 //
@@ -262,6 +270,7 @@ const WithdrawalRequests = () => {
                 <div className="min-w-0">
                     <div className="truncate text-ds-foreground">{row.original.technicianName || 'Unnamed technician'}</div>
                     <div className="truncate text-xs text-ds-muted-foreground">{row.original.technicianEmail}</div>
+                    <FinalPayoutTag withdrawal={row.original} />
                 </div>
             ),
             meta: { label: 'Technician' },
@@ -370,6 +379,7 @@ const WithdrawalRequests = () => {
                 <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-ds-foreground">{withdrawal.technicianName || 'Unnamed technician'}</p>
                     <p className="truncate text-xs text-ds-muted-foreground">{withdrawal.technicianEmail}</p>
+                    <FinalPayoutTag withdrawal={withdrawal} />
                 </div>
                 <StatusBadge domain="withdrawal" status={withdrawal.status} audience="admin" className="shrink-0" />
             </div>
