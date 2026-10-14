@@ -5,6 +5,7 @@ import { LoadingButton } from '../common/LoadingButton';
 import ServiceSpine from '../spine/ServiceSpine';
 import { WorkspaceContextPanels } from '../workspace/WorkspaceContextPanels';
 import { NextStepPanel } from '../workspace/NextStepPanel';
+import { RequestWorkflowActions } from '../workflow/RequestWorkflowActions';
 import { StageSection } from '../workspace/StageSection';
 import DamageImageManager from '../damage-images/DamageImageManager';
 import InspectionSection from '../inspection/InspectionSection';
@@ -125,6 +126,7 @@ function TechnicianRequestDetailsView({
                         {focus === 'quote' && <QuoteSection requestId={request._id} isOwner={false} canSubmitQuote isAssignedTechnicianView={isAssignedTechnicianView} />}
                         {focus === 'declined' && <QuoteRejectedActions requestId={request._id} />}
                         {focus === 'repair' && <RepairSection requestId={request._id} canManage deliveryStatus={status} />}
+                        {isAssignedTechnicianView && <RequestWorkflowActions request={request} audience="technician" />}
                     </NextStepPanel>
                 </div>
 

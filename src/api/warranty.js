@@ -51,6 +51,15 @@ export async function reviewClaim(axiosSecure, claimId, { decision, note }) {
     return (await axiosSecure.post(`/admin/warranty-claims/${claimId}/review`, { decision, note })).data;
 }
 
+// An admin taking over a technician step that is late.
+export async function adminDecideClaim(axiosSecure, claimId, { covered, reason, note }) {
+    return (await axiosSecure.post(`/admin/warranty-claims/${claimId}/decision`, { covered, reason, note })).data;
+}
+
+export async function adminCannotFix(axiosSecure, claimId, { note }) {
+    return (await axiosSecure.post(`/admin/warranty-claims/${claimId}/cannot-fix`, { note })).data;
+}
+
 export async function refundClaim(axiosSecure, claimId) {
     return (await axiosSecure.post(`/admin/warranty-claims/${claimId}/refund`)).data;
 }

@@ -6,7 +6,9 @@ import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import useRole from '../../../hooks/useRole';
 import {
     listTechnicianClaims, scheduleInspection, decideClaim, reportRerepair, listAdminClaims, reviewClaim, refundClaim,
+    adminDecideClaim, adminCannotFix,
 } from '../../../api/warranty';
+import { formatAbsoluteDateTime } from '../../../utils/relativeTime';
 import { notify } from '../../../lib/notify';
 import { NOT_COVERED_REASONS, NOTE_MAX, warrantyErrorMessage } from '../../../utils/warranty';
 import { PageHeader } from '../../../components/common/PageHeader';
@@ -80,8 +82,20 @@ function ScheduleDialog({ claim, onClose, onSaved }) {
     );
 }
 
+const DUE_COPY = {
+    not_booked: 'Book the re-inspection by',
+    not_decided: 'Record the decision by',
+    not_repaired: 'Repair it again by',
+};
+const OVERDUE_COPY = {
+    not_booked: 'The technician has not booked the re-inspection in time.',
+    not_decided: 'The technician has not recorded a decision in time.',
+    not_repaired: 'The technician has not repaired it again in time.',
+};
+
 // After re-inspecting: covered, or not covered with a reason and explanation.
-function DecisionDialog({ claim, onClose, onSaved }) {
+// An admin uses the same form to take over a late decision (asAdmin).
+function DecisionDialog({ claim, onClose, onSaved, asAdmin = false }) {
     const id = useId();
     const axiosSecure = useAxiosSecure();
     const [covered, setCovered] = useState('yes');
@@ -90,7 +104,7 @@ function DecisionDialog({ claim, onClose, onSaved }) {
     const notCovered = covered === 'no';
     const noteInvalid = notCovered && note.trim().length < 10;
     const save = useMutation({
-        mutationFn: () => decideClaim(axiosSecure, claim.id, { covered: !notCovered, reason: notCovered ? reason : undefined, note: note.trim() }),
+        mutationFn: () => (asAdmin ? adminDecideClaim : decideClaim)(axiosSecure, claim.id, { covered: !notCovered, reason: notCovered ? reason : undefined, note: note.trim() }),
         onSuccess: () => { notify.success(notCovered ? 'Saved. The customer can ask an admin to review it.' : 'Saved. Please repair it again for free.'); onSaved(); },
         onError: (err) => notify.error(warrantyErrorMessage(err, "The decision couldn't be saved.")),
     });
@@ -105,7 +119,7 @@ function DecisionDialog({ claim, onClose, onSaved }) {
                     <div className="space-y-1.5">
                         <label htmlFor={`${id}-covered`} className="text-body-sm font-semibold">Decision</label>
                         <Select id={`${id}-covered`} value={covered} onChange={(e) => setCovered(e.target.value)}>
-                            <option value="yes">Covered - I will repair it again for free</option>
+                            <option value="yes">{asAdmin ? 'Covered - the technician repairs it again for free' : 'Covered - I will repair it again for free'}</option>
                             <option value="no">Not covered</option>
                         </Select>
                     </div>
@@ -156,6 +170,11 @@ function TechnicianClaims() {
         <div className="space-y-4">
             {claims.map((claim) => (
                 <WarrantyClaimCard key={claim.id} claim={claim} audience="technician" heading={<RequestLink claim={claim} to={`/dashboard/assigned-jobs/${claim.requestId}`} />}>
+                    {claim.technicianDue?.dueAt && (
+                        <p className="w-full text-body-sm text-ds-muted-foreground">
+                            {DUE_COPY[claim.technicianDue.reason]} <time dateTime={claim.technicianDue.dueAt}>{formatAbsoluteDateTime(claim.technicianDue.dueAt)}</time> - after that an admin can take it over.
+                        </p>
+                    )}
                     {['submitted', 'inspection_scheduled'].includes(claim.status) && (
                         <Button variant={claim.status === 'submitted' ? 'action' : 'outline'} onClick={() => setDialog({ type: 'schedule', claim })}>
                             {claim.status === 'submitted' ? 'Book re-inspection' : 'Change visit time'}
@@ -200,6 +219,11 @@ function AdminClaims() {
         onSuccess: () => { notify.success('Review saved. The customer and technician have been told.'); done(); },
         onError: (err) => { notify.error(warrantyErrorMessage(err, "The review couldn't be saved.")); done(); },
     });
+    const cannotFix = useMutation({
+        mutationFn: ({ claim, note }) => adminCannotFix(axiosSecure, claim.id, { note }),
+        onSuccess: () => { notify.success('Moved to a refund.'); done(); },
+        onError: (err) => { notify.error(warrantyErrorMessage(err, "The claim couldn't be changed.")); done(); },
+    });
     const refund = useMutation({
         mutationFn: ({ claim }) => refundClaim(axiosSecure, claim.id),
         onSuccess: () => { notify.success('Refund sent.'); done(); },
@@ -228,6 +252,15 @@ function AdminClaims() {
                                     <span>Technician {claim.technicianName}</span>
                                 </p>
                             }>
+                                {claim.overdue && (
+                                    <p className="w-full text-body-sm font-medium text-ds-destructive">{OVERDUE_COPY[claim.overdue.reason]} You can take it over.</p>
+                                )}
+                                {claim.overdue && ['submitted', 'inspection_scheduled'].includes(claim.status) && (
+                                    <Button variant="action" onClick={() => setDialog({ type: 'decide', claim })}>Decide instead</Button>
+                                )}
+                                {claim.overdue && claim.status === 'covered' && (
+                                    <Button variant="action" onClick={() => setDialog({ type: 'cannotFix', claim })}>Move to refund</Button>
+                                )}
                                 {claim.status === 'review_requested' && <>
                                     <Button variant="action" onClick={() => setDialog({ type: 'review', claim, decision: 'overturn' })}>Change to covered</Button>
                                     <Button variant="outline" onClick={() => setDialog({ type: 'review', claim, decision: 'uphold' })}>Keep "not covered"</Button>
@@ -253,6 +286,17 @@ function AdminClaims() {
                 confirmLabel={dialog?.decision === 'overturn' ? 'Change to covered' : 'Keep decision'}
                 busy={review.isPending}
                 onConfirm={(note) => review.mutate({ claim: dialog.claim, decision: dialog.decision, note })}
+            />
+            {dialog?.type === 'decide' && <DecisionDialog claim={dialog.claim} asAdmin onClose={() => setDialog(null)} onSaved={done} />}
+            <ConfirmDialog
+                open={dialog?.type === 'cannotFix'}
+                onOpenChange={(open) => { if (!open) setDialog(null); }}
+                title="Move this claim to a refund?"
+                description="The technician did not repair it again in time. The customer is told a refund is coming; then refund it from this page."
+                reason reasonLabel="Note (optional)" reasonMaxLength={NOTE_MAX} validateReason={optionalNote}
+                confirmLabel="Move to refund"
+                busy={cannotFix.isPending}
+                onConfirm={(note) => cannotFix.mutate({ claim: dialog.claim, note })}
             />
             <ConfirmDialog
                 open={dialog?.type === 'refund'}
@@ -280,7 +324,7 @@ export default function WarrantyClaims() {
                 title="Warranty claims"
                 description={role === 'admin'
                     ? 'Decide disputed claims and refund repairs that could not be fixed again.'
-                    : 'Customers can report a problem within 30 days of getting their device back. Re-inspection and covered re-repairs are free.'}
+                    : 'Customers can report a problem within 30 days of getting their device back. Book the free re-inspection within 3 days, decide within 3 days of the visit, and repair covered claims within 7 days.'}
             />
             {role === 'admin' ? <AdminClaims /> : <TechnicianClaims />}
         </div>

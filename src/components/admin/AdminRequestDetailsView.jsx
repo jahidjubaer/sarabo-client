@@ -13,6 +13,7 @@ import TechnicianEarningSettlement from '../repair/TechnicianEarningSettlement';
 import TechnicianSettlementSummary from '../repair/TechnicianSettlementSummary';
 import { WorkspaceContextPanels } from '../workspace/WorkspaceContextPanels';
 import { NextStepPanel } from '../workspace/NextStepPanel';
+import { RequestWorkflowActions } from '../workflow/RequestWorkflowActions';
 import { StageSection } from '../workspace/StageSection';
 import { getStatusPresentation } from '../../config/statusPresentation';
 import { getHandoverState } from '../../utils/repairStage';
@@ -96,6 +97,7 @@ function AdminRequestDetailsView({ request, sections, isV2Request }) {
                                 <UserCog aria-hidden="true" /> Find technicians
                             </Link>
                         )}
+                        {isV2Request && <RequestWorkflowActions request={request} audience="admin" />}
                     </NextStepPanel>
 
                     {isV2Request && sections.showDamage && (

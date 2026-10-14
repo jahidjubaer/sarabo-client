@@ -18,6 +18,7 @@ import { TechnicianApplications } from './TechnicianApplications';
 import { InspectionFeeNote } from './InspectionFeeNote';
 import { EndDeclinedRequest } from './EndDeclinedRequest';
 import { CustomerWarrantySection } from '../warranty/CustomerWarrantySection';
+import { RequestWorkflowActions } from '../workflow/RequestWorkflowActions';
 import { Button } from '../ui/button';
 import { canChangePickup } from '../../utils/pickupSlots';
 import { NextStepPanel } from '../workspace/NextStepPanel';
@@ -133,6 +134,7 @@ function CustomerRequestDetailsView({ request, sections, isV2Request, damageImag
                         {model.chooser && <TechnicianApplications request={request} />}
                         <InspectionFeeNote request={request} />
                         {model.endDeclined && <EndDeclinedRequest request={request} />}
+                        <RequestWorkflowActions request={request} audience="customer" />
                         {focus === 'new-pickup-time' && (
                             <Button variant="action" onClick={() => setPickupSheetOpen(true)}>
                                 <CalendarClock aria-hidden="true" /> Choose a new time
