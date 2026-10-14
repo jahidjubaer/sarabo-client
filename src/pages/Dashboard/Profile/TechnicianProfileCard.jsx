@@ -9,6 +9,7 @@ import { humanizeSlug } from '../../../utils/serviceDefinitionCatalog';
 import { StatusBadge } from '../../../components/common/StatusBadge';
 import { Button } from '../../../components/ui/button';
 import { ExpertiseEditor } from '../../../components/technician/ExpertiseEditor';
+import { TechnicianDetailsEditor } from '../../../components/technician/TechnicianDetailsEditor';
 
 // The technician's own professional record (Phase 9.2), from GET /technicians/me.
 //
@@ -75,6 +76,7 @@ function TechnicianProfileCard({ role }) {
     // editor straight away; the param is removed once used.
     const [searchParams, setSearchParams] = useSearchParams();
     const [editorOpen, setEditorOpen] = useState(() => searchParams.get('edit') === 'expertise');
+    const [detailsOpen, setDetailsOpen] = useState(false);
     const setEditor = (open) => {
         setEditorOpen(open);
         if (!open && searchParams.get('edit')) {
@@ -133,9 +135,14 @@ function TechnicianProfileCard({ role }) {
             </Card>
 
             <Card className="p-5 sm:p-6">
-                <div className="flex items-center gap-2">
-                    <MapPin aria-hidden="true" className="size-4 text-ds-primary" />
-                    <h2 className="text-base font-semibold text-ds-foreground">Service information</h2>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                        <MapPin aria-hidden="true" className="size-4 text-ds-primary" />
+                        <h2 className="text-base font-semibold text-ds-foreground">Service information</h2>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => setDetailsOpen(true)}>
+                        <Pencil aria-hidden="true" />Edit details
+                    </Button>
                 </div>
                 <dl className="mt-3 divide-y divide-ds-border">
                     <Row
@@ -171,6 +178,7 @@ function TechnicianProfileCard({ role }) {
                     />
                     <Row label="Address" value={data.address || 'Not provided'} muted={!data.address} />
                 </dl>
+                <TechnicianDetailsEditor open={detailsOpen} onOpenChange={setDetailsOpen} profile={data} />
             </Card>
         </div>
     );
