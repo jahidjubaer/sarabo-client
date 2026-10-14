@@ -67,7 +67,7 @@ const ACTIONS = {
     },
     markReturned: {
         path: (id) => `/repair-requests/${id}/mark-returned`, title: 'Device returned to the customer?',
-        description: 'The customer is asked to confirm. If they do not answer within 3 days, it is confirmed automatically and your money becomes available.',
+        description: 'The customer is asked to confirm. If they do not answer within 3 days, it is confirmed automatically (for a finished repair, that also makes your money available).',
         confirm: 'Yes, returned', done: 'Marked returned. The customer has been asked to confirm.',
     },
     disputeReceipt: {
@@ -92,7 +92,37 @@ const ACTIONS = {
         note: { label: 'How was it confirmed? (both sides are told)', required: true },
         confirm: 'Confirm receipt', done: 'Receipt confirmed.',
     },
+    adminConfirmReturn: {
+        path: (id) => `/admin/repair-requests/${id}/confirm-receipt`, title: 'Confirm the device was returned?',
+        description: 'The request was cancelled after pickup; this records that the customer has their device back.',
+        note: { label: 'How was it confirmed? (both sides are told)', required: true },
+        confirm: 'Confirm returned', done: 'Return confirmed.',
+    },
+    confirmReturn: {
+        path: (id) => `/repair-requests/${id}/confirm-return`, title: 'Got your device back?',
+        description: 'This records that your technician returned your device.', confirm: 'Yes, I have it', done: 'Thanks - recorded.',
+    },
+    customerNotHome: {
+        path: (id) => `/repair-requests/${id}/customer-not-available`, title: "Customer wasn't available?",
+        description: 'The booking stays yours, and the customer is asked to choose a new pickup time.',
+        note: { label: 'What happened?', placeholder: 'For example: rang the bell and called twice, no answer.', required: true },
+        confirm: 'Ask for a new time', done: 'The customer has been asked to choose a new pickup time.',
+    },
+    disputeCondition: {
+        path: (id) => `/repair-requests/${id}/pickup-condition/dispute`, title: "Condition at pickup isn't right?",
+        description: 'Your technician and an admin are told. An admin reviews it with both of you.',
+        note: { label: 'What is wrong with it?', placeholder: 'For example: the screen was not cracked when I handed it over.', required: true },
+        confirm: 'Send', done: 'Thanks - an admin will review it.',
+    },
+    adminReviewCondition: {
+        path: (id) => `/admin/repair-requests/${id}/pickup-condition/reviewed`, title: 'Mark the condition dispute reviewed?',
+        description: 'The customer is told it was reviewed. Write what you found.',
+        note: { label: 'What you found (the customer sees it)', required: true },
+        confirm: 'Mark reviewed', done: 'Marked reviewed.',
+    },
 };
+
+const CONDITION_LABEL = 'Condition at pickup';
 
 function RequestWorkflowActions({ request, audience }) {
     const axiosSecure = useAxiosSecure();
@@ -116,6 +146,29 @@ function RequestWorkflowActions({ request, audience }) {
     const notes = [];
     const buttons = [];
     const add = (key, label, variant = 'outline') => buttons.push(<Button key={key} variant={variant} onClick={() => setOpen(key)} disabled={run.isPending}>{label}</Button>);
+
+    // Pickup condition (recorded by the technician when collecting the device).
+    const condition = request.pickupCondition;
+    if (condition) {
+        notes.push(<><strong>{CONDITION_LABEL}:</strong> {condition.note}{condition.accessories ? ` Accessories: ${condition.accessories}.` : ''}</>);
+        if (condition.customerDisputedAt) {
+            notes.push(condition.reviewedAt
+                ? <>The customer disagreed (“{condition.customerNote}”). Reviewed by an admin: {condition.reviewNote}</>
+                : <>The customer disagreed: “{condition.customerNote}”. An admin will review it.</>);
+            if (audience === 'admin' && !condition.reviewedAt) add('adminReviewCondition', 'Mark condition reviewed', 'action');
+        } else if (audience === 'customer') {
+            add('disputeCondition', "That's not right");
+        }
+    }
+    // The technician could not reach the customer at pickup.
+    if (request.pickupAttempt && request.pickupRescheduleRequestedAt) {
+        notes.push(audience === 'customer'
+            ? <>Your technician came <When value={request.pickupAttempt.failedAt} /> but could not reach you: “{request.pickupAttempt.note}”. Please choose a new pickup time.</>
+            : <>Customer not available <When value={request.pickupAttempt.failedAt} />: “{request.pickupAttempt.note}”. Waiting for a new pickup time.</>);
+    }
+    if (audience === 'technician' && ['driver_assigned', 'rider_arriving'].includes(status) && !request.pickupRescheduleRequestedAt) {
+        add('customerNotHome', 'Customer not available');
+    }
 
     if (status === 'cancelled' && CLOSED_COPY[request.cancellationReason]) {
         notes.push(CLOSED_COPY[request.cancellationReason]);
@@ -141,6 +194,28 @@ function RequestWorkflowActions({ request, audience }) {
         }
         if (audience === 'technician' && !request.repairBlocked) add('cannotComplete', "Can't finish this repair");
         if (audience === 'admin') add('adminCancelPaid', 'Cancel and refund', request.repairBlocked ? 'action' : 'outline');
+    }
+    // A request cancelled after pickup: the device has to go back.
+    if (status === 'cancelled' && ret.required) {
+        if (ret.confirmedAt) {
+            notes.push(<>Device returned to the customer (confirmed <When value={ret.confirmedAt} />).</>);
+        } else {
+            if (ret.disputedAt) {
+                notes.push(<>The customer says the device has not been returned{ret.disputeNote ? `: “${ret.disputeNote}”` : ''}. An admin is checking.</>);
+            } else if (ret.markedAt) {
+                notes.push(audience === 'customer'
+                    ? <>Your technician marked your device returned. It is confirmed automatically on <When value={ret.autoConfirmAt} /> unless you tell us otherwise.</>
+                    : <>Marked returned <When value={ret.markedAt} />. Confirmed automatically on <When value={ret.autoConfirmAt} /> unless the customer reports a problem.</>);
+            } else {
+                notes.push(audience === 'customer' ? 'Your technician will return your device.' : 'The device has to be returned to the customer.');
+            }
+            if (audience === 'technician' && !ret.markedAt) add('markReturned', 'Mark device returned', 'action');
+            if (audience === 'customer') {
+                add('confirmReturn', 'I have my device back', ret.markedAt ? 'action' : 'outline');
+                if (!ret.disputedAt) add('disputeReceipt', "I haven't received it");
+            }
+            if (audience === 'admin') add('adminConfirmReturn', 'Confirm returned', ret.disputedAt ? 'action' : 'outline');
+        }
     }
     if (status === 'repair_completed' && !confirmed) {
         if (ret.disputedAt) {

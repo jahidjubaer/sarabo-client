@@ -13,6 +13,7 @@ import { RepairWorkspaceHeader } from '../../../components/workspace/RepairWorks
 import { CustomerRequestDetailsView } from '../../../components/customer/CustomerRequestDetailsView';
 import { TechnicianRequestDetailsView } from '../../../components/technician/TechnicianRequestDetailsView';
 import { AdminRequestDetailsView } from '../../../components/admin/AdminRequestDetailsView';
+import { PickupConditionDialog } from '../../../components/workflow/PickupConditionDialog';
 import { notify } from '../../../lib/notify';
 import { getViewerRole, getSectionVisibility, isLegacyRequest } from '../../../utils/workspacePresentation';
 import { getStatusPresentation } from '../../../config/statusPresentation';
@@ -41,6 +42,7 @@ const RequestDetails = () => {
     const [advancing, setAdvancing] = useState(false);
     const [deciding, setDeciding] = useState(false);
     const [rejectOpen, setRejectOpen] = useState(false);
+    const [conditionOpen, setConditionOpen] = useState(false);
 
     const isAdminContext = location.pathname.startsWith('/dashboard/manage-repair-requests');
     const isTechnicianContext = location.pathname.startsWith('/dashboard/assigned-jobs');
@@ -107,11 +109,21 @@ const RequestDetails = () => {
     // decides whether an advance exists for the current status.
     const technicianCanAdvance = isTechnicianViewer && !isCancelled;
 
+    // Collecting the device first asks for its condition (PickupConditionDialog).
     const handleAdvance = (nextStatus) => {
+        if (nextStatus === 'parcel_picked_up' && isV2Request) {
+            setConditionOpen(true);
+            return;
+        }
+        sendAdvance(nextStatus);
+    };
+
+    const sendAdvance = (nextStatus, extra = {}) => {
         if (advancing) return;
         setAdvancing(true);
-        axiosSecure.patch(`/repair-requests/${id}/status`, { deliveryStatus: nextStatus })
+        axiosSecure.patch(`/repair-requests/${id}/status`, { deliveryStatus: nextStatus, ...extra })
             .then(() => {
+                setConditionOpen(false);
                 queryClient.invalidateQueries({ queryKey: ['repair-requests', id] });
                 queryClient.invalidateQueries({ queryKey: ['tech-active-jobs', user?.email] });
                 refetch();
@@ -265,6 +277,13 @@ const RequestDetails = () => {
                     />
                 )}
             </div>
+
+            <PickupConditionDialog
+                open={conditionOpen}
+                onOpenChange={setConditionOpen}
+                busy={advancing}
+                onConfirm={(pickupCondition) => sendAdvance('parcel_picked_up', { pickupCondition })}
+            />
 
             <ConfirmDialog
                 open={cancelOpen}

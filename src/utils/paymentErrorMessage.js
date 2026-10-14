@@ -17,6 +17,9 @@ export function getPaymentErrorMessage(error) {
             if (code === 'INSPECTION_FEE_REFUNDED') {
                 return "The technician you chose couldn't be booked after all, so your inspection fee is being refunded. Please choose another technician on your request.";
             }
+            if (code === 'REQUEST_CANCELLED') {
+                return 'This request was closed before your payment arrived, so your payment is being refunded in full.';
+            }
             if (code === 'PAYMENT_NOT_AVAILABLE') {
                 return 'Payment is not available for this request right now.';
             }

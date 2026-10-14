@@ -2,7 +2,7 @@ import { lazy, Suspense } from 'react';
 import { Link } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion as Motion, MotionConfig } from 'motion/react';
-import { ArrowRight, Banknote, CalendarX, CircleCheckBig, Clock3, Flag, MapPinOff, PackageX, ReceiptText, TriangleAlert, Undo2, UserCheck, UserCog, Wrench } from 'lucide-react';
+import { ArrowRight, Banknote, CalendarX, CircleCheckBig, ClipboardList, Clock3, Flag, Hourglass, MapPinOff, PackageX, ReceiptText, TriangleAlert, Undo2, UserCheck, UserCog, Wrench } from 'lucide-react';
 import useAxiosSecure from '../../hooks/useAxiosSecure';
 import { walletKeys } from '../../hooks/walletKeys';
 import { useAdminFeedbackList } from '../../hooks/useTechnicianFeedback';
@@ -94,6 +94,8 @@ function AttentionStrip({ counts }) {
         counts.feeRefunds > 0 && { key: 'refunds', icon: Undo2, text: `${plural(counts.feeRefunds, 'refund')} waiting`, hint: 'Inspection fees Stripe has not refunded yet - retry them', to: '#needs-you-queue' },
         counts.blockedRepairs > 0 && { key: 'blocked', icon: Wrench, text: `${plural(counts.blockedRepairs, 'paid repair')} can't be finished`, hint: 'The technician asked for help - cancel and refund, or follow up', to: '#needs-you-queue' },
         counts.receiptDisputes > 0 && { key: 'disputes', icon: PackageX, text: `${plural(counts.receiptDisputes, 'device')} not received`, hint: 'The customer says the repaired device did not come back', to: '#needs-you-queue' },
+        counts.stalled > 0 && { key: 'stalled', icon: Hourglass, text: `${plural(counts.stalled, 'repair')} stalled`, hint: 'Not moved on for longer than expected - follow up', to: '#needs-you-queue' },
+        counts.conditionDisputes > 0 && { key: 'condition', icon: ClipboardList, text: `${plural(counts.conditionDisputes, 'pickup condition')} disputed`, hint: 'The customer disagrees with what the technician recorded', to: '#needs-you-queue' },
         counts.unmatchable > 0 && { key: 'unmatched', icon: MapPinOff, text: `${plural(counts.unmatchable, 'request')} with no local technician`, hint: 'Nobody in the region can take them', to: '/dashboard/assign-technicians?view=unmatched' },
     ].filter(Boolean);
     if (items.length === 0) return null;
@@ -159,6 +161,19 @@ const REFUND_REASONS = {
     booking_failed: 'Technician could not be booked',
     technician_no_show: 'Technician did not come',
     customer_cancelled: 'Customer cancelled in time',
+    request_cancelled: 'Paid after the request was closed',
+};
+
+// Stalled work (server: services/stalledWork.js) - what has not moved on.
+const STALLED_STAGES = {
+    reschedule_unanswered: 'Customer has not chosen a new pickup time',
+    not_inspected: 'Collected, not inspected yet',
+    no_quote: 'Inspected, no quote sent',
+    quote_unanswered: 'Customer has not answered the quote',
+    repair_not_started: 'Paid, repair not started',
+    repair_slow: 'Repair running for over 14 days',
+    not_returned: 'Repaired, device not returned',
+    cancelled_not_returned: 'Cancelled, device not returned',
 };
 
 function buildQueue({ requests, technicians, withdrawals, reports, attention }) {
@@ -172,7 +187,7 @@ function buildQueue({ requests, technicians, withdrawals, reports, attention }) 
         })),
         // An inspection-fee refund Stripe has not completed (job-portal phase D).
         ...(attention?.feeRefunds ?? []).map((entry) => ({
-            key: `refund-${entry.id}-${entry.paidAt}`, icon: Undo2, kind: 'Refund waiting', title: `${formatMoney(entry.amount, entry.currency)} inspection fee`, urgent: true, priority: 3,
+            key: `refund-${entry.id}-${entry.paidAt}`, icon: Undo2, kind: 'Refund waiting', title: `${formatMoney(entry.amount, entry.currency)} ${entry.purpose === 'repair' ? 'repair payment' : 'inspection fee'}`, urgent: true, priority: 3,
             meta: [REFUND_REASONS[entry.reason], entry.trackingId],
             at: entry.paidAt, atLabel: 'Paid', action: 'Retry refund', to: `/dashboard/manage-repair-requests/${entry.id}`,
         })),
@@ -181,6 +196,18 @@ function buildQueue({ requests, technicians, withdrawals, reports, attention }) 
             key: `blocked-${entry.id}`, icon: Wrench, kind: "Repair can't be finished", title: attentionDeviceLabel(entry), urgent: true, priority: 3,
             meta: [entry.technicianName && `Technician: ${entry.technicianName}`, entry.reason, entry.trackingId],
             at: entry.reportedAt, atLabel: 'Reported', action: 'Decide', to: `/dashboard/manage-repair-requests/${entry.id}`,
+        })),
+        // The customer disagrees with the condition recorded at pickup.
+        ...(attention?.conditionDisputes ?? []).map((entry) => ({
+            key: `condition-${entry.id}`, icon: ClipboardList, kind: 'Pickup condition disputed', title: attentionDeviceLabel(entry), urgent: true, priority: 2,
+            meta: [entry.technicianName && `Technician: ${entry.technicianName}`, entry.note, entry.trackingId],
+            at: entry.disputedAt, atLabel: 'Reported', action: 'Review', to: `/dashboard/manage-repair-requests/${entry.id}`,
+        })),
+        // Work that has not moved on in time.
+        ...(attention?.stalled ?? []).map((entry) => ({
+            key: `stalled-${entry.id}-${entry.stage}`, icon: Hourglass, kind: 'Stalled', title: attentionDeviceLabel(entry), urgent: true, priority: 1,
+            meta: [STALLED_STAGES[entry.stage], entry.technicianName && `Technician: ${entry.technicianName}`, entry.trackingId],
+            at: entry.since, atLabel: 'Since', action: 'Follow up', to: `/dashboard/manage-repair-requests/${entry.id}`,
         })),
         // The customer says the repaired device was not returned.
         ...(attention?.receiptDisputes ?? []).map((entry) => ({
