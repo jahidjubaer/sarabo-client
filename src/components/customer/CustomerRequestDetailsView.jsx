@@ -17,6 +17,7 @@ import { PickupRescheduleSheet } from '../pickup/PickupRescheduleSheet';
 import { TechnicianApplications } from './TechnicianApplications';
 import { InspectionFeeNote } from './InspectionFeeNote';
 import { EndDeclinedRequest } from './EndDeclinedRequest';
+import { CustomerWarrantySection } from '../warranty/CustomerWarrantySection';
 import { Button } from '../ui/button';
 import { canChangePickup } from '../../utils/pickupSlots';
 import { NextStepPanel } from '../workspace/NextStepPanel';
@@ -217,6 +218,17 @@ function CustomerRequestDetailsView({ request, sections, isV2Request, damageImag
                             defaultOpen={rank >= 10}
                         >
                             <CustomerTechnicianFeedback requestId={request._id} />
+                        </StageSection>
+                    )}
+
+                    {isV2Request && request.customerReceiptConfirmation?.status === 'confirmed' && (
+                        <StageSection
+                            id="repair-warranty"
+                            title="Warranty"
+                            meta="30 days of cover if the same fault comes back"
+                            defaultOpen
+                        >
+                            <CustomerWarrantySection requestId={request._id} />
                         </StageSection>
                     )}
 

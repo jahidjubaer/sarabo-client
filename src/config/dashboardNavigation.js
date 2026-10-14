@@ -1,6 +1,6 @@
 import {
     LayoutDashboard, PlusCircle, Wrench, CreditCard, ClipboardList, CheckCheck,
-    UserCog, UserCheck, Users, Bell, User, Home, Wallet, Banknote, MessageSquare, ClipboardCheck, Tags, ChartColumn, Search,
+    UserCog, UserCheck, Users, Bell, User, Home, Wallet, Banknote, MessageSquare, ClipboardCheck, Tags, ChartColumn, Search, ShieldCheck,
 } from 'lucide-react';
 import { matchPath } from 'react-router';
 
@@ -39,6 +39,7 @@ const TECHNICIAN_SECTIONS = [
             { label: 'Find jobs', to: '/jobs', icon: Search },
             { label: 'Assigned jobs', to: '/dashboard/assigned-jobs', icon: ClipboardList },
             { label: 'Completed jobs', to: '/dashboard/completed-jobs', icon: CheckCheck },
+            { label: 'Warranty claims', to: '/dashboard/warranty-claims', icon: ShieldCheck },
             { label: 'Wallet', to: '/dashboard/wallet', icon: Wallet },
         ],
     },
@@ -53,6 +54,7 @@ const ADMIN_SECTIONS = [
             { label: 'Assign technicians', to: '/dashboard/assign-technicians', icon: UserCog },
             { label: 'Technicians', to: '/dashboard/approve-technicians', icon: UserCheck },
             { label: 'Withdrawals', to: '/dashboard/withdrawal-requests', icon: Banknote },
+            { label: 'Warranty claims', to: '/dashboard/warranty-claims', icon: ShieldCheck },
             { label: 'Users', to: '/dashboard/users-management', icon: Users },
             { label: 'Services & prices', to: '/dashboard/service-catalogue', icon: Tags },
         ],
@@ -122,6 +124,7 @@ export const SEGMENT_LABELS = {
     'users-management': 'Users',
     wallet: 'Wallet',
     'withdrawal-requests': 'Withdrawals',
+    'warranty-claims': 'Warranty claims',
     'service-catalogue': 'Services & prices',
     reports: 'Reports',
     'technician-reports': 'Technician reports',

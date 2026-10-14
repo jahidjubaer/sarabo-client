@@ -261,6 +261,12 @@ const Wallet = () => {
                     <p className="mt-2 max-w-prose text-body-sm text-ds-muted-foreground">
                         From repairs the customer has confirmed they received, and inspection fees you kept.
                     </p>
+                    {data.owedBalance > 0 && (
+                        <p role="note" className="mt-3 max-w-prose rounded-ds border border-ds-border bg-ds-muted p-3 text-body-sm text-ds-foreground">
+                            <span className="ds-numeric font-semibold">{formatMoney(data.owedBalance, currency)}</span> was taken back because a customer
+                            was refunded under the repair warranty after you had already withdrawn it. Your next earnings cover this first.
+                        </p>
+                    )}
                 </div>
 
                 <form onSubmit={handleSubmit} className="w-full rounded-ds-lg bg-ds-muted p-4" noValidate>

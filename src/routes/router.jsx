@@ -48,6 +48,7 @@ const WithdrawalRequests = lazy(() => import("../pages/Dashboard/WithdrawalReque
 const AdminFeedbackPage = lazy(() => import("../pages/Dashboard/TechnicianFeedback/AdminFeedbackPage"));
 const ServiceCatalogue = lazy(() => import("../pages/Dashboard/ServiceCatalogue/ServiceCatalogue"));
 const Reports = lazy(() => import("../pages/Dashboard/Reports/Reports"));
+const WarrantyClaims = lazy(() => import("../pages/Dashboard/WarrantyClaims/WarrantyClaims"));
 const Jobs = lazy(() => import("../pages/Jobs/Jobs"));
 
 export const router = createBrowserRouter([
@@ -215,6 +216,13 @@ export const router = createBrowserRouter([
       {
         path: 'completed-jobs',
         element: <TechnicianRoute><CompletedJobs></CompletedJobs></TechnicianRoute>
+      },
+      {
+        // Warranty claims: technicians see their own, admins the review and
+        // refund queue. The page picks the view from the server-derived role;
+        // the server authorizes every call.
+        path: 'warranty-claims',
+        Component: WarrantyClaims
       },
       {
         // Technician wallet (Phase 9). Technician-only: the server derives whose

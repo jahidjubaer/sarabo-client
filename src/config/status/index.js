@@ -24,6 +24,8 @@ const DOMAINS = {
     settlement: {
         pending: { label: 'Awaiting confirmation', tone: 'waiting', icon: Hourglass },
         available: { label: 'Available', tone: 'success', icon: CircleCheckBig },
+        // Taken back after a warranty refund to the customer.
+        reversed: { label: 'Refunded under warranty', tone: 'neutral', icon: Ban },
     },
     withdrawal: {
         requested: {
