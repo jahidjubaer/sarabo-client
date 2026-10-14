@@ -14,8 +14,8 @@ import DamageImageManager from '../damage-images/DamageImageManager';
 // in-flight upload state upward via onBusyChange so the parent can gate
 // "continue" while an upload is actually running.
 //
-// `initialFiles`: a photo the customer already gave the AI helper, uploaded
-// straight away so they don't have to pick it again.
+// `initialFiles`: a photo the customer already gave the AI helper, shown ready
+// to upload so they don't have to pick it again.
 const PostCreationDamageStep = ({ requestId, onBusyChange, initialFiles }) => {
     const headingRef = useRef(null);
 

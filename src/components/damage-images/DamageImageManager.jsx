@@ -23,9 +23,9 @@ const COMPLETE_ITEM_DISPLAY_MS = 1500;
 // gate - upload/delete controls render only when the server itself
 // confirms this caller is the request's owner, regardless of `canEdit`.
 //
-// `initialFiles` (optional) are uploaded once, as soon as the server confirms
-// the caller owns a request that has no photos yet - used for the photo the
-// customer gave the AI helper on the create form.
+// `initialFiles` (optional) start out waiting in the picker, ready to upload,
+// when the server confirms the caller owns a request that has no photos yet -
+// used for the photo the customer gave the AI helper on the create form.
 const DamageImageManager = ({ requestId, canEdit = false, maxImages = MAX_DAMAGE_IMAGES, onBusyChange, initialFiles }) => {
     const queryClient = useQueryClient();
     const [serverLocked, setServerLocked] = useState(false);
@@ -52,13 +52,6 @@ const DamageImageManager = ({ requestId, canEdit = false, maxImages = MAX_DAMAGE
     const totalImages = data?.totalImages ?? images.length;
     const isOwnerConfirmedByServer = data?.accessRole === 'owner';
     const effectiveCanEdit = canEdit && isOwnerConfirmedByServer && !serverLocked;
-
-    const initialFilesAddedRef = useRef(false);
-    useEffect(() => {
-        if (initialFilesAddedRef.current || !initialFiles?.length || !effectiveCanEdit || totalImages > 0) return;
-        initialFilesAddedRef.current = true;
-        addFiles(initialFiles.slice(0, maxImages));
-    }, [initialFiles, effectiveCanEdit, totalImages, addFiles, maxImages]);
 
     // Complete items briefly show "Uploaded" before disappearing from the
     // in-progress list, once the same image has merged into the gallery
@@ -129,6 +122,7 @@ const DamageImageManager = ({ requestId, canEdit = false, maxImages = MAX_DAMAGE
                         maxImages={maxImages}
                         disabled={isProcessing}
                         onFilesSelected={handleFilesSelected}
+                        initialFiles={totalImages === 0 ? initialFiles : undefined}
                     />
                 </div>
             )}
