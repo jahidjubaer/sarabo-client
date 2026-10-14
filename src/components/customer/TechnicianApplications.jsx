@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Award, Briefcase, CheckCircle2, MapPin, Star, Wrench, XCircle } from 'lucide-react';
+import { Award, Briefcase, CheckCircle2, MapPin, Sparkles, Star, Wrench, XCircle } from 'lucide-react';
 import useAxiosSecure from '../../hooks/useAxiosSecure';
 import { useRequestApplications, jobPortalKeys } from '../../hooks/useJobPortal';
 import { acceptApplication, declineApplication } from '../../api/jobPortal';
@@ -13,6 +13,8 @@ import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { ChoiceCard } from '../ui/choice-card';
+import { Select } from '../ui/select';
+import { OFFER_SORTS, reasonLabel, sortOffers } from '../../utils/offerMatch';
 
 const DECLINE_NOTE_MAX = 300;
 
@@ -41,6 +43,7 @@ function TechnicianApplications({ request }) {
     const [choosing, setChoosing] = useState(null);
     const [rejecting, setRejecting] = useState(null);
     const [rejectReason, setRejectReason] = useState('price');
+    const [sort, setSort] = useState('best');
     const refreshApplications = () => queryClient.invalidateQueries({ queryKey: jobPortalKeys.applications(request._id) });
 
     const reject = useMutation({
@@ -79,7 +82,7 @@ function TechnicianApplications({ request }) {
     });
 
     if (isPending) return <div className="space-y-3">{[0, 1].map((k) => <Skeleton key={k} className="h-28 w-full" />)}</div>;
-    const pending = (data?.applications ?? []).filter((a) => a.status === 'pending');
+    const pending = sortOffers((data?.applications ?? []).filter((a) => a.status === 'pending'), sort);
     const rejected = (data?.applications ?? []).filter((a) => a.status === 'declined');
     const rejectedList = rejected.length > 0 ? (
         <details className="rounded-ds-lg border border-ds-border p-3 text-body-sm">
@@ -109,14 +112,43 @@ function TechnicianApplications({ request }) {
 
     return (
         <>
+            {pending.length > 1 && (
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <details className="text-micro text-ds-muted-foreground">
+                        <summary className="cursor-pointer">How offers are ranked</summary>
+                        <p className="mt-1 max-w-prose">
+                            Best match weighs the technician&apos;s reviews, repairs finished without a missed pickup,
+                            the price against the other offers, whether they are in your district, and how quickly they
+                            usually reply. Technicians who are new to Sarabo are neither helped nor held back.
+                            The choice is always yours.
+                        </p>
+                    </details>
+                    <label className="flex items-center gap-2 text-body-sm text-ds-muted-foreground">
+                        Sort
+                        <Select size="sm" value={sort} onChange={(e) => setSort(e.target.value)} wrapperClassName="w-40">
+                            {OFFER_SORTS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                        </Select>
+                    </label>
+                </div>
+            )}
             <ul className="space-y-3" aria-label="Applications">
                 {pending.map((application) => {
                     const t = application.technician;
+                    const reasons = (application.match?.reasons ?? []).map(reasonLabel).filter(Boolean);
+                    const recommended = application.match?.recommended === true;
                     return (
-                        <li key={application.id} className="rounded-ds-lg border border-ds-border bg-ds-card p-4">
+                        <li key={application.id} className={`rounded-ds-lg border bg-ds-card p-4 ${recommended ? 'border-ds-success' : 'border-ds-border'}`}>
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                 <div className="min-w-0 space-y-1.5">
-                                    <p className="font-semibold text-ds-foreground">{t.name}</p>
+                                    <p className="flex flex-wrap items-center gap-2 font-semibold text-ds-foreground">
+                                        {t.name}
+                                        {recommended && <Badge tone="success"><Sparkles aria-hidden="true" /> Best match</Badge>}
+                                    </p>
+                                    {reasons.length > 0 && (
+                                        <ul className="flex flex-wrap gap-1.5" aria-label="Why this offer">
+                                            {reasons.map((label) => <li key={label}><Badge tone="neutral">{label}</Badge></li>)}
+                                        </ul>
+                                    )}
                                     <p className="flex flex-wrap gap-x-3 gap-y-1 text-micro text-ds-muted-foreground">
                                         {t.averageRating !== null
                                             ? <Stat icon={Star}>{t.averageRating} ({t.reviewCount} review{t.reviewCount === 1 ? '' : 's'})</Stat>
