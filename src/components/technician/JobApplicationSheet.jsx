@@ -28,6 +28,7 @@ const ERROR_COPY = {
     JOB_NOT_OPEN: 'This job is no longer open.',
     APPLICATION_CLOSED: 'Your offer for this job is closed - the customer has already decided.',
     INSPECTION_FEE_TOO_HIGH: 'The inspection fee is above the limit for this repair.',
+    INSPECTION_FEE_TOO_LOW: 'The inspection fee is below the minimum for this repair.',
     INVALID_ESTIMATE: 'Please check the estimate.',
     TECHNICIAN_NOT_APPROVED: 'Only approved technicians can apply.',
     NO_PENDING_APPLICATION: 'You have no open application for this job.',
@@ -42,11 +43,13 @@ function ApplicationForm({ job, onDone }) {
     // The customer rejected the offer: one revised offer, starting from the old one.
     const revising = job.myApplication?.status === 'declined' && job.myApplication.canReoffer ? job.myApplication : null;
     const start = existing || revising;
+    // Every offer charges at least the fee floor (older servers send no minimum).
+    const minFee = Math.min(job.minInspectionFee ?? 0, job.maxInspectionFee);
     const { register, handleSubmit, setError, setValue, getValues, control, formState: { errors } } = useForm({
         defaultValues: {
             estimateMin: start ? String(start.estimateMin) : '',
             estimateMax: start ? String(start.estimateMax) : '',
-            inspectionFee: start ? String(start.inspectionFee) : String(job.maxInspectionFee),
+            inspectionFee: start ? String(Math.max(start.inspectionFee, minFee)) : String(job.maxInspectionFee),
             note: start?.note || '',
         },
     });
@@ -152,10 +155,10 @@ function ApplicationForm({ job, onDone }) {
                     id="apply-inspection-fee"
                     label="Inspection fee (BDT)"
                     required
-                    hint={`What the customer pays for your visit - at most ${formatMoney(job.maxInspectionFee, 'BDT')}. It counts toward the final price if they go ahead.`}
+                    hint={`What the customer pays for your visit - from ${formatMoney(minFee, 'BDT')} to ${formatMoney(job.maxInspectionFee, 'BDT')}. It counts toward the final price if they go ahead.`}
                     error={errors.inspectionFee?.message}
                 >
-                    <MoneyInput id="apply-inspection-fee" inputMode="numeric" {...register('inspectionFee', wholeNumberRule({ min: 0, max: job.maxInspectionFee, label: 'Inspection fee' }))} />
+                    <MoneyInput id="apply-inspection-fee" inputMode="numeric" {...register('inspectionFee', wholeNumberRule({ min: minFee, max: job.maxInspectionFee, label: 'Inspection fee' }))} />
                 </FormField>
                 {warnings.length > 0 && (
                     <ul aria-live="polite" className="space-y-2">

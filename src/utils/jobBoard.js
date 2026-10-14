@@ -39,6 +39,7 @@ export function toBoardJob(job) {
         problem: job.problem || '',
         photoCount: job.photoCount || 0,
         maxInspectionFee: job.maxInspectionFee,
+        minInspectionFee: job.minInspectionFee ?? 0,
         invited: Boolean(job.invited),
         mine,
         raw: job,

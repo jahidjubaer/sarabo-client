@@ -94,7 +94,7 @@ function JobCard({ job, mode, onApply, onPhotos }) {
                         <p className="ds-numeric text-heading text-ds-foreground">{formatMoneyRange(job.priceMin, job.priceMax, job.currency)}</p>
                     </div>
                     {mode === 'technician' && (
-                        <p className="ds-numeric text-micro text-ds-muted-foreground">Visit fee up to {formatMoney(job.maxInspectionFee, 'BDT')}</p>
+                        <p className="ds-numeric text-micro text-ds-muted-foreground">Visit fee {job.minInspectionFee ? formatMoneyRange(job.minInspectionFee, job.maxInspectionFee, 'BDT') : `up to ${formatMoney(job.maxInspectionFee, 'BDT')}`}</p>
                     )}
                 </div>
 

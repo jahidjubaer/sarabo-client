@@ -5,6 +5,7 @@ import useAxiosSecure from '../../hooks/useAxiosSecure';
 import { createServiceDefinition, updateServiceDefinition } from '../../api/adminServiceDefinitions';
 import { humanizeSlug } from '../../utils/serviceDefinitionCatalog';
 import { formatMoney, formatMoneyRange } from '../../utils/currency';
+import { minimumInspectionFee } from '../../utils/inspectionFee';
 import {
     EXPERTISE_LEVELS, MAX_IMAGE_COUNT, MAX_DURATION_MINUTES, MAX_BASE_PRICE, MAX_INSPECTION_FEE,
     LABEL_MAX_LENGTH, DESCRIPTION_MAX_LENGTH,
@@ -28,6 +29,7 @@ const SAVE_ERROR_COPY = {
     PRODUCT_REPAIR_PAIR_NOT_ALLOWED: 'This repair is not offered for this device.',
     FIELD_NOT_EDITABLE: 'One of these fields cannot be changed.',
     SERVICE_DEFINITION_NOT_FOUND: 'This service no longer exists. Reload the page.',
+    INSPECTION_FEE_TOO_LOW: 'The inspection fee is below the minimum: 100 BDT when the price goes up to 1,000 BDT, otherwise 200 BDT.',
 };
 
 function saveErrorMessage(error) {
@@ -82,6 +84,14 @@ function ServiceForm({ definition, availablePairs, onSaved, onStale, onDone }) {
         const fields = toServiceFields(values);
         if (fields.pricingRule.baseMin > fields.pricingRule.baseMax) {
             setError('baseMax', { message: 'Must be at least the lowest price.' });
+            return;
+        }
+        // Every repair has an inspection fee (server: utils/inspectionFee.js).
+        // Only checked when prices change, so an old service can still be renamed.
+        const feeFloor = minimumInspectionFee(fields.pricingRule.baseMax);
+        const priceTouched = isCreate || ['baseMin', 'baseMax', 'inspectionFee'].some((field) => fields.pricingRule[field] !== definition?.pricingRule?.[field]);
+        if (priceTouched && fields.pricingRule.inspectionFee < feeFloor) {
+            setError('inspectionFee', { message: `At least ${feeFloor} BDT for this price range.` });
             return;
         }
         if (fields.imageRequirements.min > fields.imageRequirements.max) {
@@ -166,7 +176,7 @@ function ServiceForm({ definition, availablePairs, onSaved, onStale, onDone }) {
                             <FormField id="service-base-max" label="To (BDT)" required error={errors.baseMax?.message}>
                                 <MoneyInput id="service-base-max" inputMode="numeric" {...register('baseMax', wholeNumberRule({ min: 1, max: MAX_BASE_PRICE, label: 'Price' }))} />
                             </FormField>
-                            <FormField id="service-inspection-fee" label="Inspection fee (BDT)" required error={errors.inspectionFee?.message}>
+                            <FormField id="service-inspection-fee" label="Inspection fee (BDT)" required hint="The most a technician can charge. At least 100 (price up to 1,000) or 200." error={errors.inspectionFee?.message}>
                                 <MoneyInput id="service-inspection-fee" inputMode="numeric" {...register('inspectionFee', wholeNumberRule({ min: 0, max: MAX_INSPECTION_FEE, label: 'Fee' }))} />
                             </FormField>
                         </div>

@@ -1,5 +1,15 @@
 import { formatMoney } from './currency';
 
+// Mirrors the server's fee floor (sarabo-server utils/inspectionFee.js): every
+// repair has an inspection fee of at least 100 BDT when the estimate tops out
+// at 1,000 BDT or less, and at least 200 BDT for bigger repairs.
+export const SMALL_JOB_MAX_ESTIMATE_BDT = 1000;
+
+export function minimumInspectionFee(estimateMax) {
+    const max = Number(estimateMax);
+    return Number.isFinite(max) && max > 0 && max <= SMALL_JOB_MAX_ESTIMATE_BDT ? 100 : 200;
+}
+
 // Statuses in which a booked visit has not happened yet (the device is not
 // collected) - the same set the server allows a paid visit to be cancelled in.
 const BOOKED_NOT_COLLECTED = ['assignment_pending', 'driver_assigned', 'rider_arriving'];

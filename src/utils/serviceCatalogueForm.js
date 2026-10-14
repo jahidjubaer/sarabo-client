@@ -18,7 +18,7 @@ export function pairKey(productCategorySlug, repairCategorySlug) {
 export function toFormValues(definition) {
     if (!definition) {
         return {
-            pair: '', label: '', description: '', baseMin: '', baseMax: '', inspectionFee: '0',
+            pair: '', label: '', description: '', baseMin: '', baseMax: '', inspectionFee: '200',
             requiredExpertiseLevel: 'intermediate', estimatedDurationMinutes: '60', inspectionRequired: true,
             imageMin: '0', imageMax: '3', imageRecommended: true, isActive: true,
         };
